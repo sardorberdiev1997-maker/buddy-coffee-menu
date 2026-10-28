@@ -31,7 +31,8 @@ def fetch(tab):
     else:
         url = (f'{base}/export?format=csv&gid={gid}' if gid
                else f'{base}/gviz/tq?tqx=out:csv&headers=1&sheet=' + urllib.parse.quote(tab))
-    with urllib.request.urlopen(url, timeout=30) as r:
+    req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0 (buddy-menu sync)'})
+    with urllib.request.urlopen(req, timeout=30) as r:
         rows = list(csv.reader(io.StringIO(r.read().decode('utf-8-sig'))))
     rows = [row for row in rows if any(c.strip() for c in row)]
     head = {h.strip().lower() for h in rows[0]} if rows else set()
