@@ -39,7 +39,7 @@ export async function loadModel(env, { fresh } = {}) {
     tables = await fromSheet();
   } catch (e) {
     console.warn('menu: sheet unavailable, using data/menu.json:', e.message);
-    if (memo) return memo.model;
+    if (memo) { memo.at = Date.now(); return memo.model; } // старые данные ещё минуту, не дёргаем таблицу на каждый запрос
     tables = await fromAssets(env);
   }
   const model = R.buildModel(tables);

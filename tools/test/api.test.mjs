@@ -69,8 +69,12 @@ test('без подключённой группы заказы не прини�
   assert.equal(r.body.error, 'paused');
 });
 
-test('/bind подключает группу', async () => {
-  const t0 = Date.now();
+test('/bind подключает группу только после /api/tg/setup', async () => {
+  let t0 = Date.now();
+  await groupMsg('/bind');
+  assert.ok((await tgCalls(t0)).some((c) => /закрыто/.test(c.body.text || '')), 'без setup — отказ');
+  assert.equal((await api('/api/tg/setup')).status, 200);
+  t0 = Date.now();
   await groupMsg('/bind@Buddy_coffee_bot');
   const calls = await tgCalls(t0);
   assert.ok(calls.some((c) => c.method === 'sendMessage' && /подключена/.test(c.body.text)));

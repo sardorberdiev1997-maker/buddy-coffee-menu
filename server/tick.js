@@ -23,8 +23,9 @@ export async function tick(env, now = Date.now()) {
     const L = await groupLang(env);
 
     // 1. Заказы, которые не дошли до группы (Telegram был недоступен)
-    const lost = (await env.DB.prepare("SELECT * FROM orders WHERE group_msg IS NULL AND status != 'canceled' AND created_at > ? ORDER BY id LIMIT 10")
-      .bind(now - 2 * HOUR).all()).results.map(parseOrder);
+    // Старше минуты — чтобы не задвоить заказ, который ещё отправляется сразу после оформления
+    const lost = (await env.DB.prepare("SELECT * FROM orders WHERE group_msg IS NULL AND status != 'canceled' AND created_at > ? AND created_at < ? ORDER BY id LIMIT 10")
+      .bind(now - 2 * HOUR, now - MIN).all()).results.map(parseOrder);
     for (const o of lost) { await sendGroup(env, o); done.resent++; }
 
     // 2. Напоминания: заказ не приняли за 3 и за 10 минут
@@ -46,16 +47,18 @@ export async function tick(env, now = Date.now()) {
       const end = periodStart(kind, now);
       if (now - end > REPORT_GRACE) continue;
       const [start] = prevPeriod(kind, end);
-      if (!(await claimKV(env, `report:${kind}:${dayKey(start)}`, now))) continue;
-      await tg(env, 'sendMessage', { chat_id: group, text: await reportText(env, L, kind, start, end), parse_mode: 'HTML', disable_notification: true });
-      done.reports.push(kind);
+      const key = `report:${kind}:${dayKey(start)}`;
+      if (!(await claimKV(env, key, now))) continue;
+      const r = await tg(env, 'sendMessage', { chat_id: group, text: await reportText(env, L, kind, start, end), parse_mode: 'HTML', disable_notification: true });
+      if (r.ok) done.reports.push(kind);
+      else await setKV(env, key, null); // Telegram не ответил — повторим на следующей минуте
     }
   }
 
   // 4. Личные данные (имя, телефон, адрес, точка, комментарий) храним 90 дней, статистика остаётся
   if (await claimKV(env, `cleanup:${dayKey(now)}`, now)) {
     const r = await env.DB.prepare(`UPDATE orders SET name = NULL, phone = NULL, address = NULL, lat = NULL, lng = NULL, acc = NULL,
-        comment = NULL, ip_hash = NULL, tg_chat = NULL, tg_msg = NULL, anonymized = 1 WHERE anonymized = 0 AND created_at < ?`)
+        comment = NULL, ip_hash = NULL, tg_user = NULL, tg_chat = NULL, tg_msg = NULL, anonymized = 1 WHERE anonymized = 0 AND created_at < ?`)
       .bind(now - KEEP_PERSONAL).run();
     done.cleaned = (r.meta && r.meta.changes) || 0;
   }

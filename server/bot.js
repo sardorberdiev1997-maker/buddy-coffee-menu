@@ -63,6 +63,9 @@ async function onGroup(env, m) {
   if (name === 'bind' || name === 'start') {
     if (here) return reply(X.boundAlready);
     if (bound) return reply(X.boundOther);
+    // Подключить группу можно только в течение 30 минут после /api/tg/setup — чужая группа не перехватит заказы
+    const setupAt = parseInt((await getKV(env, 'setup_at')) || '0', 10);
+    if (Date.now() - setupAt > 30 * 60 * 1000) return reply(X.bindClosed);
     if (!(await admin())) return reply(X.adminOnly);
     await setKV(env, 'group', chat.id);
     return reply(X.bound);

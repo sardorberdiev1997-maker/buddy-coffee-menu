@@ -2,7 +2,7 @@
 // Набор как в ежедневных отчётах Square/Toast: выручка, заказы, средний чек, отмены, доставка/самовывоз,
 // время доставки, клиенты (новые), пиковый час, топ блюд и сравнение с прошлым периодом.
 import { T } from './texts.js';
-import { DAY, ddmm, local, periodStart, prevPeriod, TZ_OFFSET } from './util.js';
+import { DAY, ddmm, h, local, periodStart, prevPeriod, TZ_OFFSET } from './util.js';
 
 const DONE = "status IN ('delivered', 'picked')";
 
@@ -75,7 +75,7 @@ export function statsText(L, title, sub, s, cmp) {
   if (s.peak && s.peak.c > 1) out.push(`🕖 ${X.peak}: ${String(s.peak.hour).padStart(2, '0')}:00–${String((s.peak.hour + 1) % 24).padStart(2, '0')}:00 (${X.ordersShort(s.peak.c)})`);
   if (s.canceled) out.push(`❌ ${X.canceledN(s.canceled)}: ${X.sum(s.lost)} ${X.lost}`);
   if (s.best) out.push(`📅 ${X.bestDay}: ${X.weekday(local(s.best.day).getUTCDay())} ${ddmm(s.best.day)} — ${X.sum(s.best.sum)}`);
-  if (s.top.length) out.push(`🏆 ${X.top}: ${s.top.map((x) => `${x.dish} ×${x.qty}`).join(', ')}`);
+  if (s.top.length) out.push(`🏆 ${X.top}: ${s.top.map((x) => `${h(x.dish)} ×${x.qty}`).join(', ')}`);
   return out.join('\n');
 }
 
