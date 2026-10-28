@@ -235,7 +235,18 @@
     window.addEventListener('offline', upd);
     if (navigator.onLine === false) upd();
     // Telegram Mini App: та же страница внутри Telegram
-    document.addEventListener('tg-ready', () => { try { window.Telegram.WebApp.ready(); } catch (e) { /* нет */ } }, { once: true });
+    // Кнопка «Назад» Telegram ведёт в меню (иначе она осталась бы от корзины и ничего не делала)
+    const tgInit = () => {
+      const w = window.Telegram && window.Telegram.WebApp;
+      if (!w || !w.initData) return;
+      try {
+        w.ready();
+        w.BackButton.show();
+        w.BackButton.onClick(() => { location.href = home; });
+      } catch (e) { /* старые версии Telegram */ }
+    };
+    if (window.Telegram && window.Telegram.WebApp) tgInit();
+    else document.addEventListener('tg-ready', tgInit, { once: true });
     load();
   }
 
