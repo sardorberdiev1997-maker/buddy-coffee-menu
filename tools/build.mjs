@@ -33,10 +33,10 @@ const TABS = sandbox.MENU_CONFIG.tabs;
 
 // Данные: сначала свежие из Google Таблицы, при сбое — запасная копия data/menu.json
 async function fromSheet() {
-  const { sheetId, gids } = sandbox.MENU_CONFIG;
-  if (!sheetId || !gids) throw new Error('нет sheetId/gids');
+  const { sheetId, pub, gids } = sandbox.MENU_CONFIG;
+  if ((!sheetId && !pub) || !gids) throw new Error('нет sheetId/gids');
   const get = async (key) => {
-    const res = await fetch(`https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=${gids[key]}`, { signal: AbortSignal.timeout(15000) });
+    const res = await fetch(R.sheetCsvUrl(sandbox.MENU_CONFIG, key), { signal: AbortSignal.timeout(15000) });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return R.parseCSV(await res.text());
   };

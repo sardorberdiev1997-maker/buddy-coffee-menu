@@ -63,11 +63,11 @@
 
   // export?format=csv отдаёт значения как в ячейках; gviz угадывает типы колонок и может обнулить «чужие» ячейки
   async function loadSheet() {
-    if (!CONFIG.sheetId) throw new Error('sheetId is empty');
+    if (!CONFIG.sheetId && !CONFIG.pub) throw new Error('sheetId is empty');
     const base = `https://docs.google.com/spreadsheets/d/${encodeURIComponent(CONFIG.sheetId)}`;
     const gids = CONFIG.gids || {};
     const url = (key) => (gids[key]
-      ? `${base}/export?format=csv&gid=${encodeURIComponent(gids[key])}`
+      ? R.sheetCsvUrl(CONFIG, key)
       : `${base}/gviz/tq?tqx=out:csv&headers=1&sheet=${encodeURIComponent(TABS[key])}`);
     const [menu, categories, settings] = await Promise.all(
       ['menu', 'categories', 'settings'].map((k) => fetchText(url(k), 12000).then(R.parseCSV))

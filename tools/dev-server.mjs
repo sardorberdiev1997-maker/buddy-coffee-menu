@@ -49,10 +49,14 @@ globalThis.fetch = async (input, init) => {
   const url = typeof input === 'string' ? input : input.url;
   if (MOCK_TG && url.startsWith('https://api.telegram.org/')) {
     const method = url.split('/').pop();
-    const body = init && init.body ? JSON.parse(init.body) : {};
+    // sendDocument приходит как multipart (FormData): поля — строки, файл — имя и размер
+    let body = {};
+    if (init && init.body instanceof FormData) {
+      for (const [k, v] of init.body.entries()) body[k] = typeof v === 'string' ? v : { name: v.name, size: v.size, bytes: Buffer.from(await v.arrayBuffer()).toString('base64') };
+    } else if (init && init.body) body = JSON.parse(init.body);
     tgLog.push({ method, body, at: Date.now() });
     let result = true;
-    if (method === 'sendMessage' || method === 'sendLocation' || method === 'editMessageText') {
+    if (method === 'sendMessage' || method === 'sendLocation' || method === 'editMessageText' || method === 'copyMessage' || method === 'sendDocument') {
       result = { message_id: body.message_id || ++msgId, chat: { id: body.chat_id }, date: Math.floor(Date.now() / 1000), text: body.text };
     } else if (method === 'getChatMember') result = { status: 'creator', user: { id: body.user_id } };
     else if (method === 'getMe') result = { id: 1, is_bot: true, username: 'buddy_coffee_uz_bot' };

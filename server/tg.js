@@ -26,6 +26,22 @@ export async function tg(env, method, body, retried) {
   return j;
 }
 
+// Отправка файла (sendDocument): multipart/form-data
+export async function tgUpload(env, method, fields, file) {
+  if (!env.BOT_TOKEN) return { ok: false, description: 'BOT_TOKEN is not set' };
+  const fd = new FormData();
+  Object.entries(fields).forEach(([k, v]) => { if (v != null) fd.append(k, typeof v === 'object' ? JSON.stringify(v) : String(v)); });
+  fd.append(file.field, new Blob([file.bytes], { type: file.type }), file.name);
+  try {
+    const res = await fetch(`https://api.telegram.org/bot${env.BOT_TOKEN}/${method}`, { method: 'POST', body: fd, signal: AbortSignal.timeout(20000) });
+    const j = await res.json().catch(() => ({ ok: false, description: 'HTTP ' + res.status }));
+    if (!j.ok) console.warn('telegram', method, j.error_code, j.description);
+    return j;
+  } catch (e) {
+    return { ok: false, description: e.message };
+  }
+}
+
 export const groupChat = (env) => getKV(env, 'group');
 
 export async function groupLang(env) {

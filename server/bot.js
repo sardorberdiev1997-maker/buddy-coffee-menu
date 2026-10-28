@@ -1,11 +1,13 @@
 // Вебхук Telegram: команды и кнопки в группе кафе, личные сообщения покупателей.
+import { onBroadcastButton, setSubscribed, startDraft } from './broadcast.js';
+import { customersXlsx, touchBotUser } from './customers.js';
 import { getKV, orderById, orderByToken, parseOrder, setKV } from './db.js';
 import { cafeInfo, loadModel, OC } from './menu.js';
 import { canUndo, linkCustomer, nextStatus, refreshGroup, setStatus, undoStatus } from './orders.js';
 import { liveStats, STAT_PERIODS, statsKeyboard } from './stats.js';
 import { C, T } from './texts.js';
-import { groupChat, groupLang, isAdmin, tg } from './tg.js';
-import { fmt, hhmm, SITE } from './util.js';
+import { groupChat, groupLang, isAdmin, tg, tgUpload } from './tg.js';
+import { ddmm, fmt, h, hhmm, randomToken, SITE } from './util.js';
 
 const BOT = (globalThis.MENU_CONFIG && globalThis.MENU_CONFIG.bot) || '';
 
@@ -93,6 +95,30 @@ async function onGroup(env, m) {
     const p = STAT_PERIODS.includes(cmd[1]) ? cmd[1] : 'today';
     return reply(await liveStats(env, L, p), { reply_markup: statsKeyboard(L, p) });
   }
+  if (name === 'clients') {
+    // Личные данные клиентов — только администраторам группы
+    if (!(await admin())) return reply(X.adminOnly);
+    const { count, bytes } = await customersXlsx(env, L);
+    if (!count) return reply(X.clientsEmpty);
+    const d = ddmm(Date.now(), true);
+    return tgUpload(env, 'sendDocument', {
+      chat_id: chat.id, caption: X.clientsCaption(count, d),
+      reply_parameters: { message_id: m.message_id, allow_sending_without_reply: true }
+    }, { field: 'document', bytes, name: `buddy-coffee-clients-${d}.xlsx`, type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  }
+  if (name === 'sheet') {
+    // Формула для вкладки «Клиенты» в Google Таблице; /sheet new — новая ссылка, старая перестаёт работать
+    if (!(await admin())) return reply(X.adminOnly);
+    let key = await getKV(env, 'sheet_key');
+    if (!key || cmd[1] === 'new') { key = randomToken(24); await setKV(env, 'sheet_key', key); }
+    return reply(X.sheetHelp(`=IMPORTDATA("${SITE}api/sheet/customers.csv?key=${key}")`));
+  }
+  if (name === 'broadcast') {
+    if (!(await admin())) return reply(X.adminOnly);
+    if (!m.reply_to_message || (m.reply_to_message.from && m.reply_to_message.from.is_bot)) return reply(X.bcHelp);
+    const by = m.from ? [m.from.first_name, m.from.last_name].filter(Boolean).join(' ').slice(0, 40) : '';
+    return startDraft(env, chat, m.reply_to_message, by);
+  }
   if (name === 'orders') {
     const rows = (await env.DB.prepare("SELECT * FROM orders WHERE status NOT IN ('delivered', 'picked', 'canceled') ORDER BY id LIMIT 30").all()).results.map(parseOrder);
     if (!rows.length) return reply(X.noActive);
@@ -113,6 +139,14 @@ async function onCallback(env, q) {
   const msg = q.message;
   if (!msg) return answer();
   const [kind, idStr, arg] = data.split(':');
+
+  // Клиент отписывается от акций (кнопка под рассылкой)
+  if (kind === 'unsub' && msg.chat.type === 'private') {
+    await setSubscribed(env, msg.chat.id, false);
+    const L = /^ru/i.test((q.from && q.from.language_code) || '') ? 'ru' : 'uz';
+    await send(env, msg.chat.id, C[L].unsubbed);
+    return answer('🔕');
+  }
 
   // Покупатель отменяет свой заказ из личного чата
   if (kind === 'k') {
@@ -137,6 +171,8 @@ async function onCallback(env, q) {
   const L = await groupLang(env);
   const X = T[L];
   const by = q.from ? [q.from.first_name, q.from.last_name].filter(Boolean).join(' ').slice(0, 40) : '';
+
+  if (kind === 'bc') return onBroadcastButton(env, q, data.split(':'), () => isAdmin(env, msg.chat, q.from));
 
   if (kind === 'st') {
     const p = STAT_PERIODS.includes(idStr) ? idStr : 'today';
@@ -184,12 +220,18 @@ async function onPrivate(env, m) {
   const X = C[L];
   const menu = { inline_keyboard: [[{ text: X.menuBtn, web_app: { url: `${SITE}?tg=1&lang=${L}` } }]] };
   const cmd = command(m.text);
+  await touchBotUser(env, m.from, m.chat.id);
+
+  if (cmd && (cmd[0] === 'stop' || cmd[0] === 'subscribe')) {
+    await setSubscribed(env, m.chat.id, cmd[0] === 'subscribe');
+    return send(env, m.chat.id, cmd[0] === 'subscribe' ? X.subbed : X.unsubbed);
+  }
 
   if (cmd && cmd[0] === 'start' && /^o_[\w-]{10,40}$/.test(cmd[1])) {
     const o = await orderByToken(env, cmd[1].slice(2));
     if (!o) return send(env, m.chat.id, X.notFound, { reply_markup: menu });
     await send(env, m.chat.id, C[o.lang === 'ru' ? 'ru' : 'uz'].linked);
-    await linkCustomer(env, o, m.chat.id);
+    await linkCustomer(env, o, m.chat.id, m.from);
     return;
   }
   if (cmd && cmd[0] === 'start') return send(env, m.chat.id, X.hello, { reply_markup: menu });
@@ -220,7 +262,8 @@ export async function setupBot(env, webhookSecretValue) {
       ...base, scope: { type: 'all_private_chats' },
       commands: [
         { command: 'start', description: isRu ? 'Открыть меню и заказать' : 'Menyuni ochish va buyurtma berish' },
-        { command: 'orders', description: isRu ? 'Мои заказы' : 'Buyurtmalarim' }
+        { command: 'orders', description: isRu ? 'Мои заказы' : 'Buyurtmalarim' },
+        { command: 'stop', description: isRu ? 'Отписаться от акций' : 'Aksiyalardan obunani bekor qilish' }
       ]
     });
     await call(`group_${L}${lang ? '' : '_default'}`, 'setMyCommands', {
@@ -228,6 +271,9 @@ export async function setupBot(env, webhookSecretValue) {
       commands: [
         { command: 'stats', description: isRu ? 'Статистика продаж' : 'Savdo statistikasi' },
         { command: 'orders', description: isRu ? 'Заказы в работе' : 'Jarayondagi buyurtmalar' },
+        { command: 'clients', description: isRu ? 'База клиентов (Excel)' : 'Mijozlar bazasi (Excel)' },
+        { command: 'sheet', description: isRu ? 'Клиенты в Google Таблице' : 'Mijozlar Google Jadvalda' },
+        { command: 'broadcast', description: isRu ? 'Рассылка: ответьте на сообщение' : 'Xabarnoma: xabarga javob bering' },
         { command: 'pause', description: isRu ? 'Остановить онлайн-заказы' : 'Onlayn buyurtmani to‘xtatish' },
         { command: 'resume', description: isRu ? 'Снова принимать заказы' : 'Buyurtmani qayta yoqish' },
         { command: 'lang', description: isRu ? 'Язык бота: рус/узб' : 'Bot tili: o‘zb/rus' },

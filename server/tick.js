@@ -1,6 +1,7 @@
 // Раз в минуту (Cron Trigger воркера buddy-cron): напоминания о неподтверждённых заказах,
 // повторная отправка в группу, сводки в 00:00 по Ташкенту, удаление личных данных через 90 дней.
 // Всё идемпотентно — лишний вызов ничего не дублирует.
+import { continueBroadcasts } from './broadcast.js';
 import { claimKV, getKV, parseOrder, setKV } from './db.js';
 import { sendGroup, UNDO_WINDOW } from './orders.js';
 import { reportText } from './stats.js';
@@ -35,7 +36,7 @@ export async function tick(env, now = Date.now()) {
       const level = now - o.created_at >= REMIND[1] ? 2 : 1;
       if (o.reminded >= level) continue;
       await tg(env, 'sendMessage', {
-        chat_id: o.group_chat, text: T[L].remind(o.id, Math.floor((now - o.created_at) / MIN)),
+        chat_id: o.group_chat, text: T[L].remind(o.id, Math.floor((now - o.created_at) / MIN)), parse_mode: 'HTML',
         reply_parameters: { message_id: o.group_msg, allow_sending_without_reply: true }
       });
       await env.DB.prepare('UPDATE orders SET reminded = ? WHERE id = ?').bind(level, o.id).run();
@@ -50,7 +51,10 @@ export async function tick(env, now = Date.now()) {
       done.closed = (done.closed || 0) + 1;
     }
 
-    // 4. Сводки за закончившиеся день, неделю, месяц, квартал и год
+    // 4. Рассылка акций: следующая порция получателей
+    done.broadcast = await continueBroadcasts(env);
+
+    // 5. Сводки за закончившиеся день, неделю, месяц, квартал и год
     for (const kind of ['day', 'week', 'month', 'quarter', 'year']) {
       const end = periodStart(kind, now);
       if (now - end > REPORT_GRACE) continue;
@@ -63,7 +67,7 @@ export async function tick(env, now = Date.now()) {
     }
   }
 
-  // 5. Личные данные (имя, телефон, адрес, точка, комментарий) храним 90 дней, статистика остаётся
+  // 6. В заказах личные данные (адрес, точка, комментарий, имя, телефон) храним 90 дней; имя и телефон остаются в базе клиентов
   if (await claimKV(env, `cleanup:${dayKey(now)}`, now)) {
     const r = await env.DB.prepare(`UPDATE orders SET name = NULL, phone = NULL, address = NULL, lat = NULL, lng = NULL, acc = NULL,
         comment = NULL, ip_hash = NULL, tg_user = NULL, tg_chat = NULL, tg_msg = NULL, anonymized = 1 WHERE anonymized = 0 AND created_at < ?`)

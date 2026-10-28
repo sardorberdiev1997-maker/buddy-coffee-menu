@@ -1,4 +1,5 @@
 // Заказы: приём с сайта и Mini App, смена статусов, сообщения в группу кафе и покупателю.
+import { attachChat, upsertFromOrder } from './customers.js';
 import { getKV, orderById, orderByToken, parseOrder, salt, updateOrder } from './db.js';
 import { OC, cafeInfo, loadModel } from './menu.js';
 import { C, T } from './texts.js';
@@ -109,6 +110,8 @@ export async function createOrder(request, env, ctx) {
 
   // Сообщения отправляем после ответа покупателю; если Telegram недоступен — /api/tick повторит
   ctx.waitUntil((async () => {
+    await upsertFromOrder(env, { phone, phoneHash, name, lang, source: user ? 'tg' : 'site', tgChat: user ? user.id : null, tgUsername: user ? user.username : null })
+      .catch((e) => console.error('customer', e));
     const o = await orderById(env, id);
     await sendGroup(env, o);
     if (o.tg_chat) await notifyCustomer(env, o);
@@ -156,7 +159,7 @@ export async function cancelBySelf(env, token) {
   const chat = o.group_chat || (await groupChat(env));
   if (chat) {
     const L = await groupLang(env);
-    await tg(env, 'sendMessage', { chat_id: chat, text: T[L].customerCanceled(o.id), reply_parameters: o.group_msg ? { message_id: o.group_msg, allow_sending_without_reply: true } : undefined });
+    await tg(env, 'sendMessage', { chat_id: chat, text: T[L].customerCanceled(o.id), parse_mode: 'HTML', reply_parameters: o.group_msg ? { message_id: o.group_msg, allow_sending_without_reply: true } : undefined });
   }
   return json({ ok: true });
 }
@@ -208,35 +211,39 @@ function mapLinks(o, L) {
   return '';
 }
 
+// Сообщение в группе кафе: крупно номер и статус, состав, сумма, клиент и адрес, внизу — кто и когда менял статус
 export function groupText(o, L) {
   const X = T[L];
   const st = OC.STATUS[o.status];
-  const head = o.status === 'new' ? '🆕' : st.icon; // для кафе новый заказ — «🆕», покупателю — «⏳ ждёт подтверждения»
-  const out = [`${head} <b>${X.order} №${o.id}</b> · ${o.type === 'delivery' ? '🛵 ' + X.delivery : '🛍️ ' + X.pickup}`, ''];
+  const delivery = o.type === 'delivery';
+  const live = !OC.FINAL.includes(o.status);
+  const out = [
+    o.status === 'new' ? `🆕 <b>${X.newOrder} №${o.id}</b>` : `${st.icon} <b>№${o.id} · ${st[L].toUpperCase()}</b>`,
+    `${delivery ? '🛵 ' + X.delivery : '🛍️ ' + X.pickup}${o.eta_at && live ? ` · ⏱ ${X.etaTo(hhmm(o.eta_at))}` : ''}`,
+    ''
+  ];
   o.items.forEach((it) => {
     const size = it['size_' + L] ? ` <i>(${h(it['size_' + L])})</i>` : '';
-    out.push(`<b>${it.qty}×</b> ${h(it.uz)}${size} — ${fmt(it.sum)}`);
-    if (it.note) out.push(`      💬 <i>${h(it.note)}</i>`);
+    out.push(`• <b>${it.qty} ×</b> ${h(it.uz)}${size} — ${fmt(it.sum)}`);
+    if (it.note) out.push(`     ↳ <i>${h(it.note)}</i>`);
   });
-  out.push('', `💰 <b>${X.total}: ${X.sum(o.total)}</b>`);
-  out.push(`${o.payment === 'card' ? '💳 ' + X.card : '💵 ' + X.cash}${o.change_from ? ' · ' + X.change(o.change_from) : ''}`);
+  out.push('', `💰 <b>${X.sum(o.total)}</b> · ${o.payment === 'card' ? '💳 ' + X.card : '💵 ' + X.cash}${o.change_from ? `, ${X.change(o.change_from)}` : ''}`, '');
   if (o.name || o.phone) out.push(`👤 ${h(o.name || '')}${o.phone ? ' · +' + o.phone : ''}`);
-  if (o.type === 'delivery' && o.address) {
+  if (delivery && o.address) {
     out.push(`📍 ${h(o.address.street)}${o.address.apt ? ', ' + h(o.address.apt) : ''}`);
-    if (o.address.landmark) out.push(`🧭 ${X.landmark}: ${h(o.address.landmark)}`);
+    if (o.address.landmark) out.push(`     ${X.landmark.toLowerCase()}: ${h(o.address.landmark)}`);
     const links = mapLinks(o, L);
     if (links) out.push(links);
   }
-  if (o.comment) out.push(`📝 ${X.comment}: <i>${h(o.comment)}</i>`);
+  if (o.comment) out.push(`💬 «${h(o.comment)}»`);
   out.push(`🕐 ${hhmm(o.created_at)} · ${o.source === 'tg' ? X.fromTg : X.fromSite}`);
   const steps = o.history.filter((x) => x.s !== 'new');
   if (steps.length) {
-    out.push('');
+    out.push('', '———');
     steps.forEach((x) => {
       const s = OC.STATUS[x.s];
-      let line = `${s.icon} ${s[L]} ${hhmm(x.t)}${x.by && x.by !== 'client' ? X.byWhom(h(x.by)) : ''}`;
-      if (x.s === 'accepted' && o.eta_at) line += ` · ⏱ ${X.etaTo(hhmm(o.eta_at))}`;
-      if (x.s === 'canceled' && o.cancel_reason && OC.CANCEL_REASONS[o.cancel_reason]) line += ` — ${OC.CANCEL_REASONS[o.cancel_reason][L]}`;
+      let line = `${s.icon} ${hhmm(x.t)} ${s[L].toLowerCase()}${x.by && x.by !== 'client' ? X.byWhom(h(x.by)) : ''}`;
+      if (x.s === 'canceled' && o.cancel_reason && OC.CANCEL_REASONS[o.cancel_reason]) line += ` — ${OC.CANCEL_REASONS[o.cancel_reason][L].toLowerCase()}`;
       out.push(line);
     });
   }
@@ -294,11 +301,14 @@ export async function refreshGroup(env, o, mode) {
 
 /* ---------- карточка заказа у покупателя ---------- */
 
+// Карточка у покупателя: что сейчас с заказом, когда ждать, шаги, коротко состав и сумма
 export function customerText(o) {
   const L = o.lang === 'ru' ? 'ru' : 'uz';
   const X = C[L];
   const st = OC.STATUS[o.status];
-  const out = [X.title(o.id), '', `${st.icon} <b>${st[L]}</b>`, h(OC.UI[L].st[o.status] || '')];
+  const out = [X.title(o.id), '', `${st.icon} <b>${st[L]}</b>`];
+  const desc = OC.UI[L].st[o.status];
+  if (desc) out.push(h(desc));
   if (o.cancel_reason && OC.CANCEL_REASONS[o.cancel_reason]) out.push(`<i>${h(OC.CANCEL_REASONS[o.cancel_reason][L])}</i>`);
   if (o.eta_at && !OC.FINAL.includes(o.status)) out.push(X.eta(hhmm(o.eta_at)));
   if (o.status !== 'canceled') {
@@ -307,11 +317,10 @@ export function customerText(o) {
     o.history.forEach((x) => { at[x.s] = x.t; });
     const cur = flow.indexOf(o.status);
     out.push('');
-    flow.forEach((s, i) => out.push(`${i < cur ? '✅' : i === cur ? '➡️' : '◻️'} ${OC.STATUS[s][L]}${at[s] && i <= cur ? ' · ' + hhmm(at[s]) : ''}`));
+    flow.forEach((s, i) => out.push(`${i < cur ? '✅' : i === cur ? '🟢' : '⚪️'} ${OC.STATUS[s][L]}${at[s] && i <= cur ? ' · ' + hhmm(at[s]) : ''}`));
   }
-  out.push('');
-  o.items.forEach((it) => out.push(`${it.qty}× ${h(it[L] || it.uz)}${it['size_' + L] ? ' (' + h(it['size_' + L]) + ')' : ''} — ${fmt(it.sum)}`));
-  out.push(`${X.total}: <b>${T[L].sum(o.total)}</b> · ${o.payment === 'card' ? X.card : X.cash}`);
+  const items = o.items.map((it) => `${h(it[L] || it.uz)}${it.qty > 1 ? ' × ' + it.qty : ''}`).join(', ');
+  out.push('', `🧾 ${items}`, `💰 <b>${T[L].sum(o.total)}</b> · ${o.payment === 'card' ? X.card : X.cash}`);
   return out.join('\n');
 }
 
@@ -335,8 +344,9 @@ export async function notifyCustomer(env, o, { silent } = {}) {
   else if (r.error_code === 403 || r.error_code === 400) await env.DB.prepare('UPDATE orders SET tg_chat = NULL, tg_msg = NULL WHERE id = ?').bind(o.id).run();
 }
 
-export async function linkCustomer(env, o, chatId) {
+export async function linkCustomer(env, o, chatId, from) {
   await env.DB.prepare('UPDATE orders SET tg_chat = ?, tg_msg = NULL WHERE id = ?').bind(chatId, o.id).run();
+  await attachChat(env, o.phone_hash, chatId, from);
   if (o.tg_chat && o.tg_msg && String(o.tg_chat) !== String(chatId)) await tg(env, 'deleteMessage', { chat_id: o.tg_chat, message_id: o.tg_msg });
   await notifyCustomer(env, { ...o, tg_chat: chatId, tg_msg: null });
 }

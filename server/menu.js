@@ -11,15 +11,14 @@ const TTL = 60 * 1000;
 
 let memo = null;
 
-async function fetchCSV(gid) {
-  const url = `https://docs.google.com/spreadsheets/d/${CFG.sheetId}/export?format=csv&gid=${gid}`;
-  const res = await fetch(url, { signal: AbortSignal.timeout(8000), redirect: 'follow' });
+async function fetchCSV(key) {
+  const res = await fetch(R.sheetCsvUrl(CFG, key), { signal: AbortSignal.timeout(8000), redirect: 'follow' });
   if (!res.ok) throw new Error('sheet HTTP ' + res.status);
   return R.parseCSV(await res.text());
 }
 
 async function fromSheet() {
-  const [menu, categories, settings] = await Promise.all([CFG.gids.menu, CFG.gids.categories, CFG.gids.settings].map(fetchCSV));
+  const [menu, categories, settings] = await Promise.all(['menu', 'categories', 'settings'].map(fetchCSV));
   const tables = { menu, categories, settings };
   if (!R.validTables(tables)) throw new Error('unexpected sheet structure');
   return tables;

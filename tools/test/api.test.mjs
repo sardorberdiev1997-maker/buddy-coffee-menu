@@ -52,9 +52,8 @@ before(async () => {
   });
   await new Promise((resolve) => server.stdout.once('data', resolve));
   // Та же модель меню, что увидит сервер (живая таблица)
-  const { sheetId, gids } = globalThis.MENU_CONFIG;
-  const get = async (gid) => R.parseCSV(await (await fetch(`https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=${gid}`)).text());
-  model = R.buildModel({ menu: await get(gids.menu), categories: await get(gids.categories), settings: await get(gids.settings) });
+  const get = async (key) => R.parseCSV(await (await fetch(R.sheetCsvUrl(globalThis.MENU_CONFIG, key))).text());
+  model = R.buildModel({ menu: await get('menu'), categories: await get('categories'), settings: await get('settings') });
 });
 
 after(() => {
@@ -122,7 +121,7 @@ test('заказ с доставкой: создаётся, приходит в 
   const calls = await tgCalls(t0);
   const msg = calls.find((c) => c.method === 'sendMessage' && c.body.chat_id == GROUP);
   assert.ok(msg, 'сообщение в группу');
-  assert.match(msg.body.text, new RegExp(`Заказ №${order.number}`));
+  assert.match(msg.body.text, new RegExp(`НОВЫЙ ЗАКАЗ №${order.number}`));
   assert.match(msg.body.text, /без лука/);
   assert.match(msg.body.text, /\+998901234567/);
   assert.match(msg.body.text, /сдача с 200 000/);
@@ -138,7 +137,7 @@ test('покупатель подписывается на статус в Teleg
   const t0 = Date.now();
   await privateMsg('/start o_' + order.token);
   const calls = await tgCalls(t0);
-  const card = calls.find((c) => c.method === 'sendMessage' && c.body.chat_id === CLIENT.id && /Заказ №/.test(c.body.text));
+  const card = calls.find((c) => c.method === 'sendMessage' && c.body.chat_id === CLIENT.id && /заказ №/i.test(c.body.text));
   assert.ok(card);
   assert.equal(card.body.reply_markup.inline_keyboard.length, 2, 'кнопки «Открыть заказ» и «Отменить»');
   assert.equal((await api('/api/orders/' + order.token)).body.tg, true);
@@ -249,4 +248,73 @@ test('/api/tick без повторов; чужой вебхук отклоня�
   const r = await fetch(BASE + '/api/tg', { method: 'POST', headers: { 'content-type': 'application/json', 'x-telegram-bot-api-secret-token': 'wrong' }, body: '{}' });
   assert.equal(r.status, 403);
   assert.equal((await api('/api/orders/AAAAAAAAAAAAAAAAAAAAAA')).status, 404);
+});
+
+test('база клиентов: заказы и подписчики бота попадают в базу, /clients присылает Excel', async () => {
+  // Новый подписчик бота без заказов
+  await privateMsg('/start', { id: 333, first_name: 'Bobur', username: 'bobur_uz', is_bot: false, language_code: 'uz' });
+  const t0 = Date.now();
+  await groupMsg('/clients');
+  const doc = (await tgCalls(t0)).find((c) => c.method === 'sendDocument');
+  assert.ok(doc, 'файл отправлен');
+  assert.match(doc.body.document.name, /\.xlsx$/);
+  assert.match(doc.body.caption, /База клиентов/);
+  // Файл — настоящий xlsx: zip с листами
+  const bytes = Buffer.from(doc.body.document.bytes, 'base64');
+  assert.equal(bytes.subarray(0, 2).toString(), 'PK');
+  const text = bytes.toString('utf8');
+  assert.match(text, /\+998 90 123 45 67/);
+  assert.match(text, /@bobur_uz/);
+  assert.match(text, /Итоги/);
+});
+
+test('рассылка: ответ /broadcast → аудитория → подтверждение → copyMessage подписчикам; отписка', async () => {
+  // без ответа на сообщение — подсказка
+  let t0 = Date.now();
+  await groupMsg('/broadcast');
+  assert.ok((await tgCalls(t0)).some((c) => /Как сделать рассылку/.test(c.body.text || '')));
+  // ответом на сообщение группы
+  t0 = Date.now();
+  await update({ message: { message_id: 777, date: 0, chat: { id: GROUP, type: 'supergroup' }, from: STAFF, text: '/broadcast', reply_to_message: { message_id: 555, date: 0, chat: { id: GROUP, type: 'supergroup' }, from: STAFF, text: 'Скидка 20% на бургеры!' } } });
+  const ctl = (await tgCalls(t0)).find((c) => c.method === 'sendMessage' && /Рассылка №/.test(c.body.text));
+  assert.ok(ctl, 'сообщение выбора аудитории');
+  const id = ctl.body.text.match(/Рассылка №(\d+)/)[1];
+  assert.match(ctl.body.text, /Всем подписчикам: <b>2<\/b>/);
+  // пробное себе
+  t0 = Date.now();
+  await press(`bc:${id}:test`, 1);
+  assert.ok((await tgCalls(t0)).some((c) => c.method === 'copyMessage' && c.body.chat_id === STAFF.id));
+  // выбор «всем» → подтверждение → отправка
+  await press(`bc:${id}:aud:all`, 1);
+  t0 = Date.now();
+  await press(`bc:${id}:go:all`, 1);
+  const copies = (await tgCalls(t0)).filter((c) => c.method === 'copyMessage');
+  assert.equal(copies.length, 2, 'двум подписчикам');
+  assert.ok(copies.every((c) => c.body.from_chat_id == GROUP && c.body.message_id === 555));
+  assert.ok(copies[0].body.reply_markup.inline_keyboard.flat().some((b) => b.callback_data === 'unsub'));
+  assert.ok((await tgCalls(t0)).some((c) => c.method === 'editMessageText' && /завершена/.test(c.body.text)));
+  // повторное «отправить» не дублирует
+  t0 = Date.now();
+  await press(`bc:${id}:go:all`, 1);
+  assert.equal((await tgCalls(t0)).filter((c) => c.method === 'copyMessage').length, 0);
+  // отписка клиента
+  await press('unsub', 1, CLIENT.id, CLIENT);
+  t0 = Date.now();
+  await update({ message: { message_id: 778, date: 0, chat: { id: GROUP, type: 'supergroup' }, from: STAFF, text: '/broadcast', reply_to_message: { message_id: 556, date: 0, chat: { id: GROUP, type: 'supergroup' }, from: STAFF, text: 'Ещё акция' } } });
+  assert.match((await tgCalls(t0)).find((c) => /Рассылка №/.test(c.body.text || '')).body.text, /Всем подписчикам: <b>1<\/b>/);
+});
+
+test('вкладка «Клиенты»: /sheet выдаёт формулу, CSV только с верным ключом', async () => {
+  const t0 = Date.now();
+  await groupMsg('/sheet');
+  const msg = (await tgCalls(t0)).find((c) => /IMPORTDATA/.test(c.body.text || ''));
+  assert.ok(msg);
+  const url = msg.body.text.match(/https:\/\/buddy\.cheking\.uz\/(api\/sheet\/customers\.csv\?key=[\w-]+)/)[1];
+  const ok = await fetch(`${BASE}/${url}`);
+  assert.equal(ok.status, 200);
+  const csv = await ok.text();
+  assert.match(csv.split('\r\n')[0], /^№,Имя,Телефон/);
+  assert.match(csv, /\+998 90 123 45 67/);
+  assert.equal((await fetch(`${BASE}/api/sheet/customers.csv?key=wrong`)).status, 403);
+  assert.equal((await fetch(`${BASE}/api/sheet/customers.csv`)).status, 403);
 });

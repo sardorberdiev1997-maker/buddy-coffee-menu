@@ -15,7 +15,7 @@
       delivery: 'Yetkazib berish', payment: 'To‘lov', wifi: 'Wi‑Fi', password: 'parol',
       copy: 'Nusxa olish', copied: 'Nusxalandi', call: 'Qo‘ng‘iroq qilish', map: 'Xaritada',
       pricesNote: 'Barcha narxlar so‘mda.',
-      privacy: 'Sayt cookie-fayllardan foydalanmaydi, tashriflar statistikasi anonim. Ism, telefon va manzil faqat buyurtmani yetkazish uchun ishlatiladi va 90 kundan keyin o‘chiriladi.',
+      privacy: 'Sayt cookie-fayllardan foydalanmaydi, tashriflar statistikasi anonim. Ism va telefon kafening mijozlar bazasida buyurtmalar, aksiya va chegirmalar uchun saqlanadi; manzil va izoh 90 kundan keyin o‘chiriladi. Xabarnomadan botda chiqish mumkin, ma’lumotlarni o‘chirish — kafega qo‘ng‘iroq orqali.',
       error: 'Menyuni yuklab bo‘lmadi. Internetni tekshirib, qayta urinib ko‘ring.',
       retry: 'Qayta urinish', other: 'Boshqa',
       pairs: 'Bu bilan olishadi', rateTitle: 'Sizga yoqdimi?', rateText: 'Baho va fikr qoldiring — bu bizga juda yordam beradi.',
@@ -38,7 +38,7 @@
       delivery: 'Доставка', payment: 'Оплата', wifi: 'Wi‑Fi', password: 'пароль',
       copy: 'Копировать', copied: 'Скопировано', call: 'Позвонить', map: 'На карте',
       pricesNote: 'Все цены указаны в сумах.',
-      privacy: 'Сайт не использует cookie, статистика посещений анонимная. Имя, телефон и адрес нужны только для доставки заказа и удаляются через 90 дней.',
+      privacy: 'Сайт не использует cookie, статистика посещений анонимная. Имя и телефон хранятся в базе клиентов кафе — для заказов, акций и скидок; адрес и комментарий удаляются через 90 дней. От рассылки можно отписаться в боте, удалить данные — по звонку в кафе.',
       error: 'Не удалось загрузить меню. Проверьте интернет и попробуйте ещё раз.',
       retry: 'Повторить', other: 'Другое',
       pairs: 'С этим берут', rateTitle: 'Понравилось?', rateText: 'Оставьте оценку и отзыв — это очень нам помогает.',
@@ -213,6 +213,13 @@
   function validTables(tables) {
     const has = (rows, keys) => Array.isArray(rows) && rows.length > 1 && keys.every((k) => rows[0].map(normHeader).includes(k));
     return !!tables && has(tables.menu, ['cat', 'uz', 'price']) && has(tables.categories, ['id']) && has(tables.settings, ['key']);
+  }
+
+  // CSV вкладки: опубликованная ссылка (работает при закрытом доступе к таблице) или экспорт «всем по ссылке»
+  function sheetCsvUrl(cfg, key) {
+    const gid = encodeURIComponent((cfg.gids || {})[key] || '');
+    if (cfg.pub) return `https://docs.google.com/spreadsheets/d/e/${encodeURIComponent(cfg.pub)}/pub?gid=${gid}&single=true&output=csv`;
+    return `https://docs.google.com/spreadsheets/d/${encodeURIComponent(cfg.sheetId)}/export?format=csv&gid=${gid}`;
   }
 
   /* ---------- images ---------- */
@@ -575,5 +582,5 @@
     });
   }
 
-  root.MenuRender = { SITE, UI, ALLERGENS, crashGuard, parseCSV, buildModel, validTables, imgSrc, isLocalImg, esc, fmt, norm, safeUrl, createView };
+  root.MenuRender = { SITE, UI, ALLERGENS, crashGuard, sheetCsvUrl, parseCSV, buildModel, validTables, imgSrc, isLocalImg, esc, fmt, norm, safeUrl, createView };
 })(typeof window !== 'undefined' ? window : globalThis);

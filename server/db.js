@@ -43,7 +43,39 @@ const SCHEMA = [
   'CREATE INDEX IF NOT EXISTS orders_ip ON orders(ip_hash, created_at)',
   'CREATE INDEX IF NOT EXISTS orders_phone ON orders(phone_hash, created_at)',
   'CREATE INDEX IF NOT EXISTS orders_tg ON orders(tg_chat, created_at)',
-  'CREATE TABLE IF NOT EXISTS kv (k TEXT PRIMARY KEY, v TEXT)'
+  'CREATE TABLE IF NOT EXISTS kv (k TEXT PRIMARY KEY, v TEXT)',
+  // База клиентов: по телефону (заказывал) и/или по Telegram (пользуется ботом)
+  `CREATE TABLE IF NOT EXISTS customers (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    phone TEXT,
+    phone_hash TEXT UNIQUE,
+    name TEXT,
+    tg_chat INTEGER UNIQUE,
+    tg_username TEXT,
+    lang TEXT,
+    source TEXT,
+    created_at INTEGER NOT NULL,
+    last_seen INTEGER NOT NULL,
+    subscribed INTEGER NOT NULL DEFAULT 1,
+    blocked INTEGER NOT NULL DEFAULT 0
+  )`,
+  // Рассылки: сообщение из группы кафе, кому, сколько отправлено
+  `CREATE TABLE IF NOT EXISTS broadcasts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    src_chat INTEGER NOT NULL,
+    src_msg INTEGER NOT NULL,
+    ctl_msg INTEGER,
+    audience TEXT NOT NULL DEFAULT 'all',
+    status TEXT NOT NULL DEFAULT 'draft',
+    created_by TEXT,
+    created_at INTEGER NOT NULL,
+    started_at INTEGER,
+    done_at INTEGER,
+    total INTEGER NOT NULL DEFAULT 0,
+    sent INTEGER NOT NULL DEFAULT 0,
+    failed INTEGER NOT NULL DEFAULT 0,
+    cursor INTEGER NOT NULL DEFAULT 0
+  )`
 ];
 
 let ready = null;

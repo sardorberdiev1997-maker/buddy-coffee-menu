@@ -16,6 +16,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CONFIG = open(os.path.join(ROOT, 'assets', 'config.js'), encoding='utf-8').read()
 SHEET_ID = re.search(r"sheetId:\s*'([^']*)'", CONFIG).group(1)
 GIDS = dict(re.findall(r"(menu|categories|settings):\s*'(\d+)'", CONFIG))
+PUB = (re.search(r"pub:\s*'([^']*)'", CONFIG) or [None, ''])[1]
 TABS = {'Меню': 'menu', 'Категории': 'categories', 'Настройки': 'settings'}
 REQUIRED = {'Меню': {'категория', 'название_uz', 'цена'}, 'Категории': {'id'}, 'Настройки': {'ключ'}}
 OUT = os.path.join(ROOT, 'data', 'menu.json')
@@ -24,8 +25,12 @@ OUT = os.path.join(ROOT, 'data', 'menu.json')
 def fetch(tab):
     base = f'https://docs.google.com/spreadsheets/d/{SHEET_ID}'
     gid = GIDS.get(TABS[tab])
-    url = (f'{base}/export?format=csv&gid={gid}' if gid
-           else f'{base}/gviz/tq?tqx=out:csv&headers=1&sheet=' + urllib.parse.quote(tab))
+    # Опубликованная ссылка работает и при закрытом доступе к таблице
+    if PUB and gid:
+        url = f'https://docs.google.com/spreadsheets/d/e/{PUB}/pub?gid={gid}&single=true&output=csv'
+    else:
+        url = (f'{base}/export?format=csv&gid={gid}' if gid
+               else f'{base}/gviz/tq?tqx=out:csv&headers=1&sheet=' + urllib.parse.quote(tab))
     with urllib.request.urlopen(url, timeout=30) as r:
         rows = list(csv.reader(io.StringIO(r.read().decode('utf-8-sig'))))
     rows = [row for row in rows if any(c.strip() for c in row)]

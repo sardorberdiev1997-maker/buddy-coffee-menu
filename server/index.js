@@ -5,12 +5,13 @@
 //   DB         — привязка базы D1 (Settings → Bindings → D1 database)
 //   BOT_TOKEN  — секрет: токен бота от @BotFather (Settings → Variables and Secrets, тип Secret)
 import { handleUpdate, setupBot } from './bot.js';
+import { customersCsv } from './customers.js';
 import { ensureSchema, getKV, setKV } from './db.js';
 import { loadModel } from './menu.js';
 import { accepting, cancelBySelf, createOrder, publicOrder } from './orders.js';
-import { checkWebhook, tg, webhookSecret } from './tg.js';
+import { checkWebhook, groupLang, tg, webhookSecret } from './tg.js';
 import { tick } from './tick.js';
-import { fail, json } from './util.js';
+import { fail, json, safeEqual } from './util.js';
 
 const ORIGINS = ['https://buddy.cheking.uz', 'https://buddy-coffee-menu.pages.dev'];
 
@@ -79,6 +80,15 @@ async function route(request, env, ctx) {
       last_tick: new Date(parseInt((await getKV(env, 'tick_at')) || '0', 10)).toISOString(),
       last_exception: await getKV(env, 'last_exception'),
       last_skip: await getKV(env, 'last_skip')
+    });
+  }
+
+  // Вкладка «Клиенты» в Google Таблице: =IMPORTDATA("…/api/sheet/customers.csv?key=…"). Ключ выдаёт /sheet в группе кафе
+  if (path === '/api/sheet/customers.csv' && method === 'GET') {
+    const key = await getKV(env, 'sheet_key');
+    if (!key || !safeEqual(url.searchParams.get('key'), key)) return fail('forbidden', 403);
+    return new Response(await customersCsv(env, await groupLang(env)), {
+      headers: { 'content-type': 'text/csv; charset=utf-8', 'cache-control': 'no-store', 'x-robots-tag': 'noindex' }
     });
   }
 
