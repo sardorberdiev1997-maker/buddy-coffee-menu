@@ -76,6 +76,7 @@ async function route(request, env, ctx) {
       last_error_at: w.last_error_date ? new Date(w.last_error_date * 1000).toISOString() : null,
       group: (await getKV(env, 'group')) ? 'bound' : 'not bound',
       setup_open: Date.now() - parseInt((await getKV(env, 'setup_at')) || '0', 10) < 30 * 60 * 1000,
+      last_tick: new Date(parseInt((await getKV(env, 'tick_at')) || '0', 10)).toISOString(),
       last_exception: await getKV(env, 'last_exception'),
       last_skip: await getKV(env, 'last_skip')
     });
