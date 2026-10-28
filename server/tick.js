@@ -2,7 +2,7 @@
 // повторная отправка в группу, сводки в 00:00 по Ташкенту, удаление личных данных через 90 дней.
 // Всё идемпотентно — лишний вызов ничего не дублирует.
 import { claimKV, getKV, parseOrder, setKV } from './db.js';
-import { sendGroup } from './orders.js';
+import { sendGroup, UNDO_WINDOW } from './orders.js';
 import { reportText } from './stats.js';
 import { T } from './texts.js';
 import { groupChat, groupLang, tg } from './tg.js';
@@ -42,7 +42,15 @@ export async function tick(env, now = Date.now()) {
       done.reminded++;
     }
 
-    // 3. Сводки за закончившиеся день, неделю, месяц, квартал и год
+    // 3. Через 15 минут после «Доставлен / Выдан / Отменён» кнопка «Шаг назад» больше не нужна — убираем
+    const closed = (await env.DB.prepare("SELECT id, group_chat, group_msg FROM orders WHERE status IN ('delivered', 'picked', 'canceled') AND group_msg IS NOT NULL AND done_at >= ? AND done_at < ? LIMIT 20")
+      .bind(now - UNDO_WINDOW - 3 * MIN, now - UNDO_WINDOW).all()).results;
+    for (const o of closed) {
+      await tg(env, 'editMessageReplyMarkup', { chat_id: o.group_chat, message_id: o.group_msg, reply_markup: { inline_keyboard: [] } });
+      done.closed = (done.closed || 0) + 1;
+    }
+
+    // 4. Сводки за закончившиеся день, неделю, месяц, квартал и год
     for (const kind of ['day', 'week', 'month', 'quarter', 'year']) {
       const end = periodStart(kind, now);
       if (now - end > REPORT_GRACE) continue;
@@ -55,7 +63,7 @@ export async function tick(env, now = Date.now()) {
     }
   }
 
-  // 4. Личные данные (имя, телефон, адрес, точка, комментарий) храним 90 дней, статистика остаётся
+  // 5. Личные данные (имя, телефон, адрес, точка, комментарий) храним 90 дней, статистика остаётся
   if (await claimKV(env, `cleanup:${dayKey(now)}`, now)) {
     const r = await env.DB.prepare(`UPDATE orders SET name = NULL, phone = NULL, address = NULL, lat = NULL, lng = NULL, acc = NULL,
         comment = NULL, ip_hash = NULL, tg_user = NULL, tg_chat = NULL, tg_msg = NULL, anonymized = 1 WHERE anonymized = 0 AND created_at < ?`)

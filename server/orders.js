@@ -8,7 +8,7 @@ import { fail, fmt, h, hhmm, json, MIN, randomToken, sha256, SITE } from './util
 const RATE_WINDOW = 10 * MIN;
 const RATE_PHONE = 4; // заказов за 10 минут с одного номера
 const RATE_IP = 10; // с одного IP — больше: у мобильных операторов один адрес на многих абонентов
-const UNDO_WINDOW = 15 * MIN;
+export const UNDO_WINDOW = 15 * MIN;
 // Со звуком — этапы, которые покупатель ждёт; «Готовится» и «Передан курьеру» — тихо
 const LOUD = ['new', 'accepted', 'onway', 'ready', 'delivered', 'picked', 'canceled'];
 
