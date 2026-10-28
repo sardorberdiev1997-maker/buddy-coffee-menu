@@ -8,7 +8,7 @@ import { handleUpdate, setupBot } from './bot.js';
 import { ensureSchema, getKV, setKV } from './db.js';
 import { loadModel } from './menu.js';
 import { accepting, cancelBySelf, createOrder, publicOrder } from './orders.js';
-import { checkWebhook, webhookSecret } from './tg.js';
+import { checkWebhook, tg, webhookSecret } from './tg.js';
 import { tick } from './tick.js';
 import { fail, json } from './util.js';
 
@@ -60,6 +60,19 @@ async function route(request, env, ctx) {
     if (Date.now() - last < 30 * 1000) return fail('rate', 429);
     await setKV(env, 'setup_at', Date.now());
     return json(await setupBot(env, await webhookSecret(env)));
+  }
+
+  // Диагностика бота: доставляет ли Telegram сообщения (без секретов)
+  if (path === '/api/tg/info' && method === 'GET') {
+    if (!env.BOT_TOKEN) return fail('no_token', 503);
+    const r = await tg(env, 'getWebhookInfo', {});
+    const w = r.ok ? r.result : {};
+    return json({
+      ok: !!r.ok, url: w.url, pending: w.pending_update_count, last_error: w.last_error_message || null,
+      last_error_at: w.last_error_date ? new Date(w.last_error_date * 1000).toISOString() : null,
+      group: (await getKV(env, 'group')) ? 'bound' : 'not bound',
+      setup_open: Date.now() - parseInt((await getKV(env, 'setup_at')) || '0', 10) < 30 * 60 * 1000
+    });
   }
 
   if (path === '/api/tick') return json(await tick(env));
