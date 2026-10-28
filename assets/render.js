@@ -14,7 +14,7 @@
       contacts: 'Biz bilan bog‘lanish', address: 'Manzil', hours: 'Ish vaqti', phone: 'Telefon',
       delivery: 'Yetkazib berish', payment: 'To‘lov', wifi: 'Wi‑Fi', password: 'parol',
       copy: 'Nusxa olish', copied: 'Nusxalandi', call: 'Qo‘ng‘iroq qilish', map: 'Xaritada',
-      pricesNote: 'Barcha narxlar so‘mda.', privacy: 'Sayt cookie-fayllardan foydalanmaydi va shaxsiy ma’lumot yig‘maydi.',
+      pricesNote: 'Barcha narxlar so‘mda.', privacy: 'Sayt cookie-fayllardan foydalanmaydi va shaxsiy ma’lumot yig‘maydi — faqat anonim tashriflar statistikasi.',
       error: 'Menyuni yuklab bo‘lmadi. Internetni tekshirib, qayta urinib ko‘ring.',
       retry: 'Qayta urinish', other: 'Boshqa',
       stale: (d) => `Internet yo‘q — narxlar ${d} holatiga ko‘rsatilmoqda.`
@@ -27,7 +27,7 @@
       contacts: 'Контакты', address: 'Адрес', hours: 'Часы работы', phone: 'Телефон',
       delivery: 'Доставка', payment: 'Оплата', wifi: 'Wi‑Fi', password: 'пароль',
       copy: 'Копировать', copied: 'Скопировано', call: 'Позвонить', map: 'На карте',
-      pricesNote: 'Все цены указаны в сумах.', privacy: 'Сайт не использует cookie и не собирает персональные данные.',
+      pricesNote: 'Все цены указаны в сумах.', privacy: 'Сайт не использует cookie и не собирает персональные данные — только анонимную статистику посещений.',
       error: 'Не удалось загрузить меню. Проверьте интернет и попробуйте ещё раз.',
       retry: 'Повторить', other: 'Другое',
       stale: (d) => `Нет связи — показаны цены на ${d}.`
