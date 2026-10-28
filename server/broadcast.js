@@ -5,6 +5,7 @@
 // В каждом сообщении — кнопки «Открыть меню» и «Отписаться от акций».
 import { audienceCounts, audienceSQL } from './customers.js';
 import { C, T } from './texts.js';
+import { claimKV, setKV } from './db.js';
 import { groupLang, tg } from './tg.js';
 import { SITE } from './util.js';
 
@@ -108,21 +109,33 @@ export async function sendBatch(env, id) {
   if (!b || b.status !== 'sending') return false;
   const L = await groupLang(env);
   const X = T[L];
+  // Порцию берёт один исполнитель: «Отправить» в группе и минутный tick могут сработать одновременно
+  const claim = `bc_batch:${id}:${b.cursor}`;
+  if (!(await claimKV(env, claim, Date.now()))) return true;
   const people = (await env.DB.prepare(`SELECT id, tg_chat, lang FROM customers WHERE ${audienceSQL(b.audience)} AND id > ? ORDER BY id LIMIT ${BATCH}`)
     .bind(b.cursor).all()).results;
-  let sent = 0, failed = 0, cursor = b.cursor, paused = false;
+  let sent = 0, failed = 0, cursor = b.cursor, paused = false, broken = '';
   for (const p of people) {
     const r = await tg(env, 'copyMessage', { chat_id: p.tg_chat, from_chat_id: b.src_chat, message_id: b.src_msg, reply_markup: promoKeyboard(p.lang) });
     if (r.ok) sent++;
     else if (r.error_code === 429) { paused = true; break; } // Telegram просит подождать — продолжим со следующей минутой
-    else {
+    else if (r.error_code === 403 || /chat not found|user is deactivated|PEER_ID_INVALID/i.test(r.description || '')) {
+      // Человек заблокировал бота или удалил аккаунт — больше не пишем (снимется, когда он снова напишет боту)
       failed++;
-      // Человек заблокировал бота или удалил аккаунт — больше не пишем
-      if (r.error_code === 403 || r.error_code === 400) await env.DB.prepare('UPDATE customers SET blocked = 1 WHERE id = ?').bind(p.id).run();
-    }
+      await env.DB.prepare('UPDATE customers SET blocked = 1 WHERE id = ?').bind(p.id).run();
+    } else if (r.error_code === 400) { broken = r.description || 'HTTP 400'; break; } // например, исходное сообщение удалили
+    else failed++;
     cursor = p.id;
   }
+  if (broken) {
+    await env.DB.prepare("UPDATE broadcasts SET sent = sent + ?, failed = failed + ?, cursor = ?, status = 'stopped', done_at = ? WHERE id = ?")
+      .bind(sent, failed, cursor, Date.now(), id).run();
+    const fresh = await env.DB.prepare('SELECT * FROM broadcasts WHERE id = ?').bind(id).first();
+    await edit(env, fresh, X.bcBroken(id, fresh.sent, fresh.total));
+    return false;
+  }
   const finished = !paused && people.length < BATCH;
+  if (!finished && cursor === b.cursor) await setKV(env, claim, null); // никого не отправили (Telegram просил подождать) — порцию возьмём снова
   await env.DB.prepare(`UPDATE broadcasts SET sent = sent + ?, failed = failed + ?, cursor = ?${finished ? ", status = 'done', done_at = ?" : ''} WHERE id = ?`)
     .bind(...(finished ? [sent, failed, cursor, Date.now(), id] : [sent, failed, cursor, id])).run();
   const fresh = await env.DB.prepare('SELECT * FROM broadcasts WHERE id = ?').bind(id).first();

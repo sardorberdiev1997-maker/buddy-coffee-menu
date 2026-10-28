@@ -39,6 +39,16 @@
     self: { uz: 'Mijoz bekor qildi', ru: 'Клиент отменил сам' }
   };
 
+  // Что не понравилось — при оценке 1–3 (курьер — только у доставки)
+  const RATE_REASONS = {
+    slow: { uz: '⏱ Uzoq kutdim', ru: '⏱ Долго ждал' },
+    cold: { uz: '🥶 Sovuq keldi', ru: '🥶 Остыло' },
+    taste: { uz: '😕 Mazasi yoqmadi', ru: '😕 Невкусно' },
+    wrong: { uz: '📦 Buyurtmada xato', ru: '📦 Ошибка в заказе' },
+    courier: { uz: '🛵 Kuryer', ru: '🛵 Курьер' },
+    other: { uz: '💬 Boshqa', ru: '💬 Другое' }
+  };
+
   // Тексты корзины, оформления и страницы заказа (меню — в render.js)
   const UI = {
     uz: {
@@ -91,6 +101,11 @@
       tgFollow: 'Holatni Telegram’da olish', tgOn: 'Holat Telegram’ga keladi',
       callCafe: 'Kafega qo‘ng‘iroq', cancel: 'Buyurtmani bekor qilish', cancelAsk: 'Buyurtmani bekor qilasizmi?',
       cancelLate: 'Buyurtma allaqachon qabul qilingan. Bekor qilish uchun kafega qo‘ng‘iroq qiling.',
+      rateAsk: 'Buyurtma qanday bo‘ldi?', rateAskText: 'Baholang — bir soniya oladi.', starN: (n) => `5 dan ${n}`,
+      rateHigh: 'Baho uchun rahmat!', rateHighText: 'Qiyin bo‘lmasa, xaritada fikr qoldiring — kichik kafe uchun bu juda muhim.',
+      rateLow: 'Afsusdamiz 😔', rateLowText: 'Nima yoqmadi? Administratorga yetkazamiz.', ratePh: 'Bir-ikki so‘z — ixtiyoriy',
+      rateSend: 'Yuborish', rateDone: 'Rahmat! Albatta tuzatamiz.', rateMaps: 'Xaritada ham sharh qoldirishingiz mumkin:',
+      rateChange: 'Bahoni o‘zgartirish', rateFail: 'Yuborib bo‘lmadi. Internetni tekshirib, qayta urinib ko‘ring.',
       reason: 'Sabab', repeatOrder: 'Yana buyurtma berish', yourOrder: 'Buyurtmangiz', details: 'Tafsilotlar',
       notFound: 'Buyurtma topilmadi', notFoundText: 'Havola noto‘g‘ri yoki buyurtma ma’lumotlari o‘chirilgan.',
       loadFail: 'Holatni yuklab bo‘lmadi. Internet paydo bo‘lishi bilan sahifa o‘zi yangilanadi.',
@@ -156,6 +171,11 @@
       tgFollow: 'Получать статус в Telegram', tgOn: 'Статус приходит в Telegram',
       callCafe: 'Позвонить в кафе', cancel: 'Отменить заказ', cancelAsk: 'Отменить заказ?',
       cancelLate: 'Заказ уже принят. Чтобы отменить его, позвоните в кафе.',
+      rateAsk: 'Как вам заказ?', rateAskText: 'Оцените — это займёт секунду.', starN: (n) => `${n} из 5`,
+      rateHigh: 'Спасибо за оценку!', rateHighText: 'Если не сложно, поделитесь мнением на картах — для небольшого кафе это очень важно.',
+      rateLow: 'Нам жаль 😔', rateLowText: 'Что пошло не так? Передадим администратору.', ratePh: 'Пара слов — необязательно',
+      rateSend: 'Отправить', rateDone: 'Спасибо! Разберёмся и исправим.', rateMaps: 'Отзыв на картах можно оставить тоже:',
+      rateChange: 'Изменить оценку', rateFail: 'Не удалось отправить. Проверьте интернет и попробуйте ещё раз.',
       reason: 'Причина', repeatOrder: 'Повторить заказ', yourOrder: 'Ваш заказ', details: 'Детали',
       notFound: 'Заказ не найден', notFoundText: 'Ссылка неверная или данные заказа уже удалены.',
       loadFail: 'Не удалось загрузить статус. Как только появится интернет, страница обновится сама.',
@@ -273,5 +293,5 @@
     return { lines: out, total, missing };
   }
 
-  root.OrderCore = { UI, ZONE, FLOW, FINAL, DONE, STATUS, CANCEL_REASONS, inZone, normPhone, fmtPhone, config, price };
+  root.OrderCore = { UI, ZONE, FLOW, FINAL, DONE, STATUS, CANCEL_REASONS, RATE_REASONS, inZone, normPhone, fmtPhone, config, price };
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -360,10 +360,10 @@
       <h3 class="cart__h">${esc(t('howGet'))}</h3>
       ${typeHTML()}
       <p class="cart__hint">${esc(cart.type === 'delivery' ? t('zoneNote', eta) : t('pickupNote', eta))}</p>
-      ${m.ok ? '' : `<div class="minbar" role="status"><span class="minbar__track"><span style="width:${Math.round((p.total / m.min) * 100)}%"></span></span><p>${esc(t('minLeft', R.fmt(m.left), R.fmt(m.min)))}</p></div>`}
+      ${m.ok ? '' : `<div class="minbar" role="status"><span class="minbar__track"><span data-w="${Math.min(100, Math.round((p.total / m.min) * 100))}"></span></span><p>${esc(t('minLeft', R.fmt(m.left), R.fmt(m.min)))}</p></div>`}
       ${totalsHTML(p)}
       <div class="cart__foot"><button type="button" class="cta" data-checkout${m.ok ? '' : ' disabled'}>${esc(t('checkout'))}<b>${esc(money(p.total))}</b></button></div>`;
-    $$('.minbar__track span', els.body).forEach((s) => s.setAttribute('aria-hidden', 'true'));
+    $$('.minbar__track span', els.body).forEach((s) => { s.setAttribute('aria-hidden', 'true'); s.style.width = s.dataset.w + '%'; });
   }
 
   function totalsHTML(p) {
@@ -569,7 +569,7 @@
 
     let res, data;
     try {
-      res = await fetch('/api/orders', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+      res = await fetch('/api/orders', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body), signal: AbortSignal.timeout(20000) });
       data = await res.json().catch(() => ({}));
     } catch (e) {
       res = null;
@@ -797,7 +797,7 @@
 
   async function checkState() {
     try {
-      const res = await fetch('/api/state', { cache: 'no-store' });
+      const res = await fetch('/api/state', { cache: 'no-store', signal: AbortSignal.timeout(6000) });
       const d = res.ok ? await res.json() : null;
       accepting = !!(d && d.accepting);
     } catch (e) {
@@ -864,6 +864,15 @@
     if (!w || initTelegram.done) return;
     initTelegram.done = true;
     document.documentElement.classList.add('is-tg');
+    // Внешние ссылки (карты, отзывы, Instagram) — через Telegram: t.me открывает сам Telegram, остальные — браузер
+    document.addEventListener('click', (e) => {
+      const a = e.target.closest('a[target="_blank"]');
+      if (!a || typeof w.openLink !== 'function') return;
+      e.preventDefault();
+      const url = new URL(a.getAttribute('href'), location.href).href;
+      if (/^https:\/\/t\.me\//.test(url) && typeof w.openTelegramLink === 'function') w.openTelegramLink(url);
+      else w.openLink(url);
+    });
     const v = (x) => typeof w.isVersionAtLeast === 'function' && w.isVersionAtLeast(x);
     try {
       w.ready();
@@ -916,6 +925,8 @@
   /* ---------- start ---------- */
 
   function init() {
+    if (history.state && history.state.cart) history.replaceState(null, '');
+    window.addEventListener('pageshow', (e) => { if (e.persisted && history.state && history.state.cart && !els.dlg.open) history.replaceState(null, ''); });
     cart = load(CART_KEY) || cart;
     if (!Array.isArray(cart.lines)) cart.lines = [];
     if (cart.type !== 'pickup') cart.type = 'delivery';

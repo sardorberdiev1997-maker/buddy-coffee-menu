@@ -43,7 +43,20 @@ const SCHEMA = [
   'CREATE INDEX IF NOT EXISTS orders_ip ON orders(ip_hash, created_at)',
   'CREATE INDEX IF NOT EXISTS orders_phone ON orders(phone_hash, created_at)',
   'CREATE INDEX IF NOT EXISTS orders_tg ON orders(tg_chat, created_at)',
+  'CREATE INDEX IF NOT EXISTS orders_done ON orders(done_at)',
   'CREATE TABLE IF NOT EXISTS kv (k TEXT PRIMARY KEY, v TEXT)',
+  // Оценки заказов (server/ratings.js). asked_at — когда бот попросил оценку (0 — решили не спрашивать)
+  `CREATE TABLE IF NOT EXISTS ratings (
+    order_id INTEGER PRIMARY KEY,
+    stars INTEGER,
+    reason TEXT,
+    comment TEXT,
+    source TEXT,
+    asked_at INTEGER,
+    rated_at INTEGER,
+    alert_msg INTEGER
+  )`,
+  'CREATE INDEX IF NOT EXISTS ratings_rated ON ratings(rated_at)',
   // База клиентов: по телефону (заказывал) и/или по Telegram (пользуется ботом)
   `CREATE TABLE IF NOT EXISTS customers (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

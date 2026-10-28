@@ -60,7 +60,7 @@
     const flow = OC.FLOW[o.type] || OC.FLOW.delivery;
     const at = {};
     (o.history || []).forEach((h) => { at[h.s] = h.t; });
-    const cur = flow.indexOf(o.status);
+    const cur = flow.indexOf(o.status) + (OC.DONE.includes(o.status) ? 1 : 0); // завершённый заказ — все шаги пройдены
     return `<ol class="steps">${flow.map((s, i) => {
       const state = i < cur ? 'done' : i === cur ? 'now' : 'next';
       return `<li class="steps__item is-${state}"${state === 'now' ? ' aria-current="step"' : ''}>
@@ -69,6 +69,59 @@
         ${at[s] ? `<span class="steps__time">${time(at[s])}</span>` : ''}
       </li>`;
     }).join('')}</ol>`;
+  }
+
+  // Оценка и отзыв: сначала своя оценка 1–5, затем всем, при любой оценке, — ссылки на карты
+  // (просить отзыв только у довольных запрещают правила Google). Низкую оценку с причиной видит администратор
+  const SITE_NAMES = { google: ['Google', 'Google'], yandex: ['Yandex', 'Яндекс'], '2gis': ['2GIS', '2ГИС'] };
+  const rate = { editing: false, reason: null, busy: false, error: false };
+
+  function rateHTML(o) {
+    const r = !rate.editing && o.rating;
+    const low = r && r.stars <= 3;
+    const asking = low && !r.reason && !r.comment;
+    const sites = (o.review || []).filter((k) => SITE_NAMES[k]).map((k) =>
+      `<a class="rate__btn" href="/r/${k}" target="_blank" rel="noopener">${icon('i-star')}${esc(SITE_NAMES[k][lang === 'ru' ? 1 : 0])}</a>`).join('');
+    const title = !r ? t('rateAsk') : !low ? t('rateHigh') : asking ? t('rateLow') : t('rateDone');
+    const text = !r ? t('rateAskText') : !low ? (sites ? t('rateHighText') : '') : asking ? t('rateLowText') : '';
+    const reasons = Object.keys(OC.RATE_REASONS).filter((k) => o.type === 'delivery' || k !== 'courier');
+    return `<section class="rate track__rate" aria-labelledby="rate-title">
+        <h2 class="rate__title" id="rate-title" tabindex="-1">${esc(title)}</h2>
+        ${text ? `<p class="rate__text">${esc(text)}</p>` : ''}
+        <div class="rate__pick" role="group" aria-label="${esc(t('rateAsk'))}">${[1, 2, 3, 4, 5].map((n) =>
+          `<button type="button" class="rate__star${r && r.stars >= n ? ' is-on' : ''}" data-stars="${n}" aria-label="${esc(t('starN', n))}" aria-pressed="${!!r && r.stars === n}"${r || rate.busy ? ' disabled' : ''}>${icon('i-star-o')}</button>`).join('')}</div>
+        ${asking ? `<form class="rate__why" data-why>
+          <div class="rate__reasons">${reasons.map((k) =>
+            `<button type="button" class="rate__chip" data-reason="${k}" aria-pressed="${rate.reason === k}">${esc(OC.RATE_REASONS[k][lang])}</button>`).join('')}</div>
+          <textarea class="rate__note" name="comment" maxlength="500" rows="2" placeholder="${esc(t('ratePh'))}" aria-label="${esc(t('ratePh'))}"></textarea>
+          <button type="submit" class="rate__send"${rate.busy ? ' disabled' : ''}>${esc(t('rateSend'))}</button>
+        </form>` : ''}
+        ${rate.error ? `<p class="rate__err" role="alert">${esc(t('rateFail'))}</p>` : ''}
+        ${r && sites ? `${low ? `<p class="rate__text">${esc(t('rateMaps'))}</p>` : ''}<div class="rate__actions">${sites}</div>` : ''}
+        ${r ? `<button type="button" class="link rate__change" data-rate-change>${esc(t('rateChange'))}</button>` : ''}
+      </section>`;
+  }
+
+  async function sendRate(payload) {
+    if (rate.busy) return;
+    rate.busy = true;
+    rate.error = false;
+    try {
+      const res = await fetch(`/api/orders/${encodeURIComponent(token)}/rate`, {
+        method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload)
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok || !j.rating) throw new Error('HTTP ' + res.status);
+      order.rating = j.rating;
+      rate.editing = false;
+      rate.reason = null;
+    } catch (e) {
+      rate.error = true;
+    }
+    rate.busy = false;
+    render();
+    const title = $('#rate-title');
+    if (title) title.focus({ preventScroll: true });
   }
 
   function render() {
@@ -94,6 +147,7 @@
         ${!canceled ? stepsHTML(o) : ''}
         ${!final ? `<p class="status__auto"><span class="pulse" aria-hidden="true"></span>${esc(t('autoUpdate'))}</p>` : ''}
       </section>
+      ${OC.DONE.includes(o.status) && (o.can_rate || o.rating) ? rateHTML(o) : ''}
 
       <div class="track__actions">
         ${!final && bot ? (o.tg
@@ -228,6 +282,21 @@
       if (e.target.closest('[data-cancel]')) cancel();
       else if (e.target.closest('[data-repeat]')) repeat();
       else if (e.target.closest('[data-retry]')) { failCount = 0; load(); }
+      const star = e.target.closest('[data-stars]');
+      if (star) sendRate({ stars: Number(star.dataset.stars) });
+      const chip = e.target.closest('[data-reason]');
+      if (chip) {
+        rate.reason = rate.reason === chip.dataset.reason ? null : chip.dataset.reason;
+        main.querySelectorAll('[data-reason]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.reason === rate.reason)));
+      }
+      if (e.target.closest('[data-rate-change]')) { rate.editing = true; render(); }
+    });
+    main.addEventListener('submit', (e) => {
+      const form = e.target.closest('[data-why]');
+      if (!form) return;
+      e.preventDefault();
+      const comment = form.elements.comment.value.trim();
+      sendRate({ stars: order.rating.stars, reason: rate.reason || (comment ? 'other' : null), comment });
     });
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible' && (!order || !OC.FINAL.includes(order.status))) load();
@@ -250,6 +319,15 @@
         if (w.MainButton) w.MainButton.hide();
         if (typeof w.setHeaderColor === 'function') w.setHeaderColor('#E31B23');
       } catch (e) { /* старые версии Telegram */ }
+      // Внешние ссылки — через Telegram: t.me открывает сам Telegram, остальные — браузер (Mini App не закрывается)
+      document.addEventListener('click', (e) => {
+        const a = e.target.closest('a[target="_blank"]');
+        if (!a || typeof w.openLink !== 'function') return;
+        e.preventDefault();
+        const url = new URL(a.getAttribute('href'), location.href).href;
+        if (/^https:\/\/t\.me\//.test(url) && typeof w.openTelegramLink === 'function') w.openTelegramLink(url);
+        else w.openLink(url);
+      });
       // Тема — как в Telegram
       const theme = () => { document.documentElement.dataset.theme = w.colorScheme === 'dark' ? 'dark' : 'light'; };
       theme();

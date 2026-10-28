@@ -9,7 +9,8 @@ import { customersCsv } from './customers.js';
 import { ensureSchema, getKV, setKV } from './db.js';
 import { loadModel, R, setting } from './menu.js';
 import { accepting, cancelBySelf, createOrder, publicOrder } from './orders.js';
-import { checkWebhook, groupLang, tg, webhookSecret } from './tg.js';
+import { checkWebhook, groupChat, groupLang, tg, webhookSecret } from './tg.js';
+import { rateBySite } from './ratings.js';
 import { tick } from './tick.js';
 import { fail, json, safeEqual, SITE } from './util.js';
 
@@ -27,7 +28,7 @@ async function route(request, env, ctx) {
   const method = request.method;
 
   if (path === '/api/state' && method === 'GET') {
-    return json({ accepting: await accepting(env, await loadModel(env)) }, 200, { 'cache-control': 'no-store' });
+    return json({ accepting: await accepting(env, await loadModel(env, { ctx })) }, 200, { 'cache-control': 'no-store' });
   }
 
   if (path === '/api/orders' && method === 'POST') {
@@ -39,6 +40,15 @@ async function route(request, env, ctx) {
   if (m && method === 'GET') {
     const o = await publicOrder(env, m[1]);
     return o ? json(o) : fail('not_found', 404);
+  }
+
+  m = path.match(/^\/api\/orders\/([\w-]{10,40})\/rate$/);
+  if (m && method === 'POST') {
+    if (!sameOrigin(request)) return fail('forbidden', 403);
+    const body = await request.json().catch(() => null);
+    if (!body || typeof body !== 'object') return fail('bad_request', 400);
+    const r = await rateBySite(env, m[1], body);
+    return r.rating ? json({ rating: r.rating }) : fail(r.error, r.status);
   }
 
   m = path.match(/^\/api\/orders\/([\w-]{10,40})\/cancel$/);
@@ -64,6 +74,10 @@ async function route(request, env, ctx) {
     const last = parseInt((await getKV(env, 'setup_at')) || '0', 10);
     if (Date.now() - last < 30 * 1000) return fail('rate', 429);
     await setKV(env, 'setup_at', Date.now());
+    // Окно для /bind — только при первой установке. Потом группу меняют через /unbind в старой группе
+    // (это может только её администратор), иначе чужой мог бы открыть окно и перехватить заказы
+    if (await groupChat(env)) await setKV(env, 'ever_bound', 1);
+    else if (!(await getKV(env, 'ever_bound'))) await setKV(env, 'bind_open_at', Date.now());
     return json(await setupBot(env, await webhookSecret(env)));
   }
 
@@ -101,10 +115,10 @@ async function route(request, env, ctx) {
 // поэтому постер печатается один раз, а адрес страницы отзывов можно поменять в таблице
 const SHORT = { google: 'отзыв_google', yandex: 'отзыв_yandex', '2gis': 'отзыв_2gis' };
 
-async function shortLink(env, key) {
+async function shortLink(env, ctx, key) {
   let target = '';
   try {
-    target = R.safeUrl(setting(await loadModel(env), SHORT[key], 'ru'));
+    target = R.safeUrl(setting(await loadModel(env, { ctx }), SHORT[key], 'ru'));
   } catch (e) {
     console.warn('short link', key, e && e.message);
   }
@@ -115,7 +129,7 @@ export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     const short = url.pathname.match(/^\/r\/([\w-]+)\/?$/);
-    if (short && Object.hasOwn(SHORT, short[1])) return shortLink(env, short[1]);
+    if (short && Object.hasOwn(SHORT, short[1])) return shortLink(env, ctx, short[1]);
     if (!url.pathname.startsWith('/api/')) return env.ASSETS.fetch(request);
     if (!env.DB) return fail('server', 503, { detail: 'D1 binding DB is missing' });
     try {

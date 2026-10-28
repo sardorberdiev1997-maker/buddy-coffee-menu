@@ -69,7 +69,7 @@ export async function verifyInitData(env, initData) {
   const secret = await hmac('WebAppData', env.BOT_TOKEN, true);
   if (!safeEqual(await hmac(secret, check), hash)) return null;
   const auth = parseInt(p.get('auth_date'), 10) * 1000;
-  if (!auth || Date.now() - auth > DAY) return null;
+  if (!auth || Date.now() - auth > 7 * DAY) return null; // Mini App может долго висеть свёрнутым
   try {
     return JSON.parse(p.get('user') || 'null');
   } catch (e) {

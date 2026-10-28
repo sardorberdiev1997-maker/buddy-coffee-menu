@@ -5,6 +5,7 @@ import { OC, cafeInfo, loadModel } from './menu.js';
 import { C, T } from './texts.js';
 import { groupChat, groupLang, tg, verifyInitData } from './tg.js';
 import { fail, fmt, h, hhmm, json, MIN, randomToken, sha256, SITE } from './util.js';
+import { canRate, publicRating, ratingOf, reviewSites } from './ratings.js';
 
 const RATE_WINDOW = 10 * MIN;
 const RATE_PHONE = 4; // заказов за 10 минут с одного номера
@@ -98,14 +99,23 @@ export async function createOrder(request, env, ctx) {
   }));
   const token = randomToken(16);
   const change = b.payment === 'cash' && type === 'delivery' ? Math.max(0, Math.min(10000000, parseInt(b.change, 10) || 0)) : 0;
-  const r = await env.DB.prepare(`INSERT INTO orders (token, cid, created_at, updated_at, status, type, lang, source, name, phone, phone_hash,
+  const insert = env.DB.prepare(`INSERT INTO orders (token, cid, created_at, updated_at, status, type, lang, source, name, phone, phone_hash,
       address, lat, lng, acc, comment, payment, change_from, items, total, history, tg_user, tg_chat, ip_hash)
       VALUES (?, ?, ?, ?, 'new', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
     .bind(token, cid || null, now, now, type, lang, user ? 'tg' : 'site', name, phone, phoneHash,
       address ? JSON.stringify(address) : null, geo ? geo.lat : null, geo ? geo.lng : null, geo ? geo.acc : null,
       clip(b.comment, 300) || null, b.payment === 'card' ? 'card' : 'cash', change > p.total ? change : null,
       JSON.stringify(items), p.total, JSON.stringify([{ s: 'new', t: now }]), user ? user.id : null, user ? user.id : null, ipHash)
-    .run();
+;
+  let r;
+  try {
+    r = await insert.run();
+  } catch (e) {
+    // Та же форма пришла дважды одновременно — второй запрос получает уже созданный заказ
+    const dup = cid && parseOrder(await env.DB.prepare('SELECT * FROM orders WHERE cid = ?').bind(cid).first());
+    if (dup) return json({ token: dup.token, number: dup.id, total: dup.total });
+    throw e;
+  }
   const id = r.meta.last_row_id;
 
   // Сообщения отправляем после ответа покупателю; если Telegram недоступен — /api/tick повторит
@@ -145,7 +155,10 @@ export async function publicOrder(env, token) {
     phone: o.phone ? OC.fmtPhone(o.phone) : '',
     cancel_reason: o.cancel_reason,
     tg: !!o.tg_chat,
-    cafe: cafeInfo(model, o.lang)
+    cafe: cafeInfo(model, o.lang),
+    can_rate: canRate(o),
+    rating: publicRating(await ratingOf(env, o.id)),
+    review: OC.DONE.includes(o.status) ? reviewSites(model) : []
   };
 }
 
@@ -225,7 +238,7 @@ export function groupText(o, L) {
   o.items.forEach((it) => {
     const size = it['size_' + L] ? ` <i>(${h(it['size_' + L])})</i>` : '';
     out.push(`• <b>${it.qty} ×</b> ${h(it.uz)}${size} — ${fmt(it.sum)}`);
-    if (it.note) out.push(`     ↳ <i>${h(it.note)}</i>`);
+    if (it.note) out.push(`     ↳ <i>${h(o.items.length > 12 ? it.note.slice(0, 40) + (it.note.length > 40 ? '…' : '') : it.note)}</i>`);
   });
   out.push('', `💰 <b>${X.sum(o.total)}</b> · ${o.payment === 'card' ? '💳 ' + X.card : '💵 ' + X.cash}${o.change_from ? `, ${X.change(o.change_from)}` : ''}`, '');
   if (o.name || o.phone) out.push(`👤 ${h(o.name || '')}${o.phone ? ' · +' + o.phone : ''}`);
@@ -315,7 +328,7 @@ export function customerText(o) {
     const flow = (OC.FLOW[o.type] || OC.FLOW.delivery).slice(1);
     const at = {};
     o.history.forEach((x) => { at[x.s] = x.t; });
-    const cur = flow.indexOf(o.status);
+    const cur = flow.indexOf(o.status) + (OC.DONE.includes(o.status) ? 1 : 0); // завершённый заказ — все шаги пройдены
     out.push('');
     flow.forEach((s, i) => out.push(`${i < cur ? '✅' : i === cur ? '🟢' : '⚪️'} ${OC.STATUS[s][L]}${at[s] && i <= cur ? ' · ' + hhmm(at[s]) : ''}`));
   }

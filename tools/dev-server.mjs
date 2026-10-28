@@ -128,6 +128,10 @@ createServer(async (req, res) => {
     if (url.pathname === '/__tg') {
       const since = parseInt(url.searchParams.get('since') || '0', 10);
       out = Response.json(tgLog.filter((x) => x.at >= since));
+    } else if (url.pathname === '/__sql' && req.method === 'POST') {
+      const { sql, args = [] } = JSON.parse(body.toString() || '{}');
+      sqlite.prepare(sql).run(...args);
+      out = Response.json({ ok: true });
     } else if (url.pathname === '/__idle') {
       await Promise.all([...pending]);
       out = Response.json({ ok: true });

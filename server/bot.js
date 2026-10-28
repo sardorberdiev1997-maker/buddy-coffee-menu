@@ -4,6 +4,7 @@ import { customersXlsx, touchBotUser } from './customers.js';
 import { getKV, orderById, orderByToken, parseOrder, setKV } from './db.js';
 import { cafeInfo, loadModel, OC } from './menu.js';
 import { canUndo, linkCustomer, nextStatus, refreshGroup, setStatus, undoStatus } from './orders.js';
+import { onRateButton, takeComment } from './ratings.js';
 import { liveStats, STAT_PERIODS, statsKeyboard } from './stats.js';
 import { C, T } from './texts.js';
 import { groupChat, groupLang, isAdmin, tg, tgUpload } from './tg.js';
@@ -65,11 +66,13 @@ async function onGroup(env, m) {
   if (name === 'bind' || name === 'start') {
     if (here) return reply(X.boundAlready);
     if (bound) return reply(X.boundOther);
-    // Подключить группу можно только в течение 30 минут после /api/tg/setup — чужая группа не перехватит заказы
-    const setupAt = parseInt((await getKV(env, 'setup_at')) || '0', 10);
-    if (Date.now() - setupAt > 30 * 60 * 1000) return reply(X.bindClosed);
+    // Подключить группу можно 30 минут после первой установки (/api/tg/setup) или после /unbind в прежней группе
+    const openAt = parseInt((await getKV(env, 'bind_open_at')) || '0', 10);
+    if (Date.now() - openAt > 30 * 60 * 1000) return reply(X.bindClosed);
     if (!(await admin())) return reply(X.adminOnly);
     await setKV(env, 'group', chat.id);
+    await setKV(env, 'ever_bound', 1);
+    await setKV(env, 'bind_open_at', null);
     return reply(X.bound);
   }
   if (name === 'help') return reply(X.help);
@@ -78,6 +81,7 @@ async function onGroup(env, m) {
   if (name === 'unbind') {
     if (!(await admin())) return reply(X.adminOnly);
     await setKV(env, 'group', null);
+    await setKV(env, 'bind_open_at', Date.now()); // 30 минут, чтобы подключить новую группу
     return reply(X.unbound);
   }
   if (name === 'pause' || name === 'resume') {
@@ -147,6 +151,9 @@ async function onCallback(env, q) {
     await send(env, msg.chat.id, C[L].unsubbed);
     return answer('🔕');
   }
+
+  // Оценка заказа покупателем: звёзды, причина, «Написать», изменить
+  if (['rt', 'rr', 'rw', 'rc'].includes(kind)) return onRateButton(env, q, kind, idStr, arg);
 
   // Покупатель отменяет свой заказ из личного чата
   if (kind === 'k') {
@@ -221,6 +228,7 @@ async function onPrivate(env, m) {
   const menu = { inline_keyboard: [[{ text: X.menuBtn, web_app: { url: `${SITE}?tg=1&lang=${L}` } }]] };
   const cmd = command(m.text);
   await touchBotUser(env, m.from, m.chat.id);
+  if (!cmd && (await takeComment(env, m))) return; // комментарий к низкой оценке
 
   if (cmd && (cmd[0] === 'stop' || cmd[0] === 'subscribe')) {
     await setSubscribed(env, m.chat.id, cmd[0] === 'subscribe');
@@ -242,7 +250,7 @@ async function onPrivate(env, m) {
     return send(env, m.chat.id, X.myOrders, { reply_markup: { inline_keyboard: kb.concat(menu.inline_keyboard) } });
   }
   const model = await loadModel(env);
-  return send(env, m.chat.id, X.help(cafeInfo(model, L).phone), { reply_markup: menu });
+  return send(env, m.chat.id, X.help(h(cafeInfo(model, L).phone)), { reply_markup: menu });
 }
 
 /* ---------- настройка бота: вебхук, команды, кнопка меню ---------- */

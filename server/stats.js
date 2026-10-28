@@ -27,13 +27,16 @@ export async function collect(env, start, end, { bestDay } = {}) {
         WHERE orders.created_at >= ? AND orders.created_at < ? AND orders.${DONE}
         GROUP BY dish ORDER BY qty DESC, dish LIMIT 5`, start, end),
     q(`SELECT ((created_at + ${TZ_OFFSET}) / 3600000) % 24 AS hour, COUNT(*) AS c FROM orders
-        WHERE created_at >= ? AND created_at < ? AND status != 'canceled' GROUP BY hour ORDER BY c DESC, hour LIMIT 1`, start, end)
+        WHERE created_at >= ? AND created_at < ? AND status != 'canceled' GROUP BY hour ORDER BY c DESC, hour LIMIT 1`, start, end),
+    q(`SELECT AVG(r.stars) AS avg, COUNT(*) AS n, SUM(CASE WHEN r.stars <= 3 THEN 1 ELSE 0 END) AS low
+        FROM ratings r JOIN orders o ON o.id = r.order_id WHERE r.stars IS NOT NULL AND o.created_at >= ? AND o.created_at < ?`, start, end)
   ];
   if (bestDay) {
     stmts.push(q(`SELECT (created_at + ${TZ_OFFSET}) / ${DAY} AS d, SUM(total) AS s FROM orders
         WHERE created_at >= ? AND created_at < ? AND ${DONE} GROUP BY d ORDER BY s DESC LIMIT 1`, start, end));
   }
-  const [main, fresh, top, peak, best] = await env.DB.batch(stmts);
+  const [main, fresh, top, peak, rate, best] = await env.DB.batch(stmts);
+  const rt = rate.results[0] || {};
   const m = main.results[0] || {};
   return {
     n: m.n || 0, done: m.done || 0, revenue: m.revenue || 0, canceled: m.canceled || 0, lost: m.lost || 0,
@@ -41,6 +44,7 @@ export async function collect(env, start, end, { bestDay } = {}) {
     fresh: (fresh.results[0] || {}).c || 0,
     top: top.results || [],
     peak: peak.results[0] || null,
+    rating: rt.n ? { avg: rt.avg, n: rt.n, low: rt.low || 0 } : null,
     best: best && best.results[0] ? { day: best.results[0].d * DAY - TZ_OFFSET, sum: best.results[0].s } : null
   };
 }
@@ -72,6 +76,7 @@ export function statsText(L, title, sub, s, cmp) {
   }
   if (s.dtime) out.push(`⏱ ${X.deliveryTime}: ${Math.round(s.dtime / 60000)} ${X.min}`);
   if (s.clients) out.push(`👥 ${X.clients}: ${s.clients}${s.fresh ? ` (${X.newClients(s.fresh)})` : ''}`);
+  if (s.rating) out.push(`⭐ ${X.ratingStat(s.rating.avg.toFixed(1), s.rating.n, s.rating.low)}`);
   if (s.peak && s.peak.c > 1) out.push(`🕖 ${X.peak}: ${String(s.peak.hour).padStart(2, '0')}:00–${String((s.peak.hour + 1) % 24).padStart(2, '0')}:00 (${X.ordersShort(s.peak.c)})`);
   if (s.canceled) out.push(`❌ ${X.canceledN(s.canceled)}: ${X.sum(s.lost)} ${X.lost}`);
   if (s.best) out.push(`📅 ${X.bestDay}: ${X.weekday(local(s.best.day).getUTCDay())} ${ddmm(s.best.day)} — ${X.sum(s.best.sum)}`);

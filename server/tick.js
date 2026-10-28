@@ -3,7 +3,9 @@
 // Всё идемпотентно — лишний вызов ничего не дублирует.
 import { continueBroadcasts } from './broadcast.js';
 import { claimKV, getKV, parseOrder, setKV } from './db.js';
+import { loadModel } from './menu.js';
 import { sendGroup, UNDO_WINDOW } from './orders.js';
+import { askRatings } from './ratings.js';
 import { reportText } from './stats.js';
 import { T } from './texts.js';
 import { groupChat, groupLang, tg } from './tg.js';
@@ -14,9 +16,9 @@ const REPORT_GRACE = 6 * HOUR; // сводку за период отправл�
 const KEEP_PERSONAL = 90 * DAY;
 
 export async function tick(env, now = Date.now()) {
-  const last = parseInt((await getKV(env, 'tick_at')) || '0', 10);
-  if (now - last < 30 * 1000) return { skipped: true };
-  await setKV(env, 'tick_at', now);
+  // Захват атомарный: параллельные вызовы /api/tick не повторят напоминания и рассылки
+  const won = await env.DB.prepare("UPDATE kv SET v = ? WHERE k = 'tick_at' AND CAST(v AS INTEGER) <= ?").bind(String(now), now - 30 * 1000).run();
+  if (!(won.meta && won.meta.changes) && !(await claimKV(env, 'tick_at', now))) return { skipped: true };
 
   const done = { resent: 0, reminded: 0, reports: [], cleaned: 0 };
   const group = await groupChat(env);
@@ -67,12 +69,18 @@ export async function tick(env, now = Date.now()) {
     }
   }
 
+  // Просьба оценить заказ — через 45 минут после доставки
+  if (env.BOT_TOKEN) done.rateAsked = await askRatings(env, now);
+
   // 6. В заказах личные данные (адрес, точка, комментарий, имя, телефон) храним 90 дней; имя и телефон остаются в базе клиентов
   if (await claimKV(env, `cleanup:${dayKey(now)}`, now)) {
     const r = await env.DB.prepare(`UPDATE orders SET name = NULL, phone = NULL, address = NULL, lat = NULL, lng = NULL, acc = NULL,
         comment = NULL, ip_hash = NULL, tg_user = NULL, tg_chat = NULL, tg_msg = NULL, anonymized = 1 WHERE anonymized = 0 AND created_at < ?`)
       .bind(now - KEEP_PERSONAL).run();
     done.cleaned = (r.meta && r.meta.changes) || 0;
+    await env.DB.prepare('UPDATE ratings SET comment = NULL WHERE comment IS NOT NULL AND rated_at < ?').bind(now - KEEP_PERSONAL).run();
   }
+  // Держим кэш меню в D1 свежим — покупателям не приходится ждать Google Таблицу
+  await loadModel(env, { fresh: true }).catch((e) => console.warn('tick: menu', e.message));
   return done;
 }

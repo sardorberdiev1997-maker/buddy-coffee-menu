@@ -1304,6 +1304,32 @@ html.has-cart .info { padding-bottom: calc(100px + env(safe-area-inset-bottom));
 .steps__time { font-size: 13px; font-variant-numeric: tabular-nums; }
 
 .track__actions { display: grid; gap: 8px; margin-top: 14px; }
+.track__rate { margin: 14px 0 0; }
+.track__rate .rate__title:focus { outline: none; }
+.rate__pick { display: flex; justify-content: center; gap: 2px; margin: 4px 0 6px; }
+.rate__star { display: grid; place-items: center; width: 48px; height: 48px; padding: 0; border: 0; border-radius: 12px; background: none; color: var(--on-yellow); cursor: pointer; transition: transform .15s ease; }
+.rate__star svg { width: 36px; height: 36px; fill: transparent; stroke: currentColor; stroke-width: 1.6; stroke-linejoin: round; transition: fill .15s ease; }
+.rate__star.is-on { color: var(--red-deep); }
+.rate__star.is-on svg { fill: currentColor; }
+.rate__star:disabled { cursor: default; }
+.rate__star:not(:disabled):active { transform: scale(.88); }
+.rate__star:focus-visible { outline: 3px solid var(--on-yellow); outline-offset: -3px; }
+@media (hover: hover) {
+  .rate__pick:hover .rate__star:not(:disabled) { color: var(--red-deep); }
+  .rate__pick:hover .rate__star:not(:disabled) svg { fill: currentColor; }
+  .rate__pick .rate__star:not(:disabled):hover ~ .rate__star { color: var(--on-yellow); }
+  .rate__pick .rate__star:not(:disabled):hover ~ .rate__star svg { fill: transparent; }
+}
+.rate__why { margin-top: 6px; }
+.rate__reasons { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
+.rate__chip { min-height: 44px; padding: 0 14px; border: 2px solid var(--on-yellow); border-radius: 999px; background: none; color: var(--on-yellow); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+.rate__chip[aria-pressed="true"] { background: var(--on-yellow); color: var(--yellow); }
+.rate__note { display: block; width: 100%; margin-top: 10px; padding: 10px 12px; border: 2px solid transparent; border-radius: 14px; background: rgb(255 255 255 / .75); color: #1B1612; font: inherit; font-size: 16px; resize: vertical; }
+.rate__note:focus { outline: none; border-color: var(--on-yellow); }
+.rate__send { width: 100%; min-height: 48px; margin-top: 10px; border: 0; border-radius: 14px; background: var(--on-yellow); color: var(--yellow); font: inherit; font-weight: 800; cursor: pointer; }
+.rate__send:disabled { opacity: .6; }
+.rate__err { margin: 10px 0 0; font-weight: 700; }
+.rate__change { margin-top: 12px; color: var(--on-yellow); }
 .track__actions .cta { width: 100%; }
 .cta--tg { background: #1A73A8; } /* белый текст 5.2:1 (фирменный #229ED9 даёт только 3:1) */
 .track__tg { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 0; min-height: 44px; font-weight: 600; color: var(--tg-text); }

@@ -169,6 +169,66 @@ test('статусы доставки: принят → готовится → �
   assert.equal((await api('/api/orders/' + order.token)).body.status, 'delivered');
 });
 
+test('оценка: просьба через 45 минут, низкая — администратору, ссылки на карты при любой оценке', async () => {
+  const sql = (q, ...args) => fetch(BASE + '/__sql', { method: 'POST', body: JSON.stringify({ sql: q, args }) });
+  const tick = async () => { await sql("DELETE FROM kv WHERE k = 'tick_at'"); await api('/api/tick', { method: 'POST' }); };
+  const sites = ['google', 'yandex', '2gis'].filter((k) => { const v = model.settings['отзыв_' + k]; return v && R.safeUrl(v.ru || v.uz); });
+  // Доставлен 10 минут назад — рано; 50 минут — просим одним тихим сообщением
+  await sql('UPDATE orders SET done_at = ? WHERE id = ?', Date.now() - 10 * 60000, order.number);
+  let t0 = Date.now();
+  await tick();
+  assert.ok(!(await tgCalls(t0)).some((c) => /Оцените/.test(c.body.text || '')), 'рано');
+  await sql('UPDATE orders SET done_at = ? WHERE id = ?', Date.now() - 50 * 60000, order.number);
+  t0 = Date.now();
+  await tick();
+  const ask = (await tgCalls(t0)).find((c) => c.method === 'sendMessage' && c.body.chat_id === CLIENT.id && /Оцените/.test(c.body.text));
+  assert.ok(ask, 'просьба об оценке');
+  assert.equal(ask.body.disable_notification, true);
+  assert.equal(ask.body.reply_markup.inline_keyboard[0].length, 5);
+  t0 = Date.now();
+  await tick();
+  assert.ok(!(await tgCalls(t0)).some((c) => /Оцените/.test(c.body.text || '')), 'второй раз не просим');
+
+  // 2 звезды: администратору — оповещение; покупателю — причины, «Написать» и ссылки на карты
+  t0 = Date.now();
+  await press(`rt:${order.number}:2`, 77, CLIENT.id, CLIENT);
+  let calls = await tgCalls(t0);
+  assert.ok(calls.some((c) => c.method === 'sendMessage' && c.body.chat_id == GROUP && /Низкая оценка/.test(c.body.text)), 'группа: низкая оценка');
+  const btns = calls.find((c) => c.method === 'editMessageText' && c.body.chat_id === CLIENT.id).body.reply_markup.inline_keyboard.flat();
+  assert.ok(btns.some((b) => b.callback_data === `rr:${order.number}:cold`));
+  assert.equal(btns.filter((b) => /\/r\/(google|yandex|2gis)$/.test(b.url || '')).length, sites.length, 'карты — при любой оценке');
+  // Чужой не может оценить чужой заказ
+  t0 = Date.now();
+  await press(`rt:${order.number}:1`, 77, 999, { id: 999, first_name: 'X', is_bot: false });
+  assert.ok(!(await tgCalls(t0)).some((c) => c.method === 'editMessageText'));
+
+  // Причина и комментарий дописываются в то же сообщение группы
+  t0 = Date.now();
+  await press(`rr:${order.number}:cold`, 77, CLIENT.id, CLIENT);
+  await press(`rw:${order.number}`, 77, CLIENT.id, CLIENT);
+  await privateMsg('Курьер опоздал на <b>20</b> минут');
+  calls = await tgCalls(t0);
+  const edits = calls.filter((c) => c.method === 'editMessageText' && c.body.chat_id == GROUP);
+  assert.ok(edits.some((c) => /Остыло/.test(c.body.text)), 'причина');
+  assert.ok(edits.some((c) => /опоздал на &lt;b&gt;20/.test(c.body.text)), 'комментарий, HTML экранирован');
+
+  // С сайта: оценку можно поднять — в группе «изменил оценку»; страница заказа отдаёт оценку и площадки
+  t0 = Date.now();
+  assert.equal((await api(`/api/orders/${order.token}/rate`, { method: 'POST', body: JSON.stringify({ stars: 5 }) })).status, 200);
+  assert.ok((await tgCalls(t0)).some((c) => c.method === 'editMessageText' && c.body.chat_id == GROUP && /изменил оценку/.test(c.body.text)));
+  const pub = (await api('/api/orders/' + order.token)).body;
+  assert.equal(pub.rating.stars, 5);
+  assert.equal(pub.can_rate, true);
+  assert.deepEqual(pub.review, sites);
+  assert.equal((await api(`/api/orders/${order.token}/rate`, { method: 'POST', body: JSON.stringify({ stars: 9 }) })).status, 400);
+  assert.equal((await api(`/api/orders/${order.token}/rate`, { method: 'POST', headers: { origin: 'https://evil.example' }, body: JSON.stringify({ stars: 1 }) })).status, 403);
+
+  // Неделя прошла — оценить уже нельзя
+  await sql('UPDATE orders SET done_at = ? WHERE id = ?', Date.now() - 8 * 24 * 3600000, order.number);
+  assert.equal((await api(`/api/orders/${order.token}/rate`, { method: 'POST', body: JSON.stringify({ stars: 4 }) })).status, 409);
+  await sql('UPDATE orders SET done_at = ? WHERE id = ?', Date.now() - 50 * 60000, order.number);
+});
+
 test('самовывоз без минимальной суммы; отмена кафе с причиной', async () => {
   const cheap = model.items.find((x) => x.key === 'ichimlik-americano');
   const r = await api('/api/orders', { method: 'POST', body: JSON.stringify(orderBody({ type: 'pickup', address: null, geo: null, items: [{ key: cheap.key, size: 0, qty: 1, price: cheap.prices[0] }], total: cheap.prices[0] })) });

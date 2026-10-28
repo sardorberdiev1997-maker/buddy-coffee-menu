@@ -14,7 +14,7 @@ export async function touchBotUser(env, from, chatId) {
   if (!from || from.is_bot) return;
   const now = Date.now();
   const lang = /^ru/i.test(from.language_code || '') ? 'ru' : 'uz';
-  const r = await env.DB.prepare('UPDATE customers SET tg_username = ?, last_seen = ?, name = COALESCE(name, ?) WHERE tg_chat = ?')
+  const r = await env.DB.prepare('UPDATE customers SET tg_username = ?, last_seen = ?, name = COALESCE(name, ?), blocked = 0 WHERE tg_chat = ?')
     .bind(from.username || null, now, fullName(from), chatId).run();
   if (!(r.meta && r.meta.changes)) {
     await env.DB.prepare(`INSERT OR IGNORE INTO customers (tg_chat, tg_username, name, lang, source, created_at, last_seen)
