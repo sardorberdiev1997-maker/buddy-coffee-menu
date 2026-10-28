@@ -23,7 +23,7 @@ export async function handleUpdate(env, u) {
   if (m.chat.type === 'group' || m.chat.type === 'supergroup') return onGroup(env, m);
 }
 
-// «/stats@buddy_coffee_uz_bot today» → ['stats', 'today']; команды другим ботам пропускаем
+// «/stats@Buddy_coffee_bot today» → ['stats', 'today']; команды другим ботам пропускаем
 function command(text) {
   const m = String(text || '').match(/^\/([a-z_]+)(?:@(\w+))?(?:\s+([\s\S]*))?$/i);
   if (!m) return null;
