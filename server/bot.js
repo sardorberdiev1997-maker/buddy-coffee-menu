@@ -129,7 +129,11 @@ async function onCallback(env, q) {
   }
 
   // Всё остальное — только в подключённой группе
-  if (String(await groupChat(env)) !== String(msg.chat.id)) return answer();
+  const bound = await groupChat(env);
+  if (String(bound) !== String(msg.chat.id)) {
+    await setKV(env, 'last_skip', `${new Date().toISOString()} callback ${kind} from ${msg.chat.type} …${String(msg.chat.id).slice(-4)}, bound …${String(bound).slice(-4)}`);
+    return answer();
+  }
   const L = await groupLang(env);
   const X = T[L];
   const by = q.from ? [q.from.first_name, q.from.last_name].filter(Boolean).join(' ').slice(0, 40) : '';

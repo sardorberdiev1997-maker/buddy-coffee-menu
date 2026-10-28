@@ -49,7 +49,11 @@ async function route(request, env, ctx) {
   if (path === '/api/tg' && method === 'POST') {
     if (!(await checkWebhook(request, env))) return fail('forbidden', 403);
     const update = await request.json().catch(() => null);
-    if (update) ctx.waitUntil(handleUpdate(env, update).catch((e) => console.error('update', e)));
+    // Ошибку обработки запоминаем — её видно на /api/tg/info (Telegram получает 200 и не повторяет)
+    if (update) ctx.waitUntil(handleUpdate(env, update).catch((e) => {
+      console.error('update', e);
+      return setKV(env, 'last_exception', `${new Date().toISOString()} ${(e && e.stack) || e}`.slice(0, 600));
+    }));
     return json({ ok: true });
   }
 
@@ -71,7 +75,9 @@ async function route(request, env, ctx) {
       ok: !!r.ok, url: w.url, pending: w.pending_update_count, last_error: w.last_error_message || null,
       last_error_at: w.last_error_date ? new Date(w.last_error_date * 1000).toISOString() : null,
       group: (await getKV(env, 'group')) ? 'bound' : 'not bound',
-      setup_open: Date.now() - parseInt((await getKV(env, 'setup_at')) || '0', 10) < 30 * 60 * 1000
+      setup_open: Date.now() - parseInt((await getKV(env, 'setup_at')) || '0', 10) < 30 * 60 * 1000,
+      last_exception: await getKV(env, 'last_exception'),
+      last_skip: await getKV(env, 'last_skip')
     });
   }
 
