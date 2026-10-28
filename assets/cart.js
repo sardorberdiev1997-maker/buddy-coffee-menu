@@ -68,7 +68,11 @@
   function haptic(kind) {
     const h = tg() && tg().HapticFeedback;
     if (!h) return;
-    try { kind === 'light' ? h.impactOccurred('light') : h.notificationOccurred(kind); } catch (e) { /* старые клиенты */ }
+    try {
+      if (kind === 'light') h.impactOccurred('light');
+      else if (kind === 'select') h.selectionChanged();
+      else h.notificationOccurred(kind);
+    } catch (e) { /* старые клиенты */ }
   }
 
   // Всплывающее сообщение. popover — чтобы было видно и поверх открытой шторки
@@ -173,6 +177,40 @@
     renderSlots();
     renderBar();
     if (els.dlg.open) renderCart();
+    syncMain();
+  }
+
+  /* ---------- нативная кнопка Telegram (MainButton) ---------- */
+
+  let mainAction = '';
+
+  // Меню → «Корзина · сумма», корзина → «Оформить заказ», оформление → «Заказать» (с индикатором отправки)
+  function syncMain() {
+    const w = tg();
+    if (!w || !document.documentElement.classList.contains('tg-main')) return;
+    const p = model() ? priced() : { lines: [], total: 0 };
+    let text = '';
+    let active = true;
+    mainAction = '';
+    if (els.dlg.open && p.lines.length) {
+      if (step === 'checkout') { text = sending ? t('sending') : t('confirm', money(p.total)); active = !sending; mainAction = 'submit'; }
+      else { text = `${t('checkout')} · ${money(p.total)}`; active = minState(p.total).ok; mainAction = 'checkout'; }
+    } else if (!els.dlg.open && !$('#sheet').open && p.lines.length && accepting !== false) {
+      text = `${t('cart')} · ${money(p.total)}`;
+      mainAction = 'cart';
+    }
+    try {
+      if (!text) { w.MainButton.hide(); return; }
+      w.MainButton.setParams({ text, color: active ? '#E31B23' : '#8C8178', text_color: '#FFFFFF', is_active: active, is_visible: true });
+      if (sending) w.MainButton.showProgress(false); else w.MainButton.hideProgress();
+    } catch (e) { /* старые версии Telegram */ }
+  }
+
+  function onMain() {
+    haptic('light');
+    if (mainAction === 'cart') openCart();
+    else if (mainAction === 'checkout') goStep('checkout');
+    else if (mainAction === 'submit') { const f = $('#order-form', els.body); if (f) submit(f); }
   }
 
   /* ---------- шторка блюда: размер, комментарий, количество ---------- */
@@ -215,6 +253,7 @@
   function bindSheet() {
     els.opts.addEventListener('change', (e) => {
       if (e.target.name !== 'size' || !sel) return;
+      haptic('select');
       sel.size = parseInt(e.target.value, 10) || 0;
       renderFoot(itemById(sel.id));
     });
@@ -290,6 +329,11 @@
   }
 
   function renderCart() {
+    renderCartInner();
+    syncMain();
+  }
+
+  function renderCartInner() {
     const p = priced();
     if (step === 'checkout' && p.lines.length) { renderCheckout(p); return; }
     step = 'cart';
@@ -520,6 +564,7 @@
     const btn = $('#submit', els.body);
     btn.disabled = true;
     btn.textContent = t('sending');
+    syncMain();
     if (tg()) await askWriteAccess();
 
     let res, data;
@@ -567,6 +612,8 @@
 
   function failed(html) {
     haptic('error');
+    sending = false;
+    syncMain();
     const btn = $('#submit', els.body);
     if (btn) { btn.disabled = false; btn.textContent = t('confirm', money(priced().total)); }
     if (html) setFormError(html);
@@ -583,9 +630,11 @@
       if (typeof els.dlg.showModal === 'function') els.dlg.showModal();
       else els.dlg.setAttribute('open', '');
       history.pushState({ cart: 1 }, '');
+      haptic('light');
     }
     renderBar();
     tgBack();
+    syncMain();
     const title = $('#cart-title', els.body);
     if (title) title.focus({ preventScroll: true });
   }
@@ -617,6 +666,7 @@
       step = 'cart';
       renderBar();
       tgBack();
+      syncMain();
       if (app().keyboard) els.bar.focus({ preventScroll: true });
     };
     els.dlg.classList.add('is-closing');
@@ -663,6 +713,7 @@
       }
     });
     els.dlg.addEventListener('change', (e) => {
+      if (e.target.type === 'radio') haptic('select');
       if (e.target.name === 'otype') {
         cart.type = e.target.value;
         save(CART_KEY, cart);
@@ -813,6 +864,7 @@
     if (!w || initTelegram.done) return;
     initTelegram.done = true;
     document.documentElement.classList.add('is-tg');
+    const v = (x) => typeof w.isVersionAtLeast === 'function' && w.isVersionAtLeast(x);
     try {
       w.ready();
       w.expand();
@@ -820,14 +872,45 @@
       if (typeof w.setHeaderColor === 'function') w.setHeaderColor('#E31B23');
       w.BackButton.onClick(() => history.back());
     } catch (e) { /* старые версии Telegram */ }
+    applyTgTheme(w);
+    w.onEvent('themeChanged', () => applyTgTheme(w));
+    // Нативная кнопка внизу вместо своей панели корзины и кнопок оформления
+    if (w.MainButton && v('6.1')) {
+      document.documentElement.classList.add('tg-main');
+      w.MainButton.onClick(onMain);
+    }
+    // «Настройки» в меню Mini App — выбор языка
+    if (w.SettingsButton && v('7.0')) {
+      w.SettingsButton.show();
+      w.SettingsButton.onClick(() => w.showPopup({
+        title: 'Til · Язык',
+        message: 'Menyu tilini tanlang · Выберите язык меню',
+        buttons: [{ id: 'uz', type: 'default', text: 'O‘zbekcha' }, { id: 'ru', type: 'default', text: 'Русский' }, { type: 'cancel' }]
+      }, (id) => { if ((id === 'uz' || id === 'ru') && id !== lang()) { app().setLang(id); haptic('select'); } }));
+    }
     // Язык из Telegram, если человек ещё не выбирал его сам
     const code = w.initDataUnsafe && w.initDataUnsafe.user && w.initDataUnsafe.user.language_code;
     const chosen = store((s) => s.getItem('buddy-menu:lang')) || new URLSearchParams(location.search).get('lang');
     if (!chosen && /^ru/i.test(code || '') && lang() !== 'ru') app().setLang('ru');
     const sheet = $('#sheet');
-    new MutationObserver(tgBack).observe(sheet, { attributes: true, attributeFilter: ['open'] });
+    new MutationObserver(() => {
+      tgBack();
+      syncMain();
+      if (sheet.open) haptic('light');
+    }).observe(sheet, { attributes: true, attributeFilter: ['open'] });
     tgBack(); // после страницы заказа кнопка «Назад» могла остаться видимой
     refresh();
+  }
+
+  // Светлая или тёмная тема — как в Telegram у этого человека, а не как в системе
+  function applyTgTheme(w) {
+    const root = document.documentElement;
+    root.dataset.theme = w.colorScheme === 'dark' ? 'dark' : 'light';
+    const bg = getComputedStyle(root).getPropertyValue('--bg').trim();
+    try {
+      if (typeof w.setBackgroundColor === 'function') w.setBackgroundColor(bg);
+      if (typeof w.setBottomBarColor === 'function') w.setBottomBarColor(bg);
+    } catch (e) { /* старые версии Telegram */ }
   }
 
   /* ---------- start ---------- */

@@ -173,7 +173,9 @@
       if (!OC.FINAL.includes(o.status)) schedule(POLL);
     } catch (e) {
       failCount++;
-      if (!order) renderMessage(t('loadFail'), '', true);
+      console.warn('[order]', e && e.message);
+      // Нет связи или сбой отрисовки — не оставляем пустой экран
+      if (!$('.status', main)) renderMessage(t('loadFail'), '', true);
       schedule(Math.min(60000, POLL * 2 ** failCount));
     }
   }
@@ -213,6 +215,7 @@
   /* ---------- start ---------- */
 
   function init() {
+    R.crashGuard(t);
     lang = detectLang();
     applyLang();
     $$('.lang button').forEach((b) => b.addEventListener('click', () => {
@@ -241,9 +244,16 @@
       if (!w || !w.initData) return;
       try {
         w.ready();
+        w.expand();
         w.BackButton.show();
         w.BackButton.onClick(() => { location.href = home; });
+        if (w.MainButton) w.MainButton.hide();
+        if (typeof w.setHeaderColor === 'function') w.setHeaderColor('#E31B23');
       } catch (e) { /* старые версии Telegram */ }
+      // Тема — как в Telegram
+      const theme = () => { document.documentElement.dataset.theme = w.colorScheme === 'dark' ? 'dark' : 'light'; };
+      theme();
+      w.onEvent('themeChanged', theme);
     };
     if (window.Telegram && window.Telegram.WebApp) tgInit();
     else document.addEventListener('tg-ready', tgInit, { once: true });

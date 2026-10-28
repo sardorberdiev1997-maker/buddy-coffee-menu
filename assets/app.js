@@ -569,6 +569,8 @@
     }
   }
 
+  R.crashGuard(t);
+
   // Для cart.js: модель, язык и шторка блюда
   window.BuddyApp = {
     get model() { return model; },

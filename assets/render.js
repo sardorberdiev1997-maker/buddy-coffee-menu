@@ -26,6 +26,7 @@
       allergens: 'Allergenlar',
       allergenNote: 'Barcha taomlar bitta oshxonada tayyorlanadi, boshqa allergenlar izi bo‘lishi mumkin. Allergiyangiz bo‘lsa, buyurtmadan oldin so‘rang.',
       nothingHint: 'Boshqa so‘z bilan qidirib ko‘ring.', clearSearch: 'Qidiruvni tozalash',
+      crash: 'Nimadir noto‘g‘ri ketdi. Sahifani yangilang.', reload: 'Yangilash',
       stale: (d) => `Internet yo‘q — narxlar ${d} holatiga ko‘rsatilmoqda.`
     },
     ru: {
@@ -48,6 +49,7 @@
       allergens: 'Аллергены',
       allergenNote: 'Все блюда готовятся на одной кухне — возможны следы других аллергенов. При аллергии уточните перед заказом.',
       nothingHint: 'Попробуйте другое слово.', clearSearch: 'Сбросить поиск',
+      crash: 'Что-то пошло не так. Обновите страницу.', reload: 'Обновить',
       stale: (d) => `Нет связи — показаны цены на ${d}.`
     }
   };
@@ -556,5 +558,22 @@
     };
   }
 
-  root.MenuRender = { SITE, UI, ALLERGENS, parseCSV, buildModel, validTables, imgSrc, isLocalImg, esc, fmt, norm, safeUrl, createView };
+  // Сбой нашего скрипта: вместо молчаливой поломки — сообщение и кнопка «Обновить».
+  // Ошибки чужих скриптов (статистика, расширения браузера) не показываем.
+  function crashGuard(t) {
+    if (typeof window === 'undefined') return;
+    let shown = false;
+    window.addEventListener('error', (e) => {
+      if (shown || !e.filename || e.filename.indexOf(location.origin + '/assets/') !== 0) return;
+      shown = true;
+      const box = document.createElement('div');
+      box.className = 'crash';
+      box.setAttribute('role', 'alert');
+      box.innerHTML = `<span>${esc(t('crash'))}</span><button type="button">${esc(t('reload'))}</button>`;
+      box.querySelector('button').addEventListener('click', () => location.reload());
+      document.body.appendChild(box);
+    });
+  }
+
+  root.MenuRender = { SITE, UI, ALLERGENS, crashGuard, parseCSV, buildModel, validTables, imgSrc, isLocalImg, esc, fmt, norm, safeUrl, createView };
 })(typeof window !== 'undefined' ? window : globalThis);
