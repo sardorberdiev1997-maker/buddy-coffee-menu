@@ -1,7 +1,7 @@
 # HTTP-заголовки для Cloudflare Pages (копируется в dist/_headers при сборке)
 
 /*
-  Content-Security-Policy: default-src 'self'; script-src 'self' https://static.cloudflareinsights.com; style-src 'self'; img-src 'self' https: data:; font-src 'self'; connect-src 'self' https://docs.google.com https://*.googleusercontent.com https://cloudflareinsights.com; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'; frame-ancestors 'none'; upgrade-insecure-requests
+  Content-Security-Policy: default-src 'self'; script-src 'self' https://static.cloudflareinsights.com {{SCRIPT_HASHES}}; style-src 'self' {{STYLE_HASHES}}; img-src 'self' https: data:; font-src 'self'; connect-src 'self' https://docs.google.com https://*.googleusercontent.com https://cloudflareinsights.com; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'; frame-ancestors 'none'; upgrade-insecure-requests
   Strict-Transport-Security: max-age=31536000; includeSubDomains
   X-Content-Type-Options: nosniff
   X-Frame-Options: DENY
@@ -14,8 +14,9 @@
 /assets/*
   Cache-Control: public, max-age=31536000, immutable
 
+# Фото: при замене файла давать ему новое имя — старое имя кэшируется надолго
 /img/*
-  Cache-Control: public, max-age=604800, stale-while-revalidate=2592000
+  Cache-Control: public, max-age=31536000, immutable
 
 /data/*
   Cache-Control: public, max-age=300

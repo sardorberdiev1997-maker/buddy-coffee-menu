@@ -61,17 +61,35 @@ put('chips', view.chipsHTML());
 put('menu', view.menuHTML());
 put('info', view.infoHTML());
 put('data', `<script type="application/json" id="menu-data">${jsonInHtml({ generated: Date.now(), tables })}</script>`);
+// boot.js и стили вшиваем в HTML (минус два блокирующих запроса); в CSP — их sha256
+const sha = (s) => `'sha256-${createHash('sha256').update(s).digest('base64')}'`;
+const bootCode = readFileSync(path.join(DIST, 'assets/boot.js'), 'utf8').trim();
+const cssCode = readFileSync(path.join(DIST, 'assets/style.css'), 'utf8').trim().replace(/url\((["']?)fonts\//g, 'url($1assets/fonts/');
+const inline = (re, tag) => {
+  if (!re.test(html)) throw new Error('index.html: не найдено ' + re);
+  html = html.replace(re, () => tag);
+};
+inline(/<script src="assets\/boot\.js\?v=[\w-]+"><\/script>/, `<script>${bootCode}</script>`);
+inline(/<link rel="stylesheet" href="assets\/style\.css\?v=[\w-]+">/, `<style>${cssCode}</style>`);
 write('index.html', html);
+const page404 = read('404.html');
+const style404 = (page404.match(/<style>([\s\S]*?)<\/style>/) || [])[1];
+const scriptHashes = [sha(bootCode)];
+const styleHashes = [sha(cssCode)].concat(style404 ? [sha(style404)] : []);
 
 // Service worker: тот же список файлов и версия по их хешам
-const sw = withVersions(read('sw.js')).replace(/const VERSION = '[^']*'/, `const VERSION = 'bm-${hash(JSON.stringify(versions) + html)}'`);
+const sw = withVersions(read('sw.js'))
+  .replace(/const VERSION = '[^']*'/, `const VERSION = 'bm-${hash(JSON.stringify(versions) + html)}'`)
+  .replace(/\s*'assets\/(?:boot\.js|style\.css)\?v=[\w-]+',/g, ''); // они теперь внутри index.html
 write('sw.js', (await esbuild.transform(sw, { loader: 'js', minify: true, target: 'es2020', charset: 'utf8' })).code);
 
 // Остальное — как есть
 for (const p of ['404.html', 'favicon.svg', 'manifest.webmanifest', 'robots.txt', 'sitemap.xml', 'data/menu.json', 'assets/fonts', 'img']) {
   cpSync(path.join(ROOT, p), path.join(DIST, p), { recursive: true });
 }
-write('_headers', read('tools/_headers'));
+write('_headers', read('tools/_headers')
+  .replace('{{SCRIPT_HASHES}}', scriptHashes.join(' '))
+  .replace('{{STYLE_HASHES}}', styleHashes.join(' ')));
 
 const kb = (p) => (readFileSync(path.join(DIST, p)).length / 1024).toFixed(1) + ' KB';
 console.log(`dist готов: index.html ${kb('index.html')}, app.js ${kb('assets/app.js')}, render.js ${kb('assets/render.js')}, style.css ${kb('assets/style.css')}`);

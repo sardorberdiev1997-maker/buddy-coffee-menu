@@ -5,5 +5,6 @@
   if (l !== 'uz' && l !== 'ru') { try { l = localStorage.getItem('buddy-menu:lang'); } catch (e) { l = null; } }
   if (l !== 'uz' && l !== 'ru') l = /^ru\b/i.test(navigator.language || '') ? 'ru' : 'uz';
   document.documentElement.setAttribute('data-lang', l);
+  document.documentElement.classList.add('js');
   if (l !== 'uz') document.documentElement.classList.add('is-booting');
 })();

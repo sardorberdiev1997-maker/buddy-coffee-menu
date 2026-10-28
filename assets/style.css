@@ -531,7 +531,6 @@ a.pill--ghost:active { background: rgb(0 0 0 / .3); }
   width: 100%;
   height: 100%;
   object-fit: cover;
-  opacity: 0;
   transition: opacity .35s ease, transform .35s var(--ease-out);
 }
 .item__img.is-loaded,
@@ -591,7 +590,9 @@ a.pill--ghost:active { background: rgb(0 0 0 / .3); }
 }
 .pop:active { transform: scale(.97); }
 .pop__frame { display: block; height: 128px; overflow: hidden; border-radius: 18px 18px 0 0; background: var(--muted-bg); }
-.pop__img { width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity .35s ease; }
+.pop__img { width: 100%; height: 100%; object-fit: cover; transition: opacity .35s ease; }
+/* Плавное появление — только у ленивых фото; первые видны сразу и не задерживают LCP */
+.js img[loading="lazy"]:not(.is-loaded) { opacity: 0; }
 .pop__body { display: block; padding: 10px 12px 12px; }
 .pop__name { display: block; font-size: 15px; font-weight: 700; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .pop__price { display: block; margin-top: 4px; font-size: 14px; font-weight: 700; color: var(--ink-2); font-variant-numeric: tabular-nums; }
