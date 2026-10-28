@@ -109,6 +109,14 @@ svg { width: 1em; height: 1em; flex: none; }
 
 .sprite { position: absolute; width: 0; height: 0; overflow: hidden; }
 
+/* Меню в HTML собрано на узбекском; для русского прячем его до перерисовки (страховка — показать через 2,5 с) */
+.is-booting .hero__body,
+.is-booting #notice-slot,
+.is-booting .nav__chips,
+.is-booting .menu,
+.is-booting .info { visibility: hidden; animation: boot-reveal 0s 2.5s forwards; }
+@keyframes boot-reveal { to { visibility: visible; } }
+
 .sr-only {
   position: absolute !important;
   width: 1px; height: 1px;
@@ -550,8 +558,6 @@ a.pill--ghost:active { background: rgb(0 0 0 / .3); }
 .pop .badge { position: absolute; top: -6px; left: -6px; z-index: 2; box-shadow: 0 2px 6px rgb(0 0 0 / .2); pointer-events: none; }
 
 .item.is-out .item__img { filter: grayscale(1); opacity: .55; }
-.item.is-out .item__name,
-.item.is-out .item__desc { opacity: .65; }
 
 /* ---------- Popular strip ---------- */
 

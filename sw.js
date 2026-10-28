@@ -1,10 +1,12 @@
-// Офлайн-кэш меню. При изменении состава файлов — поднять VERSION.
+// Офлайн-кэш меню. VERSION и ?v= проставляет сборка (tools/build.mjs) по хешам файлов.
 const VERSION = 'bm-v3';
 const CORE = [
   './',
   'assets/style.css?v=3',
-  'assets/app.js?v=3',
+  'assets/boot.js?v=3',
   'assets/config.js?v=3',
+  'assets/render.js?v=3',
+  'assets/app.js?v=3',
   'data/menu.json',
   'favicon.svg',
   'assets/fonts/rubik-latin.woff2',
