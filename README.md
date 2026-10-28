@@ -60,6 +60,8 @@ buddy-cron (Worker, каждую минуту) ──► /api/tick: напоми
 4. В группе кафе (бот добавлен) администратор отправляет `/bind`.
 5. Worker `buddy-cron` (код — `cron/worker.js`), Settings → Triggers → Cron `* * * * *`.
 
+Проверка бота: `https://buddy.cheking.uz/api/tg/info` — доходят ли сообщения от Telegram, подключена ли группа, последняя ошибка. Подключить группу (`/bind`) можно только 30 минут после открытия `/api/tg/setup`. Бот: @buddy_coffee_uz_bot (токен — у владельца сайта в @BotFather).
+
 ## Локально
 
 ```bash
