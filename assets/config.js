@@ -7,7 +7,7 @@
   gids: { menu: '1991140194', categories: '5003781', settings: '864498900' },
   // ID публикации («Файл → Поделиться → Опубликовать в интернете», вкладки Меню/Категории/Настройки, CSV):
   // часть ссылки docs.google.com/spreadsheets/d/e/<ID>/pub. С ним сайт читает меню, даже когда доступ к таблице закрыт
-  pub: '',
+  pub: '2PACX-1vSuoMKSvNKrVFBObq8kItYtwKUr_QLx074nSwlBktZoumZbTYfMsBnK_njqnNPd5hcwhOFrBfLALWZA',
   // Названия вкладок — ключи в data/menu.json
   tabs: { menu: 'Меню', categories: 'Категории', settings: 'Настройки' },
   fallback: 'data/menu.json',
