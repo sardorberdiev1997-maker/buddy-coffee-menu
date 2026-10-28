@@ -822,6 +822,7 @@
     } catch (e) { /* старые версии Telegram */ }
     const sheet = $('#sheet');
     new MutationObserver(tgBack).observe(sheet, { attributes: true, attributeFilter: ['open'] });
+    tgBack(); // после страницы заказа кнопка «Назад» могла остаться видимой
     refresh();
   }
 
