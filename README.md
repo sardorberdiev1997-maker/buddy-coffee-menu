@@ -1,6 +1,6 @@
 # Buddy Coffee — онлайн-меню и заказы
 
-Сайт: **https://buddy.cheking.uz** (сюда ведёт QR-код на столах). Telegram-бот: **@Buddy_coffee_bot** (тот же сайт как Mini App).
+Сайт: **https://buddy.cheking.uz** (сюда ведёт QR-код на столах). Telegram-бот: **@buddy_coffee_uz_bot** (тот же сайт как Mini App).
 
 ## Как поменять меню (для владельца)
 

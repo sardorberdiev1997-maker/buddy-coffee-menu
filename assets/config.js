@@ -9,5 +9,5 @@
   tabs: { menu: 'Меню', categories: 'Категории', settings: 'Настройки' },
   fallback: 'data/menu.json',
   // Telegram-бот кафе (без @)
-  bot: 'Buddy_coffee_bot'
+  bot: 'buddy_coffee_uz_bot'
 };

@@ -55,7 +55,7 @@ globalThis.fetch = async (input, init) => {
     if (method === 'sendMessage' || method === 'sendLocation' || method === 'editMessageText') {
       result = { message_id: body.message_id || ++msgId, chat: { id: body.chat_id }, date: Math.floor(Date.now() / 1000), text: body.text };
     } else if (method === 'getChatMember') result = { status: 'creator', user: { id: body.user_id } };
-    else if (method === 'getMe') result = { id: 1, is_bot: true, username: 'Buddy_coffee_bot' };
+    else if (method === 'getMe') result = { id: 1, is_bot: true, username: 'buddy_coffee_uz_bot' };
     return new Response(JSON.stringify({ ok: true, result }), { headers: { 'content-type': 'application/json' } });
   }
   return realFetch(input, init);
