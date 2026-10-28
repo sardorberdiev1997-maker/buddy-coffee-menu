@@ -31,6 +31,11 @@
   let goingBack = false;
   let spyLockUntil = 0;
   const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // Фокус возвращаем на карточку только тем, кто работает с клавиатуры:
+  // на телефоне (Safari) иначе остаётся чёрная рамка вокруг карточки
+  let keyboard = false;
+  document.addEventListener('keydown', (e) => { if (['Tab', 'Enter', ' ', 'Escape'].includes(e.key)) keyboard = true; }, true);
+  document.addEventListener('pointerdown', () => { keyboard = false; }, true);
 
   const t = (key, ...args) => {
     const v = (R.UI[lang] && R.UI[lang][key]) || R.UI.uz[key];
@@ -307,7 +312,7 @@
       if (typeof els.sheet.close === 'function') els.sheet.close();
       else els.sheet.removeAttribute('open');
       // Возвращаем фокус на карточку, с которой открыли (на телефоне кнопки фокус не получают)
-      if (opener && opener.isConnected) opener.focus({ preventScroll: true });
+      if (keyboard && opener && opener.isConnected) opener.focus({ preventScroll: true });
       opener = null;
     };
     els.sheet.classList.add('is-closing');
@@ -569,6 +574,7 @@
     get model() { return model; },
     get view() { return view; },
     get lang() { return lang; },
+    get keyboard() { return keyboard; },
     t,
     openSheet,
     closeSheet,

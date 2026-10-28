@@ -617,7 +617,7 @@
       step = 'cart';
       renderBar();
       tgBack();
-      els.bar.focus({ preventScroll: true });
+      if (app().keyboard) els.bar.focus({ preventScroll: true });
     };
     els.dlg.classList.add('is-closing');
     $('.sheet__card', els.dlg).addEventListener('animationend', finish, { once: true });
@@ -727,7 +727,7 @@
         if (n && !reduceMotion) n.animate([{ transform: 'scale(1.4)' }, { transform: 'scale(1)' }], { duration: 220 });
         // «+» заменился счётчиком — фокус переводим на его «+»
         const plus = $(`[data-add-slot="${it.id}"] [data-step="1"]`);
-        if (plus) plus.focus({ preventScroll: true });
+        if (plus && app().keyboard) plus.focus({ preventScroll: true });
         return;
       }
       const st = e.target.closest('[data-step]');
@@ -737,7 +737,7 @@
         haptic('light');
         // Фокус остаётся на той же кнопке, если она ещё есть
         const again = slot && ($(`[data-step="${st.dataset.step}"]`, slot) || $('[data-add]', slot));
-        if (again) again.focus({ preventScroll: true });
+        if (again && app().keyboard) again.focus({ preventScroll: true });
       }
     });
   }

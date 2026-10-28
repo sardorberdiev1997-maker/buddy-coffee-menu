@@ -62,6 +62,7 @@
     <!--/hero--></div>
   </header>
 
+  <main id="main">
   <p class="stale" id="stale" hidden></p>
 
   <div id="notice-slot"><!--notice--><div class="notice" id="notice" hidden></div><!--/notice--></div>
@@ -85,11 +86,11 @@
 
   <noscript><p class="empty">Menyuni ko‘rish uchun brauzerda JavaScript’ni yoqing. · Чтобы увидеть меню, включите JavaScript.</p></noscript>
 
-  <main id="menu" class="menu" tabindex="-1"><!--menu-->
+  <div id="menu" class="menu" tabindex="-1"><!--menu-->
     <div class="skeleton" aria-hidden="true">
       <div></div><div></div><div></div><div></div>
     </div>
-  <!--/menu--></main>
+  <!--/menu--></div>
 
   <div class="empty" id="empty" hidden>
     <p class="empty__icon" aria-hidden="true">🔍</p>
@@ -98,6 +99,7 @@
     <button type="button" class="chip" id="clear-search" data-i18n="clearSearch">Qidiruvni tozalash</button>
   </div>
   <p class="sr-only" id="status" role="status" aria-live="polite"></p>
+  </main>
 
   <footer class="info" id="info"><!--info--><!--/info--></footer>
 
