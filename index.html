@@ -3,38 +3,57 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' https: data:; font-src 'self'; connect-src 'self' https://docs.google.com https://*.googleusercontent.com; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
   <title>Buddy Coffee — Menyu</title>
-  <meta name="description" content="Buddy Coffee menyusi: hot-dog, lavash, shaurma, KFS, burger va ichimliklar. Меню Buddy Coffee: хот-доги, лаваш, шаурма, KFS, бургеры и напитки.">
+  <meta name="description" content="Buddy Coffee menyusi: hot-dog, lavash, shaurma, KFS, burger va ichimliklar narxlari bilan. Меню Buddy Coffee с ценами: хот-доги, лаваш, шаурма, KFS, бургеры и напитки.">
+  <link rel="canonical" href="https://buddy.cheking.uz/">
+  <link rel="alternate" hreflang="uz" href="https://buddy.cheking.uz/?lang=uz">
+  <link rel="alternate" hreflang="ru" href="https://buddy.cheking.uz/?lang=ru">
+  <link rel="alternate" hreflang="x-default" href="https://buddy.cheking.uz/">
+  <meta name="color-scheme" content="light dark">
   <meta name="theme-color" content="#E31B23">
   <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Buddy Coffee">
   <meta property="og:title" content="Buddy Coffee — Menyu">
   <meta property="og:description" content="Hot-dog, lavash, shaurma, KFS, burger va ichimliklar. Shahar ichida yetkazib berish bepul!">
   <meta property="og:image" content="https://buddy.cheking.uz/img/og.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Buddy Coffee: burger, hot-dog, shaurma, lavash va ichimliklar">
   <meta property="og:url" content="https://buddy.cheking.uz/">
+  <meta property="og:locale" content="uz_UZ">
+  <meta property="og:locale:alternate" content="ru_RU">
+  <meta name="twitter:card" content="summary_large_image">
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="img/apple-touch-icon.png">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="preconnect" href="https://docs.google.com">
-  <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/style.css?v=1">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="preconnect" href="https://docs.google.com" crossorigin>
+  <link rel="preload" href="assets/fonts/rubik-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="assets/style.css?v=2">
+  <script src="assets/config.js?v=2" defer></script>
+  <script src="assets/app.js?v=2" defer></script>
 </head>
 <body>
+  <a class="skip" href="#menu" data-i18n="skip">Menyuga o‘tish</a>
+
   <header class="hero">
     <div class="hero__top">
-      <div class="brand">
+      <h1 class="brand">
         <span class="brand__mark" aria-hidden="true">
           <svg viewBox="0 0 64 64"><use href="#cup"/></svg>
         </span>
-        <span class="brand__name">Buddy<span class="brand__tag">COFFEE</span></span>
-      </div>
-      <div class="lang" role="group" aria-label="Til / Язык">
-        <button type="button" data-lang="uz">UZ</button>
-        <button type="button" data-lang="ru">RU</button>
+        <span class="brand__name">Buddy <span class="brand__tag">Coffee</span></span>
+        <span class="sr-only" data-i18n="h1">— menyu</span>
+      </h1>
+      <div class="lang" role="group" aria-label="Til · Язык">
+        <span class="lang__thumb" aria-hidden="true"></span>
+        <button type="button" data-lang="uz" lang="uz-Latn">UZ<span class="sr-only"> — O‘zbekcha</span></button>
+        <button type="button" data-lang="ru" lang="ru">RU<span class="sr-only"> — Русский</span></button>
       </div>
     </div>
     <p class="hero__slogan" data-setting="слоган">Mazali ta’m — har doim siz bilan!</p>
-    <p class="hero__sub" data-setting="подзаголовок">Coffee • Fast food • Drinks</p>
+    <p class="hero__sub" data-setting="подзаголовок" lang="en">Coffee • Fast food • Drinks</p>
     <div class="hero__pills">
       <span class="pill pill--delivery" data-setting-wrap="доставка">
         <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-scooter"/></svg>
@@ -47,19 +66,21 @@
     </div>
   </header>
 
+  <p class="stale" id="stale" hidden></p>
+
   <div class="notice" data-setting-wrap="объявление" hidden>
     <span data-setting="объявление"></span>
   </div>
 
-  <nav class="nav" aria-label="Kategoriyalar">
+  <nav class="nav" aria-label="Kategoriyalar" data-i18n-label="cats">
     <div class="nav__row">
-      <button type="button" class="nav__search-btn" aria-label="Qidirish" data-i18n-label="search">
+      <button type="button" class="nav__search-btn" aria-label="Qidirish" aria-expanded="false" aria-controls="search" data-i18n-label="search">
         <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-search"/></svg>
       </button>
       <div class="nav__chips" id="chips"></div>
-      <div class="nav__search">
+      <div class="nav__search" id="search" role="search">
         <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-search"/></svg>
-        <input type="search" id="q" autocomplete="off" enterkeyhint="search" data-i18n-placeholder="searchPh" placeholder="Taom yoki ichimlik…">
+        <input type="search" id="q" autocomplete="off" enterkeyhint="search" aria-label="Qidirish" data-i18n-label="search" data-i18n-placeholder="searchPh" placeholder="Taom yoki ichimlik…">
         <button type="button" class="nav__search-close" aria-label="Yopish" data-i18n-label="close">
           <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-x"/></svg>
         </button>
@@ -67,32 +88,38 @@
     </div>
   </nav>
 
-  <main id="menu" class="menu" aria-live="polite">
+  <noscript><p class="empty">Menyuni ko‘rish uchun brauzerda JavaScript’ni yoqing. · Чтобы увидеть меню, включите JavaScript.</p></noscript>
+
+  <main id="menu" class="menu" tabindex="-1">
     <div class="skeleton" aria-hidden="true">
       <div></div><div></div><div></div><div></div>
     </div>
   </main>
 
   <p class="empty" id="empty" hidden data-i18n="nothing">Hech narsa topilmadi</p>
+  <p class="sr-only" id="status" role="status" aria-live="polite"></p>
 
   <footer class="info" id="info"></footer>
 
   <dialog class="sheet" id="sheet" aria-labelledby="sheet-title">
     <div class="sheet__card">
+      <div class="sheet__handle" aria-hidden="true"></div>
       <button type="button" class="sheet__close" aria-label="Yopish" data-i18n-label="close">
         <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-x"/></svg>
       </button>
-      <div class="sheet__media"><img alt="" id="sheet-img" width="960" height="720"></div>
+      <div class="sheet__media"></div>
       <div class="sheet__body">
         <div class="sheet__badge" id="sheet-badge"></div>
         <h2 class="sheet__title" id="sheet-title"></h2>
         <p class="sheet__desc" id="sheet-desc"></p>
+        <p class="sheet__meta" id="sheet-meta"></p>
         <ul class="sheet__prices" id="sheet-prices"></ul>
+        <button type="button" class="sheet__done" data-i18n="close">Yopish</button>
       </div>
     </div>
   </dialog>
 
-  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <svg class="sprite" aria-hidden="true" focusable="false">
     <symbol id="cup" viewBox="0 0 64 64">
       <path d="M21 13 25 5l7 6 7-6 4 8z" fill="#FFD23F" stroke="#1B1612" stroke-width="2.4" stroke-linejoin="round"/>
       <path d="M11 17h42l-4.2 33.5A7 7 0 0 1 41.9 57H22.1a7 7 0 0 1-6.9-6.5z" fill="#1B1612"/>
@@ -111,9 +138,7 @@
     <symbol id="i-wifi" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 9.5a13 13 0 0 1 18 0M6 13a8.5 8.5 0 0 1 12 0M9 16.5a4 4 0 0 1 6 0"/><circle cx="12" cy="19.5" r=".8" fill="currentColor"/></g></symbol>
     <symbol id="i-insta" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2"><rect x="3.5" y="3.5" width="17" height="17" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.2" cy="6.8" r=".6" fill="currentColor"/></g></symbol>
     <symbol id="i-tg" viewBox="0 0 24 24"><path d="M20.5 4.5 3.8 11c-.9.4-.9 1.6.1 1.9l4.1 1.3 1.6 5c.3.8 1.3 1 1.9.4l2.3-2.2 4.4 3.2c.7.5 1.7.1 1.9-.7L22 5.8c.2-1-.7-1.7-1.5-1.3zM9.5 14l8-6.2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></symbol>
+    <symbol id="i-store" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 9.5 5.5 4h13L20 9.5M4 9.5h16M4 9.5a2.7 2.7 0 0 0 5.3 0 2.7 2.7 0 0 0 5.4 0 2.7 2.7 0 0 0 5.3 0M5.5 12.5V20h13v-7.5"/></g></symbol>
   </svg>
-
-  <script src="assets/config.js?v=1"></script>
-  <script src="assets/app.js?v=1"></script>
 </body>
 </html>

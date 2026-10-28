@@ -3,27 +3,36 @@
 
   const CONFIG = window.MENU_CONFIG || {};
   const TABS = CONFIG.tabs || { menu: 'Меню', categories: 'Категории', settings: 'Настройки' };
-  const CACHE_KEY = 'buddy-menu:data:v1';
+  const SITE = 'https://buddy.cheking.uz/';
+  const CACHE_KEY = 'buddy-menu:data:v2';
   const LANG_KEY = 'buddy-menu:lang';
+  const FALLBACK_AFTER = 2000; // мс ожидания таблицы, после которых показываем запасную копию
+  const STALE_AFTER = 24 * 3600 * 1000; // кэш старше суток помечаем датой
 
   const UI = {
     uz: {
-      title: 'Buddy Coffee — Menyu', search: 'Qidirish', searchPh: 'Taom yoki ichimlik…', close: 'Yopish',
-      nothing: 'Hech narsa topilmadi', currency: 'so‘m', out: 'Hozir yo‘q', price: 'Narxi',
+      title: 'Buddy Coffee — Menyu', h1: '— menyu', skip: 'Menyuga o‘tish', cats: 'Kategoriyalar',
+      search: 'Qidirish', searchPh: 'Taom yoki ichimlik…', close: 'Yopish', popular: 'Ommabop',
+      nothing: 'Hech narsa topilmadi', found: (n) => `${n} ta natija`, currency: 'so‘m', out: 'Hozir yo‘q', price: 'Narxi',
+      from: (p) => `${p} so‘mdan`,
       contacts: 'Biz bilan bog‘lanish', address: 'Manzil', hours: 'Ish vaqti', phone: 'Telefon',
       delivery: 'Yetkazib berish', payment: 'To‘lov', wifi: 'Wi‑Fi', password: 'parol',
-      copy: 'Nusxa', copied: 'Nusxalandi', call: 'Qo‘ng‘iroq qilish', map: 'Xaritada',
-      pricesNote: 'Barcha narxlar so‘mda.', error: 'Menyuni yuklab bo‘lmadi. Internetni tekshirib, sahifani yangilang.',
-      retry: 'Yangilash', other: 'Boshqa'
+      copy: 'Nusxa olish', copied: 'Nusxalandi', call: 'Qo‘ng‘iroq qilish', map: 'Xaritada',
+      pricesNote: 'Barcha narxlar so‘mda.', error: 'Menyuni yuklab bo‘lmadi. Internetni tekshirib, qayta urinib ko‘ring.',
+      retry: 'Qayta urinish', other: 'Boshqa',
+      stale: (d) => `Internet yo‘q — narxlar ${d} holatiga ko‘rsatilmoqda.`
     },
     ru: {
-      title: 'Buddy Coffee — Меню', search: 'Поиск', searchPh: 'Блюдо или напиток…', close: 'Закрыть',
-      nothing: 'Ничего не найдено', currency: 'сум', out: 'Нет в наличии', price: 'Цена',
+      title: 'Buddy Coffee — Меню', h1: '— меню', skip: 'Перейти к меню', cats: 'Категории',
+      search: 'Поиск', searchPh: 'Блюдо или напиток…', close: 'Закрыть', popular: 'Популярное',
+      nothing: 'Ничего не найдено', found: (n) => `Найдено: ${n}`, currency: 'сум', out: 'Нет в наличии', price: 'Цена',
+      from: (p) => `от ${p} сум`,
       contacts: 'Контакты', address: 'Адрес', hours: 'Часы работы', phone: 'Телефон',
       delivery: 'Доставка', payment: 'Оплата', wifi: 'Wi‑Fi', password: 'пароль',
       copy: 'Копировать', copied: 'Скопировано', call: 'Позвонить', map: 'На карте',
-      pricesNote: 'Все цены указаны в сумах.', error: 'Не удалось загрузить меню. Проверьте интернет и обновите страницу.',
-      retry: 'Обновить', other: 'Другое'
+      pricesNote: 'Все цены указаны в сумах.', error: 'Не удалось загрузить меню. Проверьте интернет и попробуйте ещё раз.',
+      retry: 'Повторить', other: 'Другое',
+      stale: (d) => `Нет связи — показаны цены на ${d}.`
     }
   };
 
@@ -44,7 +53,8 @@
   const HEADER_ALIASES = {
     'категория': 'cat', 'название_uz': 'uz', 'название_ru': 'ru', 'описание_uz': 'desc_uz', 'описание_ru': 'desc_ru',
     'цена': 'price', 'размеры_uz': 'sizes_uz', 'размеры_ru': 'sizes_ru', 'фото': 'img', 'метка': 'badge',
-    'в_наличии': 'avail', 'иконка': 'icon', 'ключ': 'key', 'значение_uz': 'uz', 'значение_ru': 'ru'
+    'в_наличии': 'avail', 'вес': 'weight', 'выход': 'weight', 'объём': 'weight', 'объем': 'weight',
+    'иконка': 'icon', 'ключ': 'key', 'значение_uz': 'uz', 'значение_ru': 'ru'
   };
   const NOT_AVAILABLE = /^(нет|no|false|0|-|yo[‘'ʻ’`]?q)$/i;
 
@@ -52,28 +62,49 @@
   const $$ = (s, root = document) => [...root.querySelectorAll(s)];
 
   const els = {
-    nav: $('.nav'), chips: $('#chips'), menu: $('#menu'), empty: $('#empty'), info: $('#info'),
-    q: $('#q'), sheet: $('#sheet'), sheetMedia: $('.sheet__media'), sheetBadge: $('#sheet-badge'),
-    sheetTitle: $('#sheet-title'), sheetDesc: $('#sheet-desc'), sheetPrices: $('#sheet-prices')
+    nav: $('.nav'), chips: $('#chips'), menu: $('#menu'), empty: $('#empty'), status: $('#status'), info: $('#info'),
+    q: $('#q'), searchBtn: $('.nav__search-btn'), sheet: $('#sheet'), card: $('.sheet__card'), sheetMedia: $('.sheet__media'),
+    sheetBadge: $('#sheet-badge'), sheetTitle: $('#sheet-title'), sheetDesc: $('#sheet-desc'), sheetMeta: $('#sheet-meta'),
+    sheetPrices: $('#sheet-prices'), lang: $('.lang')
   };
 
   let lang = 'uz';
   let model = null;
+  let shownJSON = '';
   let activeCat = '';
+  let openId = null;
+  let goingBack = false;
+  let opener = null;
+  let spyLockUntil = 0;
   const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   /* ---------- helpers ---------- */
 
-  const t = (key) => (UI[lang] && UI[lang][key]) || UI.uz[key] || key;
+  const t = (key, ...args) => {
+    const v = (UI[lang] && UI[lang][key]) || UI.uz[key];
+    return typeof v === 'function' ? v(...args) : (v || key);
+  };
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const fmt = (n) => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
   const norm = (s) => String(s || '').toLowerCase().replace(/[‘’ʻʼ'`]/g, '').replace(/ё/g, 'е');
-  const slug = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9_-]+/gi, '-');
+  const slug = (s) => String(s || '').trim().toLowerCase().replace(/[^\p{L}\p{N}_-]+/gu, '-');
   const splitList = (s) => String(s || '').split(/[\/;|]/).map((x) => x.trim()).filter(Boolean);
-  const toPrices = (s) => splitList(s).map((x) => parseInt(x.replace(/\D/g, ''), 10)).filter((n) => n > 0);
+  // «35000.00» → 35000; «35 000», «35,000» → 35000
+  const toPrices = (s) => splitList(s).map((x) => parseInt(x.replace(/[.,]\d{1,2}$/, '').replace(/\D/g, ''), 10)).filter((n) => n > 0);
+  const delay = (ms) => new Promise((r) => setTimeout(r, ms));
 
   function storage(fn) {
     try { return fn(window.localStorage); } catch (e) { return null; }
+  }
+
+  // Ссылки из таблицы: только http(s), tel и mailto
+  function safeUrl(v) {
+    try {
+      const u = new URL(String(v).trim(), location.href);
+      return ['http:', 'https:', 'tel:', 'mailto:'].includes(u.protocol) ? u.href : '';
+    } catch (e) {
+      return '';
+    }
   }
 
   function setting(key) {
@@ -85,6 +116,7 @@
   /* ---------- data ---------- */
 
   function parseCSV(text) {
+    text = text.replace(/^\uFEFF/, '');
     const rows = [];
     let row = [], field = '', quoted = false;
     for (let i = 0; i < text.length; i++) {
@@ -141,6 +173,7 @@
         prices: toPrices(r.price),
         sizes_uz: splitList(r.sizes_uz),
         sizes_ru: splitList(r.sizes_ru),
+        weight: r.weight || '',
         img: r.img || '',
         badge: BADGE_ALIASES[norm(r.badge)] || '',
         avail: !NOT_AVAILABLE.test(r.avail || '')
@@ -157,10 +190,10 @@
 
   function validTables(tables) {
     const has = (rows, keys) => Array.isArray(rows) && rows.length > 1 && keys.every((k) => rows[0].map(normHeader).includes(k));
-    return has(tables.menu, ['cat', 'uz', 'price']) && has(tables.categories, ['id']) && has(tables.settings, ['key']);
+    return !!tables && has(tables.menu, ['cat', 'uz', 'price']) && has(tables.categories, ['id']) && has(tables.settings, ['key']);
   }
 
-  async function fetchText(url, ms = 8000) {
+  async function fetchText(url, ms) {
     const ctl = new AbortController();
     const timer = setTimeout(() => ctl.abort(), ms);
     try {
@@ -172,30 +205,48 @@
     }
   }
 
+  // export?format=csv отдаёт значения как в ячейках; gviz угадывает типы колонок и может обнулить «чужие» ячейки
   async function loadSheet() {
     if (!CONFIG.sheetId) throw new Error('sheetId is empty');
-    const url = (name) => `https://docs.google.com/spreadsheets/d/${CONFIG.sheetId}/gviz/tq?tqx=out:csv&headers=1&sheet=${encodeURIComponent(name)}`;
-    const [menu, categories, settings] = await Promise.all([TABS.menu, TABS.categories, TABS.settings].map((n) => fetchText(url(n)).then(parseCSV)));
+    const base = `https://docs.google.com/spreadsheets/d/${encodeURIComponent(CONFIG.sheetId)}`;
+    const gids = CONFIG.gids || {};
+    const url = (key) => (gids[key]
+      ? `${base}/export?format=csv&gid=${encodeURIComponent(gids[key])}`
+      : `${base}/gviz/tq?tqx=out:csv&headers=1&sheet=${encodeURIComponent(TABS[key])}`);
+    const [menu, categories, settings] = await Promise.all(
+      ['menu', 'categories', 'settings'].map((k) => fetchText(url(k), 12000).then(parseCSV))
+    );
     const tables = { menu, categories, settings };
     if (!validTables(tables)) throw new Error('Unexpected sheet structure');
     return tables;
   }
 
   async function loadFallback() {
-    const data = JSON.parse(await fetchText(CONFIG.fallback || 'data/menu.json'));
+    const data = JSON.parse(await fetchText(CONFIG.fallback || 'data/menu.json', 8000));
     return { menu: data[TABS.menu], categories: data[TABS.categories], settings: data[TABS.settings] };
   }
 
+  // Показывает данные, только если они отличаются от уже показанных
+  function apply(tables) {
+    const json = JSON.stringify(tables);
+    if (json === shownJSON) return;
+    shownJSON = json;
+    model = buildModel(tables);
+    render();
+  }
+
   /* ---------- images ---------- */
+
+  const isLocalImg = (v) => /^[\w-]+$/.test(v);
 
   function imgSrc(it, size) {
     const v = it.img;
     if (!v) return '';
     const drive = v.match(/drive\.google\.com\/(?:file\/d\/|open\?id=|uc\?(?:export=\w+&)?id=)([\w-]+)/);
     if (drive) return `https://lh3.googleusercontent.com/d/${drive[1]}=w${size === 's' ? 360 : 960}`;
-    if (/^https?:\/\//i.test(v)) return v;
-    if (/\.(webp|jpe?g|png|avif)$/i.test(v)) return 'img/' + v.replace(/^\/+/, '');
-    return `img/${size}/${v}.webp`;
+    if (/^https?:\/\//i.test(v)) return safeUrl(v);
+    if (isLocalImg(v)) return `img/${size}/${v}.webp`;
+    return 'img/' + v.replace(/^\/+/, '').replace(/\.\.\//g, '');
   }
 
   function catIcon(it) {
@@ -204,7 +255,19 @@
   }
 
   function placeholder(it) {
-    return `<div class="item__ph" aria-hidden="true">${esc(catIcon(it))}</div>`;
+    return `<span class="item__ph" aria-hidden="true">${esc(catIcon(it))}</span>`;
+  }
+
+  function pictureHTML(it, cls, w, h, eager) {
+    const src = imgSrc(it, 's');
+    if (!src) return placeholder(it);
+    const avif = isLocalImg(it.img) ? `<source type="image/avif" srcset="img/s/${it.img}.avif">` : '';
+    const loading = eager ? 'fetchpriority="high"' : 'loading="lazy"';
+    return `<picture>${avif}<img class="${cls}" src="${esc(src)}" alt="" width="${w}" height="${h}" decoding="async" ${loading}></picture>`;
+  }
+
+  function markLoaded(root) {
+    $$('img', root).forEach((img) => { if (img.complete && img.naturalWidth) img.classList.add('is-loaded'); });
   }
 
   /* ---------- render ---------- */
@@ -218,6 +281,10 @@
     return it['sizes_' + lang].length ? it['sizes_' + lang] : it.sizes_uz;
   }
 
+  function weightHTML(it) {
+    return it.weight ? `<span class="weight">${esc(it.weight)}</span>` : '';
+  }
+
   function pricesHTML(it) {
     if (!it.avail) return `<span class="price price--out">${esc(t('out'))}</span>`;
     if (it.prices.length === 1) return `<span class="price">${fmt(it.prices[0])} <small>${esc(t('currency'))}</small></span>`;
@@ -229,53 +296,66 @@
     if (!it.avail || it.prices.length < 2) return '';
     const sizes = sizesOf(it);
     return `<div class="variants">${it.prices.map((p, i) =>
-      `<span class="variant">${sizes[i] ? `<small>${esc(sizes[i])}</small>` : ''}<b>${fmt(p)}</b></span>`).join('')}</div>`;
+      `<span class="variant">${sizes[i] ? `<small>${esc(sizes[i])}</small>` : ''}<b>${fmt(p)}<span class="sr-only"> ${esc(t('currency'))}</span></b></span>`).join('')}</div>`;
   }
 
   function itemHTML(it, index) {
-    const name = it[lang];
-    const src = imgSrc(it, 's');
-    const media = src
-      ? `<img class="item__img" src="${esc(src)}" alt="" width="116" height="116" decoding="async"${index < 3 ? '' : ' loading="lazy"'}>`
-      : placeholder(it);
+    const desc = it['desc_' + lang];
     const variants = variantsHTML(it);
-    return `<article class="item${it.avail ? '' : ' is-out'}" data-id="${it.id}" tabindex="0" role="button" aria-label="${esc(name)}">
+    const meta = variants ? weightHTML(it) : pricesHTML(it) + weightHTML(it);
+    return `<article class="item${it.avail ? '' : ' is-out'}" data-id="${it.id}">
       <div class="item__body">
-        <h3 class="item__name">${esc(name)}</h3>
-        ${it['desc_' + lang] ? `<p class="item__desc">${esc(it['desc_' + lang])}</p>` : ''}
-        ${variants ? '' : `<div class="prices">${pricesHTML(it)}</div>`}
+        <h3 class="item__name"><button type="button" class="item__btn" aria-haspopup="dialog">${esc(it[lang])}</button></h3>
+        ${desc ? `<p class="item__desc">${esc(desc)}</p>` : ''}
+        ${meta ? `<div class="prices">${meta}</div>` : ''}
       </div>
-      <div class="item__media">${media}${badgeHTML(it.badge)}</div>
+      <div class="item__media"><span class="item__frame">${pictureHTML(it, 'item__img', 116, 116, index < 2)}</span>${badgeHTML(it.badge)}</div>
       ${variants}
     </article>`;
   }
 
+  function popularHTML() {
+    const picks = model.items.filter((it) => it.avail && (it.badge === 'hit' || it.badge === 'recommend')).slice(0, 8);
+    if (picks.length < 2) return '';
+    return `<section class="popular" aria-labelledby="pop-title">
+      <h2 class="popular__title" id="pop-title">${esc(t('popular'))}</h2>
+      <div class="popular__track">${picks.map((it) => {
+        const price = it.prices.length > 1 ? t('from', fmt(Math.min(...it.prices))) : it.prices.length ? `${fmt(it.prices[0])} ${t('currency')}` : '';
+        return `<button type="button" class="pop" data-id="${it.id}" aria-haspopup="dialog">
+          <span class="pop__frame">${pictureHTML(it, 'pop__img', 156, 128, false)}</span>
+          <span class="pop__body"><span class="pop__name">${esc(it[lang])}</span><span class="pop__price">${esc(price)}</span></span>
+          ${badgeHTML(it.badge)}
+        </button>`;
+      }).join('')}</div>
+    </section>`;
+  }
+
   function renderChips() {
     els.chips.innerHTML = model.cats.map((c) =>
-      `<button type="button" class="chip" data-cat="${c.id}">${c.icon ? `<span class="chip__icon" aria-hidden="true">${esc(c.icon)}</span>` : ''}${esc(c[lang])}</button>`
+      `<button type="button" class="chip" data-cat="${c.id}" aria-controls="cat-${c.id}">${c.icon ? `<span class="chip__icon" aria-hidden="true">${esc(c.icon)}</span>` : ''}${esc(c[lang])}</button>`
     ).join('');
   }
 
   function renderMenu() {
     let n = 0;
-    els.menu.innerHTML = model.cats.map((c) => {
+    els.menu.innerHTML = popularHTML() + model.cats.map((c) => {
       const items = model.items.filter((it) => it.cat === c.id);
       return `<section class="section" id="cat-${c.id}" data-cat="${c.id}" aria-labelledby="h-${c.id}">
-        <h2 class="section__title" id="h-${c.id}">${esc(c[lang])} <small>${items.length}</small></h2>
+        <h2 class="section__title" id="h-${c.id}" tabindex="-1">${esc(c[lang])} <small aria-hidden="true">${items.length}</small></h2>
         <div class="items">${items.map((it) => itemHTML(it, n++)).join('')}</div>
       </section>`;
     }).join('');
+    markLoaded(els.menu);
   }
 
   function infoRow(icon, label, valueHTML) {
-    return `<li class="info__row"><span class="info__icon"><svg viewBox="0 0 24 24"><use href="#${icon}"/></svg></span>
+    return `<li class="info__row"><span class="info__icon" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#${icon}"/></svg></span>
       <span><span class="info__label">${esc(label)}</span><span class="info__value">${valueHTML}</span></span></li>`;
   }
 
   function socialURL(v, base) {
     if (!v) return '';
-    if (/^https?:\/\//i.test(v)) return v;
-    return base + v.replace(/^@/, '');
+    return /^https?:\/\//i.test(v) ? safeUrl(v) : safeUrl(base + v.replace(/^@/, ''));
   }
 
   function telHref(v) {
@@ -296,19 +376,22 @@
         `${esc(setting('wifi_сеть'))}${pass ? ` · ${esc(t('password'))}: <b>${esc(pass)}</b> <button type="button" class="info__copy" data-copy="${esc(pass)}">${esc(t('copy'))}</button>` : ''}`));
     }
 
+    const map = safeUrl(setting('ссылка_на_карту'));
+    const insta = socialURL(setting('instagram'), 'https://instagram.com/');
+    const tg = socialURL(setting('telegram'), 'https://t.me/');
     const actions = [];
-    if (phone) actions.push(`<a class="btn btn--primary" href="${esc(telHref(phone))}"><svg viewBox="0 0 24 24"><use href="#i-phone"/></svg>${esc(t('call'))}</a>`);
-    if (setting('ссылка_на_карту')) actions.push(`<a class="btn" href="${esc(setting('ссылка_на_карту'))}" target="_blank" rel="noopener"><svg viewBox="0 0 24 24"><use href="#i-pin"/></svg>${esc(t('map'))}</a>`);
-    if (setting('instagram')) actions.push(`<a class="btn" href="${esc(socialURL(setting('instagram'), 'https://instagram.com/'))}" target="_blank" rel="noopener"><svg viewBox="0 0 24 24"><use href="#i-insta"/></svg>Instagram</a>`);
-    if (setting('telegram')) actions.push(`<a class="btn" href="${esc(socialURL(setting('telegram'), 'https://t.me/'))}" target="_blank" rel="noopener"><svg viewBox="0 0 24 24"><use href="#i-tg"/></svg>Telegram</a>`);
+    if (phone) actions.push(`<a class="btn btn--primary" href="${esc(telHref(phone))}"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-phone"/></svg>${esc(t('call'))}</a>`);
+    if (setting('ссылка_на_карту') && map) actions.push(`<a class="btn" href="${esc(map)}" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-pin"/></svg>${esc(t('map'))}</a>`);
+    if (insta) actions.push(`<a class="btn" href="${esc(insta)}" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-insta"/></svg>Instagram</a>`);
+    if (tg) actions.push(`<a class="btn" href="${esc(tg)}" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-tg"/></svg>Telegram</a>`);
 
-    els.info.innerHTML = `<div class="info__card">
-        <h2 class="info__title">${esc(t('contacts'))}</h2>
+    const notes = [t('pricesNote'), setting('примечание_к_фото'), setting('продавец')].filter(Boolean);
+    els.info.innerHTML = `<section class="info__card" aria-labelledby="info-title">
+        <h2 class="info__title" id="info-title">${esc(t('contacts'))}</h2>
         <ul class="info__list">${rows.join('')}</ul>
         ${actions.length ? `<div class="info__actions">${actions.join('')}</div>` : ''}
-      </div>
-      <p class="info__note">${esc(t('pricesNote'))}</p>
-      ${setting('примечание_к_фото') ? `<p class="info__note">${esc(setting('примечание_к_фото'))}</p>` : ''}`;
+      </section>
+      ${notes.map((n) => `<p class="info__note">${esc(n)}</p>`).join('')}`;
   }
 
   function applySettings() {
@@ -322,28 +405,86 @@
   }
 
   function applyStatic() {
-    document.documentElement.lang = lang;
+    document.documentElement.lang = lang === 'uz' ? 'uz-Latn' : 'ru';
     document.title = t('title');
     $$('[data-i18n]').forEach((el) => { el.textContent = t(el.dataset.i18n); });
     $$('[data-i18n-label]').forEach((el) => { el.setAttribute('aria-label', t(el.dataset.i18nLabel)); });
     $$('[data-i18n-placeholder]').forEach((el) => { el.placeholder = t(el.dataset.i18nPlaceholder); });
     $$('.lang button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.lang === lang)));
+    els.lang.dataset.active = lang;
+  }
+
+  // Структурированные данные schema.org: кафе + меню (для поисковиков и карт)
+  function renderJSONLD() {
+    const abs = (src) => (src ? new URL(src, SITE).href : undefined);
+    const data = {
+      '@context': 'https://schema.org',
+      '@type': 'CafeOrCoffeeShop',
+      name: 'Buddy Coffee',
+      url: SITE,
+      image: SITE + 'img/og.jpg',
+      telephone: setting('телефон').replace(/[^\d+]/g, '') || undefined,
+      servesCuisine: ['Fast food', 'Coffee'],
+      address: setting('адрес') ? { '@type': 'PostalAddress', streetAddress: setting('адрес'), addressCountry: 'UZ' } : undefined,
+      hasMenu: {
+        '@type': 'Menu',
+        inLanguage: lang,
+        hasMenuSection: model.cats.map((c) => ({
+          '@type': 'MenuSection',
+          name: c[lang],
+          hasMenuItem: model.items.filter((it) => it.cat === c.id).map((it) => ({
+            '@type': 'MenuItem',
+            name: it[lang],
+            description: it['desc_' + lang] || undefined,
+            image: abs(imgSrc(it, 'l')),
+            offers: it.prices.map((p, i) => ({
+              '@type': 'Offer',
+              price: p,
+              priceCurrency: 'UZS',
+              name: sizesOf(it)[i] || undefined,
+              availability: it.avail ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock'
+            }))
+          }))
+        }))
+      }
+    };
+    let node = $('#ld-json');
+    if (!node) {
+      node = document.createElement('script');
+      node.type = 'application/ld+json';
+      node.id = 'ld-json';
+      document.head.appendChild(node);
+    }
+    node.textContent = JSON.stringify(data);
   }
 
   function render() {
     applyStatic();
     if (!model) return;
+    // Перерисовка не должна сбивать фокус клавиатуры
+    const focused = document.activeElement;
+    const focusHost = focused && focused.closest && focused.closest('[data-id], [data-cat]');
+    const focusSel = focusHost ? (focusHost.dataset.id ? `[data-id="${focusHost.dataset.id}"]` : `.chip[data-cat="${focusHost.dataset.cat}"]`) : '';
+    const focusIsBtn = focused && focused.classList && focused.classList.contains('item__btn');
     applySettings();
     renderChips();
     renderMenu();
     renderInfo();
-    applySearch();
+    renderJSONLD();
+    applySearch(true);
     activeCat = '';
     updateSpy();
+    if (openId && els.sheet.open) fillSheet(model.items.find((x) => x.id === openId));
+    if (focusSel) {
+      const host = $(focusSel);
+      const target = host && (focusIsBtn ? $('.item__btn', host) : host);
+      if (target) target.focus({ preventScroll: true });
+    }
   }
 
   function renderError() {
-    els.menu.innerHTML = `<div class="empty"><p>${esc(t('error'))}</p><button type="button" class="chip" onclick="location.reload()">${esc(t('retry'))}</button></div>`;
+    els.menu.innerHTML = `<div class="empty"><p>${esc(t('error'))}</p><button type="button" class="chip" id="retry">${esc(t('retry'))}</button></div>`;
+    $('#retry').addEventListener('click', () => location.reload());
   }
 
   /* ---------- language ---------- */
@@ -364,74 +505,183 @@
 
   /* ---------- sheet (item details) ---------- */
 
-  function openSheet(id) {
-    const it = model && model.items.find((x) => x.id === id);
+  function sheetImgHTML(it, thumb) {
+    const src = thumb || imgSrc(it, 's');
+    if (!src) return placeholder(it);
+    return `<img class="sheet__img${thumb ? ' is-loaded' : ''}" src="${esc(src)}" alt="" width="960" height="720">`;
+  }
+
+  function fillSheet(it, thumb) {
     if (!it) return;
-    const src = imgSrc(it, 'l');
-    els.sheetMedia.innerHTML = src ? `<img src="${esc(src)}" alt="${esc(it[lang])}" width="960" height="720">` : placeholder(it);
+    els.sheetMedia.innerHTML = sheetImgHTML(it, thumb);
     els.sheetBadge.innerHTML = badgeHTML(it.badge);
     els.sheetTitle.textContent = it[lang];
     els.sheetDesc.textContent = it['desc_' + lang];
     els.sheetDesc.hidden = !it['desc_' + lang];
+    els.sheetMeta.textContent = it.weight;
 
     const sizes = sizesOf(it);
-    let rows;
+    const cur = esc(t('currency'));
+    let rows = '';
     if (!it.avail) rows = `<li class="is-out">${esc(t('out'))}</li>`;
-    else if (it.prices.length > 1) rows = it.prices.map((p, i) => `<li><span>${esc(sizes[i] || '')}</span><b>${fmt(p)} ${esc(t('currency'))}</b></li>`).join('');
-    else if (it.prices.length === 1) rows = `<li><span>${esc(t('price'))}</span><b>${fmt(it.prices[0])} ${esc(t('currency'))}</b></li>`;
-    else rows = '';
+    else if (it.prices.length > 1) rows = it.prices.map((p, i) => `<li><span>${esc(sizes[i] || '')}</span><b>${fmt(p)} ${cur}</b></li>`).join('');
+    else if (it.prices.length === 1) rows = `<li><span>${esc(t('price'))}</span><b>${fmt(it.prices[0])} ${cur}</b></li>`;
     els.sheetPrices.innerHTML = rows;
 
-    if (typeof els.sheet.showModal === 'function') els.sheet.showModal();
-    else els.sheet.setAttribute('open', '');
-    $('.sheet__card').scrollTop = 0;
+    // Сначала показываем уже загруженное превью, затем подменяем на большое фото
+    const img = $('img', els.sheetMedia);
+    const large = imgSrc(it, 'l');
+    if (img && large) {
+      const wantAvif = thumb && /\.avif(\?|$)/.test(thumb) && isLocalImg(it.img);
+      const big = wantAvif ? `img/l/${it.img}.avif` : large;
+      const pre = new Image();
+      pre.src = big;
+      pre.decode().then(() => {
+        if (openId === it.id && img.isConnected) { img.src = big; img.classList.add('is-loaded'); }
+      }).catch(() => {});
+    }
+  }
+
+  function openSheet(id, fromEl) {
+    const it = model && model.items.find((x) => x.id === id);
+    if (!it) return;
+    const thumbImg = fromEl && $('img.is-loaded', fromEl);
+    const thumb = thumbImg ? thumbImg.currentSrc || thumbImg.src : '';
+    openId = id;
+    opener = fromEl ? $('.item__btn', fromEl) || fromEl : document.activeElement;
+
+    const show = () => {
+      if (openId !== id) return; // успели закрыть до начала анимации
+      els.sheet.classList.remove('is-closing');
+      els.card.style.transform = '';
+      fillSheet(it, thumb);
+      if (typeof els.sheet.showModal === 'function') els.sheet.showModal();
+      else els.sheet.setAttribute('open', '');
+      els.card.scrollTop = 0;
+    };
+
+    if (document.startViewTransition && !reduceMotion && thumbImg) {
+      thumbImg.style.viewTransitionName = 'dish';
+      els.sheet.classList.add('is-vt');
+      const vt = document.startViewTransition(() => {
+        thumbImg.style.viewTransitionName = '';
+        show();
+        const img = $('img', els.sheetMedia);
+        if (img) img.style.viewTransitionName = 'dish';
+      });
+      // Анимация может быть пропущена (быстрые нажатия, вкладка в фоне) — это не ошибка
+      vt.ready.catch(() => {});
+      vt.updateCallbackDone.catch(() => {});
+      vt.finished.catch(() => {}).then(() => {
+        const img = $('img', els.sheetMedia);
+        if (img) img.style.viewTransitionName = '';
+        els.sheet.classList.remove('is-vt');
+      });
+    } else {
+      show();
+    }
     history.pushState({ sheet: true }, '');
   }
 
   function closeSheet() {
-    if (history.state && history.state.sheet) history.back();
-    else hideSheet();
+    if (goingBack) return;
+    if (history.state && history.state.sheet) {
+      goingBack = true;
+      history.back();
+    } else hideSheet();
   }
 
   function hideSheet() {
-    if (!els.sheet.open) return;
-    if (typeof els.sheet.close === 'function') els.sheet.close();
-    else els.sheet.removeAttribute('open');
+    openId = null;
+    if (!els.sheet.open || els.sheet.classList.contains('is-closing')) return;
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      els.sheet.classList.remove('is-closing');
+      els.card.style.transform = '';
+      if (typeof els.sheet.close === 'function') els.sheet.close();
+      else els.sheet.removeAttribute('open');
+      // Возвращаем фокус на карточку, с которой открыли (на телефоне кнопки фокус не получают)
+      if (opener && opener.isConnected) opener.focus({ preventScroll: true });
+      opener = null;
+    };
+    els.sheet.classList.add('is-closing');
+    els.card.addEventListener('animationend', finish, { once: true });
+    setTimeout(finish, 400);
+  }
+
+  // Свайп вниз по фото или «ручке» закрывает шторку
+  function bindSheetDrag() {
+    let drag = null;
+    els.card.addEventListener('pointerdown', (e) => {
+      if (!e.isPrimary || e.target.closest('.sheet__close') || !e.target.closest('.sheet__media, .sheet__handle')) return;
+      if (els.card.scrollTop > 0) return;
+      drag = { id: e.pointerId, y: e.clientY, t: performance.now(), dy: 0 };
+      els.card.classList.remove('is-settling');
+      els.card.setPointerCapture(e.pointerId);
+    });
+    els.card.addEventListener('pointermove', (e) => {
+      if (!drag || e.pointerId !== drag.id) return;
+      drag.dy = Math.max(0, e.clientY - drag.y);
+      els.card.style.transform = drag.dy ? `translateY(${drag.dy}px)` : '';
+    });
+    const end = (e) => {
+      if (!drag || e.pointerId !== drag.id) return;
+      const { dy, t: t0 } = drag;
+      drag = null;
+      const speed = dy / Math.max(1, performance.now() - t0);
+      if (dy > 110 || (dy > 30 && speed > 0.6)) {
+        closeSheet();
+      } else if (dy) {
+        els.card.classList.add('is-settling');
+        els.card.style.transform = '';
+        setTimeout(() => els.card.classList.remove('is-settling'), 260);
+      }
+    };
+    els.card.addEventListener('pointerup', end);
+    els.card.addEventListener('pointercancel', end);
   }
 
   /* ---------- search ---------- */
 
-  function applySearch() {
+  function applySearch(silent) {
     if (!model) return;
     const q = norm(els.q.value.trim());
-    let any = false;
+    let total = 0;
     $$('.section', els.menu).forEach((sec) => {
       let shown = 0;
       $$('.item', sec).forEach((el) => {
         const it = model.items.find((x) => x.id === el.dataset.id);
-        const hay = norm([it.uz, it.ru, it.desc_uz, it.desc_ru].join(' '));
-        const hit = !q || hay.includes(q);
+        const cat = model.cats.find((c) => c.id === it.cat) || {};
+        const hit = !q || norm([it.uz, it.ru, it.desc_uz, it.desc_ru, cat.uz, cat.ru].join(' ')).includes(q);
         el.hidden = !hit;
         if (hit) shown++;
       });
       sec.hidden = shown === 0;
       $('.section__title small', sec).textContent = shown;
-      if (shown) any = true;
+      total += shown;
     });
-    els.empty.hidden = any;
+    const pop = $('.popular', els.menu);
+    if (pop) pop.hidden = !!q;
+    els.empty.hidden = total > 0;
+    if (!silent) els.status.textContent = q ? (total ? t('found', total) : t('nothing')) : '';
   }
 
   function openSearch() {
     els.nav.classList.add('is-search');
+    els.searchBtn.setAttribute('aria-expanded', 'true');
     const top = els.nav.getBoundingClientRect().top + window.scrollY;
     if (window.scrollY < top) window.scrollTo({ top, behavior: reduceMotion ? 'auto' : 'smooth' });
-    els.q.focus();
+    els.q.focus({ preventScroll: true });
   }
 
   function closeSearch() {
     els.q.value = '';
     els.nav.classList.remove('is-search');
+    els.searchBtn.setAttribute('aria-expanded', 'false');
     applySearch();
+    els.searchBtn.focus({ preventScroll: true });
   }
 
   /* ---------- scroll spy ---------- */
@@ -441,7 +691,8 @@
     activeCat = id;
     $$('.chip', els.chips).forEach((c) => {
       const on = c.dataset.cat === id;
-      c.setAttribute('aria-current', String(on));
+      if (on) c.setAttribute('aria-current', 'true');
+      else c.removeAttribute('aria-current');
       if (on) {
         const left = c.offsetLeft - els.chips.offsetLeft - 8;
         els.chips.scrollTo({ left, behavior: reduceMotion ? 'auto' : 'smooth' });
@@ -452,6 +703,8 @@
   function updateSpy() {
     const navRect = els.nav.getBoundingClientRect();
     els.nav.classList.toggle('is-stuck', navRect.top <= 0 && window.scrollY > 0);
+    if (spyLockUntil > performance.now()) return;
+    spyLockUntil = 0;
     const line = navRect.bottom + 24;
     let current = '';
     $$('.section', els.menu).forEach((sec) => {
@@ -483,43 +736,55 @@
       const chip = e.target.closest('.chip');
       if (!chip) return;
       const sec = document.getElementById('cat-' + chip.dataset.cat);
-      if (sec) sec.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
+      if (!sec) return;
       setActive(chip.dataset.cat);
+      // Пока идёт плавная прокрутка, подсветку категорий не пересчитываем
+      spyLockUntil = performance.now() + 1200;
+      sec.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
+      const h = $('.section__title', sec);
+      if (h) h.focus({ preventScroll: true });
     });
+    window.addEventListener('scrollend', () => { if (spyLockUntil) { spyLockUntil = 0; updateSpy(); } });
 
     els.menu.addEventListener('click', (e) => {
-      const item = e.target.closest('.item');
-      if (item) openSheet(item.dataset.id);
-    });
-    els.menu.addEventListener('keydown', (e) => {
-      const item = e.target.closest('.item');
-      if (item && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); openSheet(item.dataset.id); }
+      const el = e.target.closest('.item, .pop');
+      if (el) openSheet(el.dataset.id, el);
     });
 
-    // Битая ссылка на фото → заглушка с иконкой категории
+    // Плавное появление фото; битая ссылка → заглушка с иконкой категории
+    document.addEventListener('load', (e) => {
+      if (e.target instanceof HTMLImageElement) e.target.classList.add('is-loaded');
+    }, true);
     document.addEventListener('error', (e) => {
       const img = e.target;
       if (!(img instanceof HTMLImageElement) || !model) return;
-      const host = img.closest('.item, .sheet');
-      const id = host && host.classList.contains('item') ? host.dataset.id : null;
-      const it = model.items.find((x) => x.id === id) || model.items.find((x) => x[lang] === img.alt);
-      img.outerHTML = it ? placeholder(it) : '';
+      const host = img.closest('[data-id]');
+      const it = host ? model.items.find((x) => x.id === host.dataset.id) : model.items.find((x) => x.id === openId);
+      (img.closest('picture') || img).outerHTML = it ? placeholder(it) : '';
     }, true);
 
     $('.sheet__close').addEventListener('click', closeSheet);
     els.sheet.addEventListener('click', (e) => { if (e.target === els.sheet) closeSheet(); });
     els.sheet.addEventListener('cancel', (e) => { e.preventDefault(); closeSheet(); });
-    window.addEventListener('popstate', hideSheet);
+    window.addEventListener('popstate', () => { goingBack = false; hideSheet(); });
+    $('.sheet__done').addEventListener('click', closeSheet);
+    bindSheetDrag();
 
-    $('.nav__search-btn').addEventListener('click', openSearch);
+    els.searchBtn.addEventListener('click', openSearch);
     $('.nav__search-close').addEventListener('click', closeSearch);
-    els.q.addEventListener('input', () => { applySearch(); updateSpy(); });
+    els.q.addEventListener('input', () => {
+      applySearch();
+      // Результаты начинаются сразу под панелью — прокручиваем к ней, если ушли ниже
+      const top = els.menu.getBoundingClientRect().top + window.scrollY - els.nav.offsetHeight;
+      if (window.scrollY > top) window.scrollTo({ top });
+      updateSpy();
+    });
     els.q.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeSearch(); if (e.key === 'Enter') els.q.blur(); });
 
     els.info.addEventListener('click', (e) => {
       const btn = e.target.closest('[data-copy]');
       if (!btn || !navigator.clipboard) return;
-      navigator.clipboard.writeText(btn.dataset.copy).then(() => { btn.textContent = t('copied'); });
+      navigator.clipboard.writeText(btn.dataset.copy).then(() => { btn.textContent = t('copied'); }).catch(() => {});
     });
 
     window.addEventListener('scroll', onScroll, { passive: true });
@@ -528,38 +793,55 @@
 
   /* ---------- start ---------- */
 
+  function showStale(time) {
+    const el = $('#stale');
+    if (!el) return;
+    const d = new Date(time);
+    const date = `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.${d.getFullYear()}`;
+    el.textContent = t('stale', date);
+    el.hidden = false;
+  }
+
   async function init() {
     lang = detectLang();
+    // После перезагрузки с открытой шторкой в истории остаётся её запись — убираем
+    if (history.state && history.state.sheet) history.replaceState(null, '');
     bindUI();
     applyStatic();
 
-    const cachedRaw = storage((s) => s.getItem(CACHE_KEY));
+    // Кэш: последняя удачно загруженная таблица + время загрузки
     let cached = null;
-    try { cached = cachedRaw ? JSON.parse(cachedRaw) : null; } catch (e) { cached = null; }
-    if (cached && validTables(cached)) {
-      model = buildModel(cached);
-      render();
-    } else cached = null;
+    try { cached = JSON.parse(storage((s) => s.getItem(CACHE_KEY)) || 'null'); } catch (e) { cached = null; }
+    if (cached && validTables(cached.tables)) apply(cached.tables);
+    else cached = null;
 
-    let tables = null;
-    try {
-      tables = await loadSheet();
-    } catch (e) {
+    const sheet = loadSheet().catch((e) => {
       if (CONFIG.sheetId) console.warn('[menu] Google Sheet:', e.message);
-    }
-    if (!tables && !cached) {
-      try { tables = await loadFallback(); } catch (e) { console.warn('[menu] fallback:', e.message); }
+      return null;
+    });
+
+    // Нет кэша: ждём таблицу недолго, потом показываем запасную копию
+    if (!model) {
+      const first = await Promise.race([sheet, delay(FALLBACK_AFTER).then(() => 'slow')]);
+      if (first && first !== 'slow') apply(first);
+      else {
+        try { apply(await loadFallback()); } catch (e) { console.warn('[menu] fallback:', e.message); }
+      }
     }
 
+    const tables = await sheet;
     if (tables) {
-      const json = JSON.stringify(tables);
-      if (json !== cachedRaw) {
-        model = buildModel(tables);
-        render();
-      }
-      if (CONFIG.sheetId) storage((s) => s.setItem(CACHE_KEY, json));
+      apply(tables);
+      storage((s) => s.setItem(CACHE_KEY, JSON.stringify({ t: Date.now(), tables })));
     } else if (!model) {
       renderError();
+      els.status.textContent = t('error');
+    } else if (cached && Date.now() - cached.t > STALE_AFTER) {
+      showStale(cached.t);
+    }
+
+    if ('serviceWorker' in navigator && location.protocol === 'https:') {
+      navigator.serviceWorker.register('sw.js').catch(() => {});
     }
   }
 

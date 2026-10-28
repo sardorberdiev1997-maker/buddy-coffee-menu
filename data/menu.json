@@ -1,37 +1,32 @@
 {
   "Меню": [
-    ["категория", "название_uz", "название_ru", "описание_uz", "описание_ru", "цена", "размеры_uz", "размеры_ru", "фото", "метка", "в_наличии"],
-    ["hotdog", "Klassik", "Классический", "Sosiska, yumshoq bulochka, ketchup, mayonez va yangi ko‘katlar.", "Сосиска, мягкая булочка, кетчуп, майонез и свежая зелень.", "15000 / 20000 / 25000", "Kichik / O‘rta / Katta", "Маленький / Средний / Большой", "hotdog-klassik", "хит", "да"],
-    ["hotdog", "Kazilik", "Казылик", "Qazi, yumshoq bulochka, bodring tuzlamasi, sous va ko‘katlar.", "Казы, мягкая булочка, маринованный огурец, соус и зелень.", "18000 / 28000 / 35000", "Kichik / O‘rta / Katta", "Маленький / Средний / Большой", "hotdog-qazili", "", "да"],
-    ["hotdog", "Kanadskiy", "Канадский", "Sosiska, makkajo‘xori, yashil no‘xat, pishloq sousi va ketchup.", "Сосиска, кукуруза, зелёный горошек, сырный соус и кетчуп.", "25000", "", "", "hotdog-kanadskiy", "", "да"],
-    ["hotdog", "Shashlikli", "С шашлыком", "Shashlik go‘shti bo‘laklari, piyoz, pomidor va maxsus sous.", "Кусочки шашлыка, лук, помидор и фирменный соус.", "25000 / 35000 / 45000", "Kichik / O‘rta / Katta", "Маленький / Средний / Большой", "hotdog-shashlikli", "", "да"],
-    ["hotdog", "Go‘shtli", "Мясной", "Mol go‘shti, sosiska, pomidor, bodring va sous.", "Говядина, сосиска, помидор, огурец и соус.", "35000", "", "", "hotdog-goshtli", "", "да"],
-    ["hotdog", "Barbekyu", "Барбекю", "Sosiska, barbekyu sousi, qovurilgan piyoz va pishloq.", "Сосиска, соус барбекю, жареный лук и сыр.", "25000 / 35000", "Kichik / Katta", "Маленький / Большой", "hotdog-barbekyu", "", "да"],
-
-    ["lavash", "Lavash", "Лаваш", "Mol go‘shti, pomidor, bodring, chips va maxsus sous lavashga o‘ralgan.", "Говядина, помидор, огурец, чипсы и фирменный соус в лаваше.", "35000", "", "", "lavash", "хит", "да"],
-    ["lavash", "Lavash sirniy", "Лаваш сырный", "Go‘sht, eritilgan pishloq, pomidor, bodring va sous.", "Мясо, тянущийся сыр, помидор, огурец и соус.", "35000", "", "", "lavash-pishloqli", "", "да"],
-    ["lavash", "Tovuqli lavash", "Лаваш с курицей", "Tovuq go‘shti, yangi sabzavotlar, chips va sarimsoqli sous.", "Курица, свежие овощи, чипсы и чесночный соус.", "25000", "", "", "lavash-tovuqli", "", "да"],
-
-    ["shaurma", "Shaurma", "Шаурма", "Go‘sht, yangi sabzavotlar, kartoshka fri va maxsus sous.", "Мясо, свежие овощи, картофель фри и фирменный соус.", "35000", "", "", "shaurma", "", "да"],
-    ["shaurma", "Big shaurma", "Биг шаурма", "Katta porsiya: ko‘proq go‘sht, sabzavot va sous.", "Большая порция: больше мяса, овощей и соуса.", "45000", "", "", "shaurma-big", "хит", "да"],
-
-    ["kfs", "KFS Basket", "KFS Баскет", "Strips, qanotchalar, kartoshka fri va 2 ta sous. Do‘stlar davrasi uchun.", "Стрипсы, крылышки, картофель фри и 2 соуса. На компанию.", "65000", "", "", "kfs-basket", "советуем", "да"],
-    ["kfs", "Strips", "Стрипсы", "Qarsildoq tovuq filesi bo‘laklari, sous bilan. 5 dona.", "Хрустящие полоски куриного филе с соусом. 5 шт.", "30000", "", "", "kfs-strips", "", "да"],
-    ["kfs", "Qanotchalar", "Крылышки", "Achchiq panirovkadagi qarsildoq tovuq qanotchalari. 6 dona.", "Хрустящие куриные крылышки в острой панировке. 6 шт.", "35000", "", "", "kfs-qanotlar", "острое", "да"],
-    ["kfs", "Naggets", "Наггетсы", "Tovuq naggetslari, sous bilan. 9 dona.", "Куриные наггетсы с соусом. 9 шт.", "25000", "", "", "kfs-nagets", "", "да"],
-    ["kfs", "Kartoshka fri", "Картофель фри", "Qarsildoq kartoshka fri, ketchup bilan.", "Хрустящий картофель фри с кетчупом.", "15000", "", "", "fri", "", "да"],
-
-    ["burger", "Gamburger", "Гамбургер", "Mol go‘shti kotleti, salat bargi, pomidor, piyoz va sous.", "Говяжья котлета, салат, помидор, лук и соус.", "30000", "", "", "burger-gamburger", "", "да"],
-    ["burger", "Chizburger", "Чизбургер", "Mol go‘shti kotleti, cheddar pishlog‘i, bodring tuzlamasi, piyoz va sous.", "Говяжья котлета, сыр чеддер, маринованный огурец, лук и соус.", "35000", "", "", "burger-chizburger", "", "да"],
-    ["burger", "Big burger", "Биг бургер", "Ikki qavat mol go‘shti kotleti, ikki qavat pishloq, sabzavotlar va sous.", "Две говяжьи котлеты, двойной сыр, овощи и соус.", "45000", "", "", "burger-big", "хит", "да"],
-
-    ["ichimlik", "Americano", "Американо", "Espresso va issiq suv. 250 ml.", "Эспрессо и горячая вода. 250 мл.", "15000", "", "", "americano", "", "да"],
-    ["ichimlik", "Espresso", "Эспрессо", "Kuchli va xushbo‘y qahva. 40 ml.", "Крепкий ароматный кофе. 40 мл.", "12000", "", "", "espresso", "", "да"],
-    ["ichimlik", "Cappuccino", "Капучино", "Espresso va ko‘pirtirilgan sut. 300 ml.", "Эспрессо и молочная пенка. 300 мл.", "20000", "", "", "cappuccino", "", "да"],
-    ["ichimlik", "Iced latte", "Айс латте", "Espresso, sovuq sut va muz. 400 ml.", "Эспрессо, холодное молоко и лёд. 400 мл.", "25000", "", "", "iced-latte", "", "да"],
-    ["ichimlik", "Milkshake", "Милкшейк", "Sut va muzqaymoq: qulupnay, shokolad yoki vanil. 400 ml.", "Молоко и мороженое: клубника, шоколад или ваниль. 400 мл.", "25000", "", "", "milkshake", "", "да"],
-    ["ichimlik", "Mojito", "Мохито", "Alkogolsiz: yalpiz, laym, muz va gazli suv. 400 ml.", "Безалкогольный: мята, лайм, лёд и газировка. 400 мл.", "20000", "", "", "mojito", "", "да"],
-    ["ichimlik", "Limonad", "Лимонад", "Yangi limon, yalpiz va muz. 400 ml.", "Свежий лимон, мята и лёд. 400 мл.", "20000", "", "", "lemonade", "", "да"]
+    ["категория", "название_uz", "название_ru", "описание_uz", "описание_ru", "цена", "размеры_uz", "размеры_ru", "фото", "метка", "в_наличии", "вес"],
+    ["hotdog", "Klassik", "Классический", "Sosiska, yumshoq bulochka, ketchup, mayonez va yangi ko‘katlar.", "Сосиска, мягкая булочка, кетчуп, майонез и свежая зелень.", "15000 / 20000 / 25000", "Kichik / O‘rta / Katta", "Маленький / Средний / Большой", "hotdog-klassik", "хит", "да", ""],
+    ["hotdog", "Kazilik", "Казылик", "Qazi, yumshoq bulochka, bodring tuzlamasi, sous va ko‘katlar.", "Казы, мягкая булочка, маринованный огурец, соус и зелень.", "18000 / 28000 / 35000", "Kichik / O‘rta / Katta", "Маленький / Средний / Большой", "hotdog-qazili", "", "да", ""],
+    ["hotdog", "Kanadskiy", "Канадский", "Sosiska, makkajo‘xori, yashil no‘xat, pishloq sousi va ketchup.", "Сосиска, кукуруза, зелёный горошек, сырный соус и кетчуп.", "25000", "", "", "hotdog-kanadskiy", "", "да", ""],
+    ["hotdog", "Shashlikli", "С шашлыком", "Shashlik go‘shti bo‘laklari, piyoz, pomidor va maxsus sous.", "Кусочки шашлыка, лук, помидор и фирменный соус.", "25000 / 35000 / 45000", "Kichik / O‘rta / Katta", "Маленький / Средний / Большой", "hotdog-shashlikli", "", "да", ""],
+    ["hotdog", "Go‘shtli", "Мясной", "Mol go‘shti, sosiska, pomidor, bodring va sous.", "Говядина, сосиска, помидор, огурец и соус.", "35000", "", "", "hotdog-goshtli", "", "да", ""],
+    ["hotdog", "Barbekyu", "Барбекю", "Sosiska, barbekyu sousi, qovurilgan piyoz va pishloq.", "Сосиска, соус барбекю, жареный лук и сыр.", "25000 / 35000", "Kichik / Katta", "Маленький / Большой", "hotdog-barbekyu", "", "да", ""],
+    ["lavash", "Lavash", "Лаваш", "Mol go‘shti, pomidor, bodring, chips va maxsus sous lavashga o‘ralgan.", "Говядина, помидор, огурец, чипсы и фирменный соус в лаваше.", "35000", "", "", "lavash", "хит", "да", ""],
+    ["lavash", "Lavash sirniy", "Лаваш сырный", "Go‘sht, eritilgan pishloq, pomidor, bodring va sous.", "Мясо, тянущийся сыр, помидор, огурец и соус.", "35000", "", "", "lavash-pishloqli", "", "да", ""],
+    ["lavash", "Tovuqli lavash", "Лаваш с курицей", "Tovuq go‘shti, yangi sabzavotlar, chips va sarimsoqli sous.", "Курица, свежие овощи, чипсы и чесночный соус.", "25000", "", "", "lavash-tovuqli", "", "да", ""],
+    ["shaurma", "Shaurma", "Шаурма", "Go‘sht, yangi sabzavotlar, kartoshka fri va maxsus sous.", "Мясо, свежие овощи, картофель фри и фирменный соус.", "35000", "", "", "shaurma", "", "да", ""],
+    ["shaurma", "Big shaurma", "Биг шаурма", "Katta porsiya: ko‘proq go‘sht, sabzavot va sous.", "Большая порция: больше мяса, овощей и соуса.", "45000", "", "", "shaurma-big", "хит", "да", ""],
+    ["kfs", "KFS Basket", "KFS Баскет", "Strips, qanotchalar, kartoshka fri va 2 ta sous. Do‘stlar davrasi uchun.", "Стрипсы, крылышки, картофель фри и 2 соуса. На компанию.", "65000", "", "", "kfs-basket", "советуем", "да", ""],
+    ["kfs", "Strips", "Стрипсы", "Qarsildoq tovuq filesi bo‘laklari, sous bilan. 5 dona.", "Хрустящие полоски куриного филе с соусом. 5 шт.", "30000", "", "", "kfs-strips", "", "да", ""],
+    ["kfs", "Qanotchalar", "Крылышки", "Achchiq panirovkadagi qarsildoq tovuq qanotchalari. 6 dona.", "Хрустящие куриные крылышки в острой панировке. 6 шт.", "35000", "", "", "kfs-qanotlar", "острое", "да", ""],
+    ["kfs", "Naggets", "Наггетсы", "Tovuq naggetslari, sous bilan. 9 dona.", "Куриные наггетсы с соусом. 9 шт.", "25000", "", "", "kfs-nagets", "", "да", ""],
+    ["kfs", "Kartoshka fri", "Картофель фри", "Qarsildoq kartoshka fri, ketchup bilan.", "Хрустящий картофель фри с кетчупом.", "15000", "", "", "fri", "", "да", ""],
+    ["burger", "Gamburger", "Гамбургер", "Mol go‘shti kotleti, salat bargi, pomidor, piyoz va sous.", "Говяжья котлета, салат, помидор, лук и соус.", "30000", "", "", "burger-gamburger", "", "да", ""],
+    ["burger", "Chizburger", "Чизбургер", "Mol go‘shti kotleti, cheddar pishlog‘i, bodring tuzlamasi, piyoz va sous.", "Говяжья котлета, сыр чеддер, маринованный огурец, лук и соус.", "35000", "", "", "burger-chizburger", "", "да", ""],
+    ["burger", "Big burger", "Биг бургер", "Ikki qavat mol go‘shti kotleti, ikki qavat pishloq, sabzavotlar va sous.", "Две говяжьи котлеты, двойной сыр, овощи и соус.", "45000", "", "", "burger-big", "хит", "да", ""],
+    ["ichimlik", "Americano", "Американо", "Espresso va issiq suv. 250 ml.", "Эспрессо и горячая вода. 250 мл.", "15000", "", "", "americano", "", "да", ""],
+    ["ichimlik", "Espresso", "Эспрессо", "Kuchli va xushbo‘y qahva. 40 ml.", "Крепкий ароматный кофе. 40 мл.", "12000", "", "", "espresso", "", "да", ""],
+    ["ichimlik", "Cappuccino", "Капучино", "Espresso va ko‘pirtirilgan sut. 300 ml.", "Эспрессо и молочная пенка. 300 мл.", "20000", "", "", "cappuccino", "", "да", ""],
+    ["ichimlik", "Iced latte", "Айс латте", "Espresso, sovuq sut va muz. 400 ml.", "Эспрессо, холодное молоко и лёд. 400 мл.", "25000", "", "", "iced-latte", "", "да", ""],
+    ["ichimlik", "Milkshake", "Милкшейк", "Sut va muzqaymoq: qulupnay, shokolad yoki vanil. 400 ml.", "Молоко и мороженое: клубника, шоколад или ваниль. 400 мл.", "25000", "", "", "milkshake", "", "да", ""],
+    ["ichimlik", "Mojito", "Мохито", "Alkogolsiz: yalpiz, laym, muz va gazli suv. 400 ml.", "Безалкогольный: мята, лайм, лёд и газировка. 400 мл.", "20000", "", "", "mojito", "", "да", ""],
+    ["ichimlik", "Limonad", "Лимонад", "Yangi limon, yalpiz va muz. 400 ml.", "Свежий лимон, мята и лёд. 400 мл.", "20000", "", "", "lemonade", "", "да", ""]
   ],
   "Категории": [
     ["id", "название_uz", "название_ru", "иконка"],
@@ -57,6 +52,7 @@
     ["instagram", "", ""],
     ["telegram", "", ""],
     ["объявление", "", ""],
-    ["примечание_к_фото", "Rasmlar taxminiy, taomning ko‘rinishi farq qilishi mumkin.", "Фото носят иллюстративный характер."]
+    ["примечание_к_фото", "Rasmlar taxminiy, taomning ko‘rinishi farq qilishi mumkin.", "Фото носят иллюстративный характер."],
+    ["продавец", "", ""]
   ]
 }
