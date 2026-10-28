@@ -1,0 +1,7 @@
+# Необязательно: то же самое через wrangler (npx wrangler deploy -c cron/wrangler.toml)
+name = "buddy-cron"
+main = "worker.js"
+compatibility_date = "2026-10-01"
+
+[triggers]
+crons = ["* * * * *"]

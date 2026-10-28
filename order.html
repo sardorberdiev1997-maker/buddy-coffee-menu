@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="uz-Latn">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="referrer" content="no-referrer">
+  <meta name="robots" content="noindex">
+  <title>Buddy Coffee — Buyurtma</title>
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#E31B23">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="img/apple-touch-icon.png">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="preload" href="assets/fonts/rubik-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <script src="assets/boot.js?v=3"></script>
+  <link rel="stylesheet" href="assets/style.css?v=3">
+  <script src="assets/config.js?v=3" defer></script>
+  <script src="assets/order.js?v=3" defer></script>
+  <script src="assets/render.js?v=3" defer></script>
+  <script src="assets/track.js?v=3" defer></script>
+</head>
+<body class="track-page">
+  <header class="hero hero--slim">
+    <div class="hero__top">
+      <a class="brand" href="/">
+        <span class="brand__mark" aria-hidden="true">
+          <svg viewBox="0 0 64 64"><use href="#cup"/></svg>
+        </span>
+        <span class="brand__name">Buddy <span class="brand__tag">Coffee</span></span>
+      </a>
+      <div class="lang" role="group" aria-label="Til · Язык" data-active="uz">
+        <span class="lang__thumb" aria-hidden="true"></span>
+        <button type="button" data-lang="uz" lang="uz-Latn" aria-pressed="true">UZ<span class="sr-only"> — O‘zbekcha</span></button>
+        <button type="button" data-lang="ru" lang="ru" aria-pressed="false">RU<span class="sr-only"> — Русский</span></button>
+      </div>
+    </div>
+  </header>
+
+  <main class="track" id="track" tabindex="-1">
+    <div class="skeleton" aria-hidden="true"><div></div><div></div></div>
+  </main>
+  <p class="sr-only" id="track-status" role="status" aria-live="polite"></p>
+  <p class="net" id="net" role="status" hidden></p>
+
+  <noscript><p class="empty">Buyurtma holatini ko‘rish uchun JavaScript’ni yoqing. · Чтобы увидеть статус заказа, включите JavaScript.</p></noscript>
+
+  <svg class="sprite" aria-hidden="true" focusable="false">
+    <symbol id="cup" viewBox="0 0 64 64">
+      <path d="M21 13 25 5l7 6 7-6 4 8z" fill="#FFD23F" stroke="#1B1612" stroke-width="2.4" stroke-linejoin="round"/>
+      <path d="M11 17h42l-4.2 33.5A7 7 0 0 1 41.9 57H22.1a7 7 0 0 1-6.9-6.5z" fill="#1B1612"/>
+      <path d="M52 24h2.5a8 8 0 0 1 0 16H50" fill="none" stroke="#1B1612" stroke-width="4.5" stroke-linecap="round"/>
+      <ellipse cx="25" cy="30" rx="2.6" ry="3.2" fill="#fff"/>
+      <ellipse cx="39" cy="30" rx="2.6" ry="3.2" fill="#fff"/>
+      <path d="M23 39q9 9 18 0" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round"/>
+    </symbol>
+    <symbol id="i-phone" viewBox="0 0 24 24"><path d="M6.6 3.5h2.6l1.4 4.2-2 1.3a11 11 0 0 0 6.4 6.4l1.3-2 4.2 1.4v2.6a2 2 0 0 1-2.2 2A16.5 16.5 0 0 1 4.6 5.7a2 2 0 0 1 2-2.2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
+    <symbol id="i-tg" viewBox="0 0 24 24"><path d="M20.5 4.5 3.8 11c-.9.4-.9 1.6.1 1.9l4.1 1.3 1.6 5c.3.8 1.3 1 1.9.4l2.3-2.2 4.4 3.2c.7.5 1.7.1 1.9-.7L22 5.8c.2-1-.7-1.7-1.5-1.3zM9.5 14l8-6.2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></symbol>
+    <symbol id="i-repeat" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11a7.5 7.5 0 0 1 13-5l2.5 2.5M20 13a7.5 7.5 0 0 1-13 5L4.5 15.5"/><path d="M19.5 3.5v5h-5M4.5 20.5v-5h5"/></g></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></symbol>
+    <symbol id="i-pin" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.4"/></g></symbol>
+    <symbol id="i-back" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-chat" viewBox="0 0 24 24"><path d="M5 5.5h14a1.5 1.5 0 0 1 1.5 1.5v8.5A1.5 1.5 0 0 1 19 17h-8l-4.5 3.5V17H5a1.5 1.5 0 0 1-1.5-1.5V7A1.5 1.5 0 0 1 5 5.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
+  </svg>
+</body>
+</html>

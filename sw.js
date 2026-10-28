@@ -2,11 +2,16 @@
 const VERSION = 'bm-v3';
 const CORE = [
   './',
+  'order',
+  'offline.html',
   'assets/style.css?v=3',
   'assets/boot.js?v=3',
   'assets/config.js?v=3',
+  'assets/order.js?v=3',
   'assets/render.js?v=3',
   'assets/app.js?v=3',
+  'assets/cart.js?v=3',
+  'assets/track.js?v=3',
   'assets/vt.css?v=3',
   'data/menu.json',
   'favicon.svg',
@@ -41,6 +46,8 @@ self.addEventListener('fetch', (e) => {
   const url = new URL(req.url);
   // Google Таблица и прочие внешние запросы — напрямую, их кэширует app.js
   if (url.origin !== self.location.origin) return;
+  // Заказы и статусы — всегда из сети, никогда из кэша
+  if (url.pathname.startsWith('/api/')) return;
 
   // Фото и шрифты: сразу из кэша, в фоне обновляем
   if (url.pathname.startsWith('/img/') || url.pathname.startsWith('/assets/fonts/')) {
@@ -51,11 +58,13 @@ self.addEventListener('fetch', (e) => {
     return;
   }
 
-  // Страница, стили, скрипты, menu.json: сначала сеть, без сети — кэш
+  // Страница, стили, скрипты, menu.json: сначала сеть, без сети — кэш, для страниц — «нет сети»
   e.respondWith(
     fetch(req)
       .then((res) => put(req, res))
       .catch(() => caches.match(req, { ignoreSearch: req.mode === 'navigate' })
-        .then((hit) => hit || (req.mode === 'navigate' ? caches.match('./') : undefined)))
+        .then((hit) => hit || (req.mode === 'navigate'
+          ? caches.match(url.pathname === '/' ? './' : 'offline.html').then((page) => page || caches.match('offline.html'))
+          : undefined)))
   );
 });

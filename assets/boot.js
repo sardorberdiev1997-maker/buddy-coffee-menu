@@ -7,4 +7,12 @@
   document.documentElement.setAttribute('data-lang', l);
   document.documentElement.classList.add('js');
   if (l !== 'uz') document.documentElement.classList.add('is-booting');
+
+  // Сайт открыт как Telegram Mini App — подключаем скрипт Telegram (обычным посетителям он не нужен)
+  if (/tgWebApp/.test(location.hash) || /[?&]tg=1\b/.test(location.search)) {
+    var s = document.createElement('script');
+    s.src = 'https://telegram.org/js/telegram-web-app.js?59';
+    s.onload = function () { document.dispatchEvent(new Event('tg-ready')); };
+    document.head.appendChild(s);
+  }
 })();

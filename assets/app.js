@@ -17,8 +17,9 @@
     heroBody: $('#hero-body'), noticeSlot: $('#notice-slot'), q: $('#q'), searchBtn: $('.nav__search-btn'),
     sheet: $('#sheet'), card: $('.sheet__card'), sheetMedia: $('.sheet__media'),
     sheetBadge: $('#sheet-badge'), sheetTitle: $('#sheet-title'), sheetDesc: $('#sheet-desc'), sheetMeta: $('#sheet-meta'),
-    sheetPrices: $('#sheet-prices'), sheetPairs: $('#sheet-pairs'), lang: $('.lang')
+    sheetPrices: $('#sheet-prices'), sheetPairs: $('#sheet-pairs'), sheetNutr: $('#sheet-nutr'), lang: $('.lang')
   };
+  const cart = () => window.BuddyCart;
 
   let lang = 'uz';
   let model = null;
@@ -108,6 +109,7 @@
     markLoaded(document);
     applySearch(true);
     updateSpy();
+    if (cart()) cart().refresh();
   }
 
   /* ---------- render ---------- */
@@ -147,6 +149,7 @@
     applySearch(true);
     activeCat = '';
     requestAnimationFrame(updateSpy);
+    if (cart()) cart().refresh();
     if (openId && els.sheet.open) fillSheet(model.items.find((x) => x.id === openId));
     if (focusSel) {
       const host = $(focusSel);
@@ -167,7 +170,7 @@
   }
 
   function renderError() {
-    els.menu.innerHTML = `<div class="empty"><p>${R.esc(t('error'))}</p><button type="button" class="chip" id="retry">${R.esc(t('retry'))}</button></div>`;
+    els.menu.innerHTML = `<div class="empty"><p class="empty__icon" aria-hidden="true">📡</p><p>${R.esc(t('error'))}</p><button type="button" class="chip" id="retry">${R.esc(t('retry'))}</button></div>`;
     $('#retry').addEventListener('click', () => location.reload());
     els.status.textContent = t('error');
   }
@@ -195,6 +198,7 @@
     lang = l;
     storage((s) => s.setItem(LANG_KEY, l));
     render();
+    if (cart()) cart().lang();
   }
 
   /* ---------- sheet (item details) ---------- */
@@ -223,8 +227,10 @@
     else if (it.prices.length > 1) rows = it.prices.map((p, i) => `<li><span>${R.esc(sizes[i] || '')}${perSize ? ` <small>· ${R.esc(weights[i])}</small>` : ''}</span><b>${R.fmt(p)} ${cur}</b></li>`).join('');
     else if (it.prices.length === 1) rows = `<li><span>${R.esc(t('price'))}</span><b>${R.fmt(it.prices[0])} ${cur}</b></li>`;
     els.sheetPrices.innerHTML = rows;
+    els.sheetNutr.innerHTML = view.nutritionHTML(it, 0);
     els.sheetPairs.innerHTML = view.pairsHTML(it);
     markLoaded(els.sheetPairs);
+    if (cart()) cart().fillSheet(it);
 
     // Сначала показываем уже загруженное превью, затем подменяем на большое фото
     const img = $('img', els.sheetMedia);
@@ -445,9 +451,11 @@
     window.addEventListener('scrollend', () => { if (spyLockUntil) { spyLockUntil = 0; updateSpy(); } });
 
     els.menu.addEventListener('click', (e) => {
+      if (e.target.closest('.add-slot')) return; // «+» и счётчик — в cart.js
       const el = e.target.closest('.item, .pop');
       if (el) openSheet(el.dataset.id, el);
     });
+    $('#clear-search').addEventListener('click', () => { closeSearch(); });
 
     // Плавное появление фото; битая ссылка → заглушка с иконкой категории
     document.addEventListener('load', (e) => {
@@ -555,6 +563,18 @@
       navigator.serviceWorker.register('sw.js').catch(() => {});
     }
   }
+
+  // Для cart.js: модель, язык и шторка блюда
+  window.BuddyApp = {
+    get model() { return model; },
+    get view() { return view; },
+    get lang() { return lang; },
+    t,
+    openSheet,
+    closeSheet,
+    // После «цены обновились» — перечитать таблицу сразу
+    reload: () => loadSheet().then((tables) => { if (tables) apply(tables); }).catch(() => {})
+  };
 
   init();
 })();

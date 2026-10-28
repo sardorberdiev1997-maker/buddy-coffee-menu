@@ -2,9 +2,11 @@
   "name": "buddy-coffee-menu",
   "private": true,
   "type": "module",
-  "description": "QR-меню Buddy Coffee: статический сайт, данные из Google Таблицы",
+  "description": "QR-меню и заказы Buddy Coffee: статический сайт, данные из Google Таблицы, заказы через Cloudflare Pages + D1 и Telegram-бот",
   "scripts": {
-    "build": "node tools/build.mjs"
+    "build": "node tools/build.mjs",
+    "dev": "node tools/build.mjs && node --no-warnings tools/dev-server.mjs",
+    "test": "node --no-warnings --test tools/test/*.test.mjs"
   },
   "devDependencies": {
     "esbuild": "0.24.0"

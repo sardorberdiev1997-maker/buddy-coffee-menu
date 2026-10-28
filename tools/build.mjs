@@ -2,6 +2,7 @@
 // 1) Меню из data/menu.json вшивается в index.html — показывается сразу, без ожидания скриптов и данных.
 // 2) JS/CSS минифицируются, к ссылкам добавляется хеш содержимого — можно кэшировать «навсегда».
 // 3) Service worker получает тот же список файлов и версию.
+// 4) Сервер заказов (server/) собирается в dist/_worker.js и обслуживает только /api/* (dist/_routes.json).
 import { createHash } from 'node:crypto';
 import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
@@ -25,6 +26,7 @@ sandbox.window = sandbox;
 sandbox.globalThis = sandbox;
 vm.createContext(sandbox);
 vm.runInContext(read('assets/config.js'), sandbox);
+vm.runInContext(read('assets/order.js'), sandbox);
 vm.runInContext(read('assets/render.js'), sandbox);
 const R = sandbox.MenuRender;
 const TABS = sandbox.MENU_CONFIG.tabs;
@@ -59,13 +61,14 @@ mkdirSync(DIST, { recursive: true });
 
 // Скрипты и стили: минификация + хеш
 const versions = {};
-for (const file of ['assets/boot.js', 'assets/config.js', 'assets/render.js', 'assets/app.js', 'assets/style.css', 'assets/vt.css']) {
+const ASSETS = ['assets/boot.js', 'assets/config.js', 'assets/order.js', 'assets/render.js', 'assets/app.js', 'assets/cart.js', 'assets/track.js', 'assets/style.css', 'assets/vt.css'];
+for (const file of ASSETS) {
   const isCss = file.endsWith('.css');
   const out = await esbuild.transform(read(file), { loader: isCss ? 'css' : 'js', minify: true, target: isCss ? undefined : 'es2020', charset: 'utf8' });
   write(file, out.code);
   versions[file] = hash(out.code);
 }
-const withVersions = (s) => s.replace(/(assets\/(?:boot|config|render|app)\.js|assets\/(?:style|vt)\.css)\?v=[\w-]+/g, (m, file) => `${file}?v=${versions[file]}`);
+const withVersions = (s) => s.replace(/(assets\/(?:boot|config|order|render|app|cart|track)\.js|assets\/(?:style|vt)\.css)\?v=[\w-]+/g, (m, file) => `${file}?v=${versions[file]}`);
 
 // index.html: вставляем готовую разметку по меткам <!--name-->…<!--/name-->
 let html = withVersions(read('index.html'));
@@ -92,25 +95,41 @@ const inline = (re, tag) => {
 inline(/<script src="assets\/boot\.js\?v=[\w-]+"><\/script>/, `<script>${bootCode}</script>`);
 inline(/<link rel="stylesheet" href="assets\/style\.css\?v=[\w-]+">/, `<style>${cssCode}</style>`);
 write('index.html', html);
-const page404 = read('404.html');
-const style404 = (page404.match(/<style>([\s\S]*?)<\/style>/) || [])[1];
+// Страница заказа: без встроенных скриптов и стилей — CSP не нужны хеши
+write('order.html', withVersions(read('order.html')));
+// Встроенные стили страниц 404 и «нет сети» тоже разрешаем по хешу
+const inlineStyle = (file) => (read(file).match(/<style>([\s\S]*?)<\/style>/) || [])[1];
 const scriptHashes = [sha(bootCode)];
-const styleHashes = [sha(cssCode)].concat(style404 ? [sha(style404)] : []);
+const styleHashes = [sha(cssCode)].concat(['404.html', 'offline.html'].map(inlineStyle).filter(Boolean).map(sha));
 
 // Service worker: тот же список файлов и версия по их хешам
 const sw = withVersions(read('sw.js'))
-  .replace(/const VERSION = '[^']*'/, `const VERSION = 'bm-${hash(JSON.stringify(versions) + html)}'`)
-  .replace(/\s*'assets\/(?:boot\.js|style\.css)\?v=[\w-]+',/g, ''); // они теперь внутри index.html
+  .replace(/const VERSION = '[^']*'/, `const VERSION = 'bm-${hash(JSON.stringify(versions) + html)}'`);
 write('sw.js', (await esbuild.transform(sw, { loader: 'js', minify: true, target: 'es2020', charset: 'utf8' })).code);
 
 // Остальное — как есть
-for (const p of ['404.html', 'favicon.svg', 'manifest.webmanifest', 'robots.txt', 'sitemap.xml', 'data/menu.json', 'assets/fonts', 'img']) {
+for (const p of ['404.html', 'offline.html', 'favicon.svg', 'manifest.webmanifest', 'robots.txt', 'sitemap.xml', 'data/menu.json', 'assets/fonts', 'img']) {
   cpSync(path.join(ROOT, p), path.join(DIST, p), { recursive: true });
 }
+// Сервер заказов: один файл для Cloudflare Pages (advanced mode)
+await esbuild.build({
+  entryPoints: [path.join(ROOT, 'server/index.js')],
+  outfile: path.join(DIST, '_worker.js'),
+  bundle: true,
+  format: 'esm',
+  platform: 'neutral',
+  target: 'es2022',
+  minify: true,
+  charset: 'utf8',
+  legalComments: 'none',
+  logLevel: 'warning'
+});
+write('_routes.json', JSON.stringify({ version: 1, include: ['/api/*'], exclude: [] }));
+
 write('_headers', read('tools/_headers')
   .replace('{{SCRIPT_HASHES}}', scriptHashes.join(' '))
   .replace('{{STYLE_HASHES}}', styleHashes.join(' ')));
 
 const kb = (p) => (readFileSync(path.join(DIST, p)).length / 1024).toFixed(1) + ' KB';
-console.log(`dist готов: index.html ${kb('index.html')}, app.js ${kb('assets/app.js')}, render.js ${kb('assets/render.js')}, style.css ${kb('assets/style.css')}`);
+console.log(`dist готов: index.html ${kb('index.html')}, app.js ${kb('assets/app.js')}, cart.js ${kb('assets/cart.js')}, render.js ${kb('assets/render.js')}, style.css ${kb('assets/style.css')}, _worker.js ${kb('_worker.js')}`);
 if (!existsSync(path.join(DIST, 'img/og.jpg'))) throw new Error('нет img/og.jpg');

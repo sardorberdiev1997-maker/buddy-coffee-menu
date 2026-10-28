@@ -14,10 +14,18 @@
       contacts: 'Biz bilan bog‘lanish', address: 'Manzil', hours: 'Ish vaqti', phone: 'Telefon',
       delivery: 'Yetkazib berish', payment: 'To‘lov', wifi: 'Wi‑Fi', password: 'parol',
       copy: 'Nusxa olish', copied: 'Nusxalandi', call: 'Qo‘ng‘iroq qilish', map: 'Xaritada',
-      pricesNote: 'Barcha narxlar so‘mda.', privacy: 'Sayt cookie-fayllardan foydalanmaydi va shaxsiy ma’lumot yig‘maydi — faqat anonim tashriflar statistikasi.',
+      pricesNote: 'Barcha narxlar so‘mda.',
+      privacy: 'Sayt cookie-fayllardan foydalanmaydi, tashriflar statistikasi anonim. Ism, telefon va manzil faqat buyurtmani yetkazish uchun ishlatiladi va 90 kundan keyin o‘chiriladi.',
       error: 'Menyuni yuklab bo‘lmadi. Internetni tekshirib, qayta urinib ko‘ring.',
       retry: 'Qayta urinish', other: 'Boshqa',
       pairs: 'Bu bilan olishadi', rateTitle: 'Sizga yoqdimi?', rateText: 'Baho va fikr qoldiring — bu bizga juda yordam beradi.',
+      addTo: (n) => `Savatga qo‘shish: ${n}`, energy: 'Kaloriya',
+      kcal: 'kkal', g: 'g', nutrTitle: 'Ozuqaviy qiymat', protein: 'Oqsil', fat: 'Yog‘', carbs: 'Uglevod',
+      perPortion: (w) => `1 porsiya${w ? ` (${w})` : ''} uchun, taxminan`,
+      nutrNote: 'Taxminiy qiymatlar: standart retseptlar va USDA FoodData Central ma’lumotlari asosida hisoblangan.',
+      allergens: 'Allergenlar',
+      allergenNote: 'Barcha taomlar bitta oshxonada tayyorlanadi, boshqa allergenlar izi bo‘lishi mumkin. Allergiyangiz bo‘lsa, buyurtmadan oldin so‘rang.',
+      nothingHint: 'Boshqa so‘z bilan qidirib ko‘ring.', clearSearch: 'Qidiruvni tozalash',
       stale: (d) => `Internet yo‘q — narxlar ${d} holatiga ko‘rsatilmoqda.`
     },
     ru: {
@@ -28,10 +36,18 @@
       contacts: 'Контакты', address: 'Адрес', hours: 'Часы работы', phone: 'Телефон',
       delivery: 'Доставка', payment: 'Оплата', wifi: 'Wi‑Fi', password: 'пароль',
       copy: 'Копировать', copied: 'Скопировано', call: 'Позвонить', map: 'На карте',
-      pricesNote: 'Все цены указаны в сумах.', privacy: 'Сайт не использует cookie и не собирает персональные данные — только анонимную статистику посещений.',
+      pricesNote: 'Все цены указаны в сумах.',
+      privacy: 'Сайт не использует cookie, статистика посещений анонимная. Имя, телефон и адрес нужны только для доставки заказа и удаляются через 90 дней.',
       error: 'Не удалось загрузить меню. Проверьте интернет и попробуйте ещё раз.',
       retry: 'Повторить', other: 'Другое',
       pairs: 'С этим берут', rateTitle: 'Понравилось?', rateText: 'Оставьте оценку и отзыв — это очень нам помогает.',
+      addTo: (n) => `Добавить в корзину: ${n}`, energy: 'Калории',
+      kcal: 'ккал', g: 'г', nutrTitle: 'Пищевая ценность', protein: 'Белки', fat: 'Жиры', carbs: 'Углеводы',
+      perPortion: (w) => `на порцию${w ? ` ${w}` : ''}, примерно`,
+      nutrNote: 'Примерные значения: расчёт по стандартным рецептам и данным USDA FoodData Central.',
+      allergens: 'Аллергены',
+      allergenNote: 'Все блюда готовятся на одной кухне — возможны следы других аллергенов. При аллергии уточните перед заказом.',
+      nothingHint: 'Попробуйте другое слово.', clearSearch: 'Сбросить поиск',
       stale: (d) => `Нет связи — показаны цены на ${d}.`
     }
   };
@@ -54,8 +70,29 @@
     'категория': 'cat', 'название_uz': 'uz', 'название_ru': 'ru', 'описание_uz': 'desc_uz', 'описание_ru': 'desc_ru',
     'цена': 'price', 'размеры_uz': 'sizes_uz', 'размеры_ru': 'sizes_ru', 'фото': 'img', 'метка': 'badge',
     'в_наличии': 'avail', 'с_этим_берут': 'pairs', 'вес': 'weight', 'выход': 'weight', 'объём': 'weight', 'объем': 'weight',
+    'ккал': 'kcal', 'калории': 'kcal', 'белки': 'protein', 'жиры': 'fat', 'углеводы': 'carbs', 'аллергены': 'allergens',
     'иконка': 'icon', 'ключ': 'key', 'значение_uz': 'uz', 'значение_ru': 'ru'
   };
+
+  // 14 аллергенов, которые по правилам ЕС (Регламент 1169/2011) указывают в меню
+  const ALLERGENS = {
+    gluten: { uz: 'Glyuten', ru: 'Глютен', aliases: ['глютен', 'gluten', 'glyuten', 'пшеница', 'bug‘doy'] },
+    milk: { uz: 'Sut', ru: 'Молоко', aliases: ['молоко', 'лактоза', 'milk', 'sut'] },
+    eggs: { uz: 'Tuxum', ru: 'Яйца', aliases: ['яйца', 'яйцо', 'eggs', 'egg', 'tuxum'] },
+    mustard: { uz: 'Xantal', ru: 'Горчица', aliases: ['горчица', 'mustard', 'xantal'] },
+    sesame: { uz: 'Kunjut', ru: 'Кунжут', aliases: ['кунжут', 'sesame', 'kunjut'] },
+    soy: { uz: 'Soya', ru: 'Соя', aliases: ['соя', 'soy', 'soya'] },
+    nuts: { uz: 'Yong‘oq', ru: 'Орехи', aliases: ['орехи', 'орех', 'nuts', 'yong‘oq', 'yongoq'] },
+    peanuts: { uz: 'Yeryong‘oq', ru: 'Арахис', aliases: ['арахис', 'peanuts', 'peanut', 'yeryong‘oq', 'yeryongoq'] },
+    celery: { uz: 'Selderey', ru: 'Сельдерей', aliases: ['сельдерей', 'celery', 'selderey'] },
+    fish: { uz: 'Baliq', ru: 'Рыба', aliases: ['рыба', 'fish', 'baliq'] },
+    crustaceans: { uz: 'Qisqichbaqasimonlar', ru: 'Ракообразные', aliases: ['ракообразные', 'креветки', 'crustaceans', 'qisqichbaqasimonlar'] },
+    molluscs: { uz: 'Mollyuskalar', ru: 'Моллюски', aliases: ['моллюски', 'molluscs', 'mollyuskalar'] },
+    sulphites: { uz: 'Sulfitlar', ru: 'Сульфиты', aliases: ['сульфиты', 'sulphites', 'sulfites', 'sulfitlar'] },
+    lupin: { uz: 'Lyupin', ru: 'Люпин', aliases: ['люпин', 'lupin', 'lyupin'] }
+  };
+  const ALLERGEN_ALIASES = {};
+  Object.keys(ALLERGENS).forEach((code) => ALLERGENS[code].aliases.forEach((a) => { ALLERGEN_ALIASES[a.replace(/[‘’ʻʼ'`]/g, '')] = code; }));
   const NOT_AVAILABLE = /^(нет|no|false|0|-|yo[‘'ʻ’`]?q)$/i;
 
   // Единицы веса/объёма под язык: g/г, ml/мл, kg/кг, l/л
@@ -71,6 +108,9 @@
   const splitList = (s) => String(s || '').split(/[\/;|]/).map((x) => x.trim()).filter(Boolean);
   // «35000.00» → 35000; «35 000», «35,000» → 35000
   const toPrices = (s) => splitList(s).map((x) => parseInt(x.replace(/[.,]\d{1,2}$/, '').replace(/\D/g, ''), 10)).filter((n) => n > 0);
+  // «400 / 530 / 660» → [400, 530, 660]; пустые и нечисловые — null
+  const toNums = (s) => splitList(s).map((x) => { const n = parseFloat(x.replace(',', '.').replace(/[^\d.]/g, '')); return Number.isFinite(n) ? n : null; });
+  const toAllergens = (s) => String(s || '').split(/[,;\/|]/).map((x) => ALLERGEN_ALIASES[norm(x.trim())]).filter((c, i, a) => c && a.indexOf(c) === i);
 
   // Ссылки из таблицы: только http(s), tel и mailto
   function safeUrl(v) {
@@ -143,11 +183,21 @@
         sizes_uz: splitList(r.sizes_uz),
         sizes_ru: splitList(r.sizes_ru),
         weight: r.weight || '',
+        nutr: { kcal: toNums(r.kcal), p: toNums(r.protein), f: toNums(r.fat), c: toNums(r.carbs) },
+        allergens: toAllergens(r.allergens),
         pairs: splitList(r.pairs),
         img: r.img || '',
         badge: BADGE_ALIASES[norm(r.badge)] || '',
         avail: !NOT_AVAILABLE.test(r.avail || '')
       }));
+
+    // Ключ для корзины: не зависит от порядка строк в таблице
+    const seen = {};
+    items.forEach((it) => {
+      const base = slug(it.cat + '-' + it.uz);
+      seen[base] = (seen[base] || 0) + 1;
+      it.key = seen[base] > 1 ? `${base}-${seen[base]}` : base;
+    });
 
     items.forEach((it) => {
       if (!cats.some((c) => c.id === it.cat)) {
@@ -246,6 +296,39 @@
       return `<span class="weight">${esc(w.join(' / '))}</span>`;
     }
 
+    // КБЖУ размера i: значения по размерам или одно на все
+    function nutrOf(it, i) {
+      const pick = (arr) => (arr.length > 1 ? arr[i] : arr[0]);
+      const n = { kcal: pick(it.nutr.kcal), p: pick(it.nutr.p), f: pick(it.nutr.f), c: pick(it.nutr.c) };
+      return n.kcal == null ? null : n;
+    }
+
+    // На карточке — только калории: «≈ 530 ккал» или «≈ 400–660 ккал»
+    function kcalHTML(it) {
+      const list = it.nutr.kcal.filter((x) => x != null);
+      if (!list.length) return '';
+      const lo = Math.min(...list), hi = Math.max(...list);
+      return `<span class="kcal">≈ ${lo === hi ? fmt(lo) : `${fmt(lo)}–${fmt(hi)}`} ${esc(t('kcal'))}</span>`;
+    }
+
+    // В шторке — полное КБЖУ выбранного размера, аллергены и пометка «примерно»
+    function nutritionHTML(it, i) {
+      i = i || 0;
+      const n = nutrOf(it, i);
+      const all = it.allergens.map((c) => ALLERGENS[c][lang]);
+      if (!n && !all.length) return '';
+      const w = weightsOf(it);
+      const portion = [it.prices.length > 1 ? sizesOf(it)[i] : '', w.length > 1 ? w[i] : w[0]].filter(Boolean).join(', ');
+      const num = (v) => (v == null ? '—' : fmt(Math.round(v)));
+      const tile = (v, unit, label, cls) => `<div class="nutr__cell${cls ? ' ' + cls : ''}"><b>${num(v)}<small> ${esc(unit)}</small></b><span>${esc(label)}</span></div>`;
+      return `<section class="nutr" aria-labelledby="nutr-title">
+        <h3 class="nutr__title" id="nutr-title">${esc(t('nutrTitle'))} <small>${esc(t('perPortion', portion))}</small></h3>
+        ${n ? `<div class="nutr__grid">${tile(n.kcal, t('kcal'), t('energy'), 'nutr__cell--kcal')}${tile(n.p, t('g'), t('protein'))}${tile(n.f, t('g'), t('fat'))}${tile(n.c, t('g'), t('carbs'))}</div>` : ''}
+        ${all.length ? `<p class="nutr__all"><span>${esc(t('allergens'))}:</span> ${all.map((a) => `<span class="allergen">${esc(a)}</span>`).join('')}</p>` : ''}
+        <p class="nutr__note">${n ? esc(t('nutrNote')) + ' ' : ''}${esc(t('allergenNote'))}</p>
+      </section>`;
+    }
+
     function pricesHTML(it) {
       if (!it.avail) return `<span class="price price--out">${esc(t('out'))}</span>`;
       if (it.prices.length === 1) return `<span class="price">${fmt(it.prices[0])} <small>${esc(t('currency'))}</small></span>`;
@@ -262,17 +345,27 @@
         `<span class="variant">${sizes[i] ? `<small>${esc(sizes[i])}</small>` : ''}<b>${fmt(p)}<span class="sr-only"> ${esc(t('currency'))}</span></b>${ws[i] ? `<small class="variant__w">${esc(ws[i])}</small>` : ''}</span>`).join('')}</div>`;
     }
 
+    const OC = root.OrderCore;
+    const ordering = !!(OC && OC.config(model).enabled);
+    const canOrder = (it) => ordering && it.avail && it.prices.length > 0;
+
+    // «+» на фото; когда блюдо уже в корзине, cart.js меняет его на счётчик
+    function addHTML(it) {
+      if (!canOrder(it)) return '';
+      return `<span class="add-slot" data-add-slot="${it.id}"><button type="button" class="add" data-add="${it.id}" aria-label="${esc(t('addTo', it[lang]))}"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-plus"/></svg></button></span>`;
+    }
+
     function itemHTML(it, index) {
       const desc = it['desc_' + lang];
       const variants = variantsHTML(it);
-      const meta = variants ? weightHTML(it) : pricesHTML(it) + weightHTML(it);
+      const meta = (variants ? weightHTML(it) : pricesHTML(it) + weightHTML(it)) + kcalHTML(it);
       return `<article class="item${it.avail ? '' : ' is-out'}" data-id="${it.id}">
       <div class="item__body">
         <h3 class="item__name"><button type="button" class="item__btn" aria-haspopup="dialog">${esc(it[lang])}</button></h3>
         ${desc ? `<p class="item__desc">${esc(desc)}</p>` : ''}
         ${meta ? `<div class="prices">${meta}</div>` : ''}
       </div>
-      <div class="item__media"><span class="item__frame">${pictureHTML(it, 'item__img', 116, 116, index < 2 ? 'eager' : 'lazy')}</span>${badgeHTML(it.badge)}</div>
+      <div class="item__media"><span class="item__frame">${pictureHTML(it, 'item__img', 116, 116, index < 2 ? 'eager' : 'lazy')}</span>${badgeHTML(it.badge)}${addHTML(it)}</div>
       ${variants}
     </article>`;
     }
@@ -412,6 +505,7 @@
     // Структурированные данные schema.org: кафе + меню (для поисковиков и карт)
     function jsonLD() {
       const abs = (src) => (src ? new URL(src, SITE).href : undefined);
+      const cafe = OC ? OC.config(model).cafe : null;
       return {
         '@context': 'https://schema.org',
         '@type': 'CafeOrCoffeeShop',
@@ -420,7 +514,16 @@
         image: SITE + 'img/og.jpg',
         telephone: setting('телефон').replace(/[^\d+]/g, '') || undefined,
         servesCuisine: ['Fast food', 'Coffee'],
-        address: setting('адрес') ? { '@type': 'PostalAddress', streetAddress: setting('адрес'), addressCountry: 'UZ' } : undefined,
+        address: setting('адрес') ? { '@type': 'PostalAddress', streetAddress: setting('адрес'), addressLocality: 'Shahrisabz', addressRegion: 'Qashqadaryo', addressCountry: 'UZ' } : undefined,
+        geo: cafe ? { '@type': 'GeoCoordinates', latitude: cafe.lat, longitude: cafe.lng } : undefined,
+        hasMap: safeUrl(setting('ссылка_на_карту')) || undefined,
+        // «24/7», «24 soat», «круглосуточно» → все дни 00:00–23:59
+        openingHoursSpecification: /24|круглосуточ|kecha-kunduz/i.test(setting('часы_работы')) ? {
+          '@type': 'OpeningHoursSpecification',
+          dayOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
+          opens: '00:00',
+          closes: '23:59'
+        } : undefined,
         sameAs: [socialURL(setting('instagram'), 'https://instagram.com/'), socialURL(setting('telegram'), 'https://t.me/')]
           .filter((u) => u && !/^https:\/\/(www\.)?(instagram\.com|t\.me)\/?$/.test(u)),
         hasMenu: {
@@ -448,10 +551,10 @@
     }
 
     return {
-      lang, model, t, setting, telHref, placeholder, badgeHTML, sizesOf, weightsOf, pairsHTML,
-      menuHTML, chipsHTML, heroBodyHTML, noticeHTML, infoHTML, jsonLD
+      lang, model, t, setting, telHref, placeholder, badgeHTML, sizesOf, weightsOf, pairsHTML, pairsOf, priceText,
+      pictureHTML, nutritionHTML, addHTML, canOrder, ordering, menuHTML, chipsHTML, heroBodyHTML, noticeHTML, infoHTML, jsonLD
     };
   }
 
-  root.MenuRender = { SITE, UI, parseCSV, buildModel, validTables, imgSrc, isLocalImg, esc, fmt, norm, createView };
+  root.MenuRender = { SITE, UI, ALLERGENS, parseCSV, buildModel, validTables, imgSrc, isLocalImg, esc, fmt, norm, safeUrl, createView };
 })(typeof window !== 'undefined' ? window : globalThis);
