@@ -29,9 +29,29 @@ vm.runInContext(read('assets/render.js'), sandbox);
 const R = sandbox.MenuRender;
 const TABS = sandbox.MENU_CONFIG.tabs;
 
-const data = JSON.parse(read('data/menu.json'));
-const tables = { menu: data[TABS.menu], categories: data[TABS.categories], settings: data[TABS.settings] };
-if (!R.validTables(tables)) throw new Error('data/menu.json: неожиданная структура');
+// Данные: сначала свежие из Google Таблицы, при сбое — запасная копия data/menu.json
+async function fromSheet() {
+  const { sheetId, gids } = sandbox.MENU_CONFIG;
+  if (!sheetId || !gids) throw new Error('нет sheetId/gids');
+  const get = async (key) => {
+    const res = await fetch(`https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=${gids[key]}`, { signal: AbortSignal.timeout(15000) });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return R.parseCSV(await res.text());
+  };
+  const t = { menu: await get('menu'), categories: await get('categories'), settings: await get('settings') };
+  if (!R.validTables(t)) throw new Error('неожиданная структура таблицы');
+  return t;
+}
+let tables;
+try {
+  tables = await fromSheet();
+  console.log('Данные: Google Таблица');
+} catch (e) {
+  const data = JSON.parse(read('data/menu.json'));
+  tables = { menu: data[TABS.menu], categories: data[TABS.categories], settings: data[TABS.settings] };
+  if (!R.validTables(tables)) throw new Error('data/menu.json: неожиданная структура');
+  console.log(`Данные: data/menu.json (таблица недоступна: ${e.message})`);
+}
 const view = R.createView(R.buildModel(tables), 'uz');
 
 rmSync(DIST, { recursive: true, force: true });

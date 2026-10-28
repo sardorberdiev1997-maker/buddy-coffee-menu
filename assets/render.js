@@ -17,6 +17,7 @@
       pricesNote: 'Barcha narxlar so‘mda.', privacy: 'Sayt cookie-fayllardan foydalanmaydi va shaxsiy ma’lumot yig‘maydi — faqat anonim tashriflar statistikasi.',
       error: 'Menyuni yuklab bo‘lmadi. Internetni tekshirib, qayta urinib ko‘ring.',
       retry: 'Qayta urinish', other: 'Boshqa',
+      pairs: 'Bu bilan olishadi', rateTitle: 'Sizga yoqdimi?', rateText: 'Baho va fikr qoldiring — bu bizga juda yordam beradi.',
       stale: (d) => `Internet yo‘q — narxlar ${d} holatiga ko‘rsatilmoqda.`
     },
     ru: {
@@ -30,6 +31,7 @@
       pricesNote: 'Все цены указаны в сумах.', privacy: 'Сайт не использует cookie и не собирает персональные данные — только анонимную статистику посещений.',
       error: 'Не удалось загрузить меню. Проверьте интернет и попробуйте ещё раз.',
       retry: 'Повторить', other: 'Другое',
+      pairs: 'С этим берут', rateTitle: 'Понравилось?', rateText: 'Оставьте оценку и отзыв — это очень нам помогает.',
       stale: (d) => `Нет связи — показаны цены на ${d}.`
     }
   };
@@ -51,7 +53,7 @@
   const HEADER_ALIASES = {
     'категория': 'cat', 'название_uz': 'uz', 'название_ru': 'ru', 'описание_uz': 'desc_uz', 'описание_ru': 'desc_ru',
     'цена': 'price', 'размеры_uz': 'sizes_uz', 'размеры_ru': 'sizes_ru', 'фото': 'img', 'метка': 'badge',
-    'в_наличии': 'avail', 'вес': 'weight', 'выход': 'weight', 'объём': 'weight', 'объем': 'weight',
+    'в_наличии': 'avail', 'с_этим_берут': 'pairs', 'вес': 'weight', 'выход': 'weight', 'объём': 'weight', 'объем': 'weight',
     'иконка': 'icon', 'ключ': 'key', 'значение_uz': 'uz', 'значение_ru': 'ru'
   };
   const NOT_AVAILABLE = /^(нет|no|false|0|-|yo[‘'ʻ’`]?q)$/i;
@@ -126,7 +128,7 @@
 
     const cats = toObjects(tables.categories)
       .filter((c) => c.id)
-      .map((c) => ({ id: slug(c.id), uz: c.uz || c.id, ru: c.ru || c.uz || c.id, icon: c.icon || '' }));
+      .map((c) => ({ id: slug(c.id), uz: c.uz || c.id, ru: c.ru || c.uz || c.id, icon: c.icon || '', pairs: splitList(c.pairs) }));
 
     const items = toObjects(tables.menu)
       .filter((r) => r.uz || r.ru)
@@ -141,6 +143,7 @@
         sizes_uz: splitList(r.sizes_uz),
         sizes_ru: splitList(r.sizes_ru),
         weight: r.weight || '',
+        pairs: splitList(r.pairs),
         img: r.img || '',
         badge: BADGE_ALIASES[norm(r.badge)] || '',
         avail: !NOT_AVAILABLE.test(r.avail || '')
@@ -148,7 +151,7 @@
 
     items.forEach((it) => {
       if (!cats.some((c) => c.id === it.cat)) {
-        cats.push({ id: it.cat, uz: it.cat === 'other' ? UI.uz.other : it.cat, ru: it.cat === 'other' ? UI.ru.other : it.cat, icon: '' });
+        cats.push({ id: it.cat, uz: it.cat === 'other' ? UI.uz.other : it.cat, ru: it.cat === 'other' ? UI.ru.other : it.cat, icon: '', pairs: [] });
       }
     });
 
@@ -280,7 +283,7 @@
       return `<section class="popular" aria-labelledby="pop-title">
       <h2 class="popular__title" id="pop-title">${esc(t('popular'))}</h2>
       <div class="popular__track">${picks.map((it, i) => {
-        const price = it.prices.length > 1 ? t('from', fmt(Math.min(...it.prices))) : it.prices.length ? `${fmt(it.prices[0])} ${t('currency')}` : '';
+        const price = priceText(it);
         return `<button type="button" class="pop" data-id="${it.id}" aria-haspopup="dialog">
           <span class="pop__frame">${pictureHTML(it, 'pop__img', 156, 128, i < 2 ? 'high' : i < 3 ? 'eager' : 'lazy')}</span>
           <span class="pop__body"><span class="pop__name">${esc(it[lang])}</span><span class="pop__price">${esc(price)}</span></span>
@@ -288,6 +291,36 @@
         </button>`;
       }).join('')}</div>
     </section>`;
+    }
+
+    // «С этим берут»: список названий у позиции, иначе — у её категории (колонка «с_этим_берут»)
+    function pairsOf(it) {
+      const cat = model.cats.find((c) => c.id === it.cat);
+      const names = it.pairs.length ? it.pairs : (cat ? cat.pairs : []);
+      const out = [];
+      names.forEach((name) => {
+        const key = norm(name);
+        const p = model.items.find((x) => norm(x.uz) === key || norm(x.ru) === key);
+        if (p && p.id !== it.id && p.avail && !out.includes(p)) out.push(p);
+      });
+      return out.slice(0, 3);
+    }
+
+    function priceText(it) {
+      if (it.prices.length > 1) return t('from', fmt(Math.min(...it.prices)));
+      return it.prices.length ? `${fmt(it.prices[0])} ${t('currency')}` : '';
+    }
+
+    function pairsHTML(it) {
+      const list = pairsOf(it);
+      if (!list.length) return '';
+      return `<section class="pairs" aria-labelledby="pairs-title">
+        <h3 class="pairs__title" id="pairs-title">${esc(t('pairs'))}</h3>
+        <div class="pairs__list">${list.map((p) => `<button type="button" class="pair" data-pair="${p.id}" aria-haspopup="dialog">
+          <span class="pair__frame">${pictureHTML(p, 'pair__img', 64, 64, 'eager')}</span>
+          <span class="pair__body"><span class="pair__name">${esc(p[lang])}</span><span class="pair__price">${esc(priceText(p))}</span></span>
+        </button>`).join('')}</div>
+      </section>`;
     }
 
     function menuHTML() {
@@ -353,8 +386,22 @@
       if (insta) actions.push(`<a class="btn" href="${esc(insta)}" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-insta"/></svg>Instagram</a>`);
       if (tg) actions.push(`<a class="btn" href="${esc(tg)}" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-tg"/></svg>Telegram</a>`);
 
+      // Отзывы: Google, Яндекс, 2ГИС — показываем те, для которых есть ссылка
+      const reviews = [
+        ['отзыв_google', 'Google'],
+        ['отзыв_yandex', lang === 'ru' ? 'Яндекс' : 'Yandex'],
+        ['отзыв_2gis', lang === 'ru' ? '2ГИС' : '2GIS']
+      ].map(([key, label]) => [safeUrl(setting(key)), label]).filter(([url]) => url);
+      const reviewHTML = reviews.length ? `<section class="rate" aria-labelledby="rate-title">
+        <div class="rate__stars" aria-hidden="true">★★★★★</div>
+        <h2 class="rate__title" id="rate-title">${esc(t('rateTitle'))}</h2>
+        <p class="rate__text">${esc(t('rateText'))}</p>
+        <div class="rate__actions">${reviews.map(([url, label]) =>
+          `<a class="rate__btn" href="${esc(url)}" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-star"/></svg>${esc(label)}</a>`).join('')}</div>
+      </section>` : '';
+
       const notes = [t('pricesNote'), setting('примечание_к_фото'), setting('продавец'), t('privacy')].filter(Boolean);
-      return `<section class="info__card" aria-labelledby="info-title">
+      return `${reviewHTML}<section class="info__card" aria-labelledby="info-title">
         <h2 class="info__title" id="info-title">${esc(t('contacts'))}</h2>
         <ul class="info__list">${rows.join('')}</ul>
         ${actions.length ? `<div class="info__actions">${actions.join('')}</div>` : ''}
@@ -401,7 +448,7 @@
     }
 
     return {
-      lang, model, t, setting, telHref, placeholder, badgeHTML, sizesOf, weightsOf,
+      lang, model, t, setting, telHref, placeholder, badgeHTML, sizesOf, weightsOf, pairsHTML,
       menuHTML, chipsHTML, heroBodyHTML, noticeHTML, infoHTML, jsonLD
     };
   }

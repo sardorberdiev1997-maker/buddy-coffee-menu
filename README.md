@@ -18,15 +18,17 @@ https://docs.google.com/spreadsheets/d/1kNo_wDgMou0T0M79G-gFn0dmuhOThz96vISxytnS
 
 ```
 Google Таблица ──(export CSV в браузере)──► сайт обновляет меню на лету
-      │
+      ├─(при каждой сборке Cloudflare)──► меню вшивается в index.html
       └─(GitHub Action каждые 15 мин)──► data/menu.json ──► git push ──► Cloudflare Pages: npm run build ──► dist/
 ```
 
 - **Хостинг:** Cloudflare Pages, проект `buddy-coffee-menu` (сборка `npm run build`, папка `dist`, Node 20). Каждый push в `main` — новая сборка. Резервный адрес: https://buddy-coffee-menu.pages.dev
 - **Домен:** `buddy.cheking.uz` — запись CNAME `buddy` → `buddy-coffee-menu.pages.dev` в DNS cheking.uz на ahost.uz.
-- **Сборка** (`tools/build.mjs`): вшивает меню из `data/menu.json` в `index.html` (страница показывается сразу, без ожидания данных), встраивает CSS и `boot.js` в HTML и добавляет их sha256 в CSP, минифицирует JS/CSS (esbuild), ставит хеши версий для кэша, кладёт `_headers` (CSP, HSTS, X-Frame-Options и др.). Правила View Transitions лежат в `assets/vt.css` отдельно: валидатор W3C пока не знает этот синтаксис.
+- **Сборка** (`tools/build.mjs`): берёт меню прямо из Google Таблицы (при сбое — из `data/menu.json`) и вшивает его в `index.html` (страница показывается сразу, без ожидания данных), встраивает CSS и `boot.js` в HTML и добавляет их sha256 в CSP, минифицирует JS/CSS (esbuild), ставит хеши версий для кэша, кладёт `_headers` (CSP, HSTS, X-Frame-Options и др.). Правила View Transitions лежат в `assets/vt.css` отдельно: валидатор W3C пока не знает этот синтаксис.
 - **В браузере** (`assets/app.js` + общий `assets/render.js`): меню из HTML → кэш прошлого визита → свежие данные из таблицы (перерисовка только если что-то изменилось). Языки UZ/RU, поиск, шторка блюда, офлайн-режим (`sw.js`).
 - **Запасная копия** `data/menu.json` — обновляется GitHub Action'ом `.github/workflows/sync-menu.yml` (`tools/sync_menu.py`). Если 60 дней в репозитории нет коммитов, GitHub отключит расписание и пришлёт письмо — включить в Actions одной кнопкой.
+- **«С этим берут»** в карточке блюда: колонка `с_этим_берут` — во вкладке «Категории» (для всей категории) и «Меню» (для блюда, важнее). Названия через «/», до 3 штук, то, чего нет в наличии, не показывается.
+- **Отзывы:** ключи `отзыв_google`, `отзыв_yandex`, `отзыв_2gis` во вкладке «Настройки» — жёлтый блок «Понравилось?» с кнопками над контактами. Пустой ключ — кнопки нет.
 - **Статистика:** Cloudflare Web Analytics (без cookie) — dash.cloudflare.com → Analytics → Web analytics → buddy.cheking.uz.
 - **Фото:** `img/xs` (240 px), `img/s` (360 px), `img/l` (960 px) в AVIF и WebP. Кэшируются на год — при замене фото давать файлу новое имя. В таблице в колонке «фото» — имя файла без расширения, прямая ссылка на картинку или ссылка на файл Google Диска с доступом по ссылке.
 - `print/` — QR-код и постеры (`tools/make_qr.py`).

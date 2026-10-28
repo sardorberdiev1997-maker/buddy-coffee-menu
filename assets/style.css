@@ -682,6 +682,38 @@ a.pill--ghost:active { background: rgb(0 0 0 / .3); }
 .info__note { margin: 16px 4px 0; font-size: 13px; color: var(--ink-3); text-align: center; text-wrap: balance; }
 .info__note + .info__note { margin-top: 4px; }
 
+/* ---------- Отзывы ---------- */
+
+.rate {
+  margin-bottom: 14px;
+  padding: 20px;
+  border-radius: 24px;
+  background: var(--yellow);
+  color: var(--on-yellow);
+  text-align: center;
+}
+.rate__stars { font-size: 22px; letter-spacing: 4px; color: var(--red-deep); }
+.rate__title { margin: 4px 0 4px; font-size: 22px; font-weight: 800; letter-spacing: -.01em; }
+.rate__text { margin: 0 0 14px; font-size: 15px; line-height: 1.4; text-wrap: balance; }
+.rate__actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(84px, 1fr)); gap: 8px; }
+.rate__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 10px;
+  border-radius: 14px;
+  background: var(--on-yellow);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: transform .15s;
+}
+.rate__btn:active { transform: scale(.97); }
+.rate__btn svg { width: 18px; height: 18px; color: var(--yellow); }
+
 /* ---------- Item sheet ---------- */
 
 .sheet {
@@ -780,6 +812,32 @@ a.pill--ghost:active { background: rgb(0 0 0 / .3); }
 }
 .sheet__prices .is-out { color: var(--ink-2); }
 .sheet__prices small { font-size: 14px; font-weight: 500; color: var(--ink-3); }
+
+/* «С этим берут» в шторке */
+.pairs { margin-top: 22px; }
+.pairs__title { margin: 0 0 10px; font-size: 17px; font-weight: 800; }
+.pairs__list { display: grid; gap: 8px; }
+.pair {
+  display: grid;
+  grid-template-columns: 64px 1fr;
+  gap: 12px;
+  align-items: center;
+  width: 100%;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--card);
+  text-align: left;
+  transition: transform .15s;
+}
+.pair:active { transform: scale(.98); }
+.pair__frame { display: block; width: 64px; height: 64px; overflow: hidden; border-radius: 12px; background: var(--muted-bg); }
+.pair__img { width: 100%; height: 100%; object-fit: cover; }
+.pair__frame .item__ph { font-size: 28px; }
+.pair__body { display: grid; gap: 2px; min-width: 0; }
+.pair__name { font-size: 15px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pair__price { font-size: 14px; font-weight: 600; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.sheet__title:focus { outline: none; }
 
 /* Большая кнопка внизу — удобно закрыть одной рукой */
 .sheet__done {

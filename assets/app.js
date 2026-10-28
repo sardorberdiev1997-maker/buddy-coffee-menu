@@ -17,7 +17,7 @@
     heroBody: $('#hero-body'), noticeSlot: $('#notice-slot'), q: $('#q'), searchBtn: $('.nav__search-btn'),
     sheet: $('#sheet'), card: $('.sheet__card'), sheetMedia: $('.sheet__media'),
     sheetBadge: $('#sheet-badge'), sheetTitle: $('#sheet-title'), sheetDesc: $('#sheet-desc'), sheetMeta: $('#sheet-meta'),
-    sheetPrices: $('#sheet-prices'), lang: $('.lang')
+    sheetPrices: $('#sheet-prices'), sheetPairs: $('#sheet-pairs'), lang: $('.lang')
   };
 
   let lang = 'uz';
@@ -223,6 +223,8 @@
     else if (it.prices.length > 1) rows = it.prices.map((p, i) => `<li><span>${R.esc(sizes[i] || '')}${perSize ? ` <small>· ${R.esc(weights[i])}</small>` : ''}</span><b>${R.fmt(p)} ${cur}</b></li>`).join('');
     else if (it.prices.length === 1) rows = `<li><span>${R.esc(t('price'))}</span><b>${R.fmt(it.prices[0])} ${cur}</b></li>`;
     els.sheetPrices.innerHTML = rows;
+    els.sheetPairs.innerHTML = view.pairsHTML(it);
+    markLoaded(els.sheetPairs);
 
     // Сначала показываем уже загруженное превью, затем подменяем на большое фото
     const img = $('img', els.sheetMedia);
@@ -461,7 +463,18 @@
 
     $('.sheet__close').addEventListener('click', closeSheet);
     $('.sheet__done').addEventListener('click', closeSheet);
-    els.sheet.addEventListener('click', (e) => { if (e.target === els.sheet) closeSheet(); });
+    els.sheet.addEventListener('click', (e) => {
+      if (e.target === els.sheet) { closeSheet(); return; }
+      // «С этим берут»: открываем выбранное блюдо в той же шторке
+      const pair = e.target.closest('[data-pair]');
+      const it = pair && model.items.find((x) => x.id === pair.dataset.pair);
+      if (!it) return;
+      const img = $('img.is-loaded', pair);
+      openId = it.id;
+      fillSheet(it, img ? img.currentSrc || img.src : '');
+      els.card.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' });
+      els.sheetTitle.focus({ preventScroll: true });
+    });
     els.sheet.addEventListener('cancel', (e) => { e.preventDefault(); closeSheet(); });
     window.addEventListener('popstate', () => { goingBack = false; hideSheet(); });
     bindSheetDrag();
