@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<title>Buddy Coffee — QR poster</title>
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  @page { size: 148mm 210mm; margin: 0; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    width: 148mm;
+    height: 210mm;
+    overflow: hidden;
+    font-family: "Rubik", sans-serif;
+    color: #fff;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    background:
+      radial-gradient(rgb(255 255 255 / .1) .35mm, transparent .4mm) 0 0 / 4mm 4mm,
+      radial-gradient(120% 90% at 100% 0%, #F2343B 0%, #E31B23 45%, #B10F18 100%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 11mm 11mm 9mm;
+    text-align: center;
+  }
+  html.a4 body { zoom: 1.4142; }
+
+  .brand { display: flex; align-items: center; gap: 4mm; }
+  .mark {
+    display: grid; place-items: center;
+    width: 17mm; height: 17mm; border-radius: 5mm;
+    background: #fff; transform: rotate(-4deg);
+    box-shadow: 0 1.2mm 0 rgb(0 0 0 / .2);
+  }
+  .mark svg { width: 13mm; height: 13mm; }
+  .name { text-align: left; font-size: 12mm; font-weight: 800; line-height: .9; text-shadow: 0 .9mm 0 rgb(0 0 0 / .22); }
+  .tag {
+    display: inline-block; margin-top: 1.4mm; padding: .9mm 2.2mm .6mm;
+    font-size: 3.4mm; letter-spacing: .24em; color: #1B1612; background: #FFD23F; border-radius: 1.6mm;
+    text-shadow: none; vertical-align: top;
+  }
+
+  h1 { margin: 9mm 0 1.5mm; font-size: 8.6mm; font-weight: 800; line-height: 1.05; letter-spacing: -.01em; }
+  .ru { margin: 0; font-size: 5mm; font-weight: 600; color: #FFD23F; }
+
+  .card {
+    margin-top: 7mm;
+    padding: 8mm 8mm 5mm;
+    border-radius: 7mm;
+    background: #fff;
+    box-shadow: 0 2mm 0 #1B1612;
+  }
+  .card img { display: block; width: 68mm; height: 68mm; }
+  .url { margin-top: 3mm; font-size: 5.2mm; font-weight: 700; color: #1B1612; letter-spacing: .01em; }
+
+  .hint { display: flex; gap: 2.5mm; justify-content: center; margin-top: 6mm; font-size: 3.8mm; font-weight: 600; }
+  .hint span { padding: 1.6mm 3mm; border-radius: 99mm; background: rgb(0 0 0 / .2); }
+
+  .foot { margin-top: auto; display: flex; flex-direction: column; align-items: center; gap: 2.5mm; }
+  .pill {
+    display: inline-flex; align-items: center; gap: 2mm;
+    padding: 2.4mm 5mm; border-radius: 99mm;
+    background: #FFD23F; color: #1B1612; font-size: 4.4mm; font-weight: 700;
+    box-shadow: 0 .9mm 0 rgb(0 0 0 / .2);
+  }
+  .pill svg { width: 5.5mm; height: 5.5mm; }
+  .phone { font-size: 4.4mm; font-weight: 600; }
+  .phone b { font-size: 5.6mm; font-weight: 800; letter-spacing: .02em; }
+</style>
+<script>if (location.hash === '#a4') { document.documentElement.classList.add('a4'); document.write('<style>@page{size:210mm 297mm;margin:0}</style>'); }</script>
+</head>
+<body>
+  <div class="brand">
+    <div class="mark">
+      <svg viewBox="0 0 64 64"><path d="M21 13 25 5l7 6 7-6 4 8z" fill="#FFD23F" stroke="#1B1612" stroke-width="2.4" stroke-linejoin="round"/><path d="M11 17h42l-4.2 33.5A7 7 0 0 1 41.9 57H22.1a7 7 0 0 1-6.9-6.5z" fill="#1B1612"/><path d="M52 24h2.5a8 8 0 0 1 0 16H50" fill="none" stroke="#1B1612" stroke-width="4.5" stroke-linecap="round"/><ellipse cx="25" cy="30" rx="2.6" ry="3.2" fill="#fff"/><ellipse cx="39" cy="30" rx="2.6" ry="3.2" fill="#fff"/><path d="M23 39q9 9 18 0" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round"/></svg>
+    </div>
+    <div class="name">Buddy<br><span class="tag">COFFEE</span></div>
+  </div>
+
+  <h1>Menyuni ko‘rish uchun<br>skanerlang</h1>
+  <p class="ru">Отсканируйте — откроется меню</p>
+
+  <div class="card">
+    <img src="qr.svg" alt="QR: buddy.cheking.uz">
+    <div class="url">buddy.cheking.uz</div>
+  </div>
+
+  <div class="hint"><span>📷 Kamerani oching</span><span>Наведите камеру</span></div>
+
+  <div class="foot">
+    <div class="pill">
+      <svg viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="17" r="2.5"/><circle cx="18" cy="17" r="2.5"/><path d="M8.5 17h6.5l2-6h-4M14 5h2l3 12M3 11h6v3"/></g></svg>
+      Shahar ichida yetkazib berish bepul
+    </div>
+    <div class="phone">Buyurtma uchun / Заказ: <b>90 896 54 00</b></div>
+  </div>
+</body>
+</html>
