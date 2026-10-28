@@ -3,3 +3,6 @@ node_modules/
 dist/
 .dev/
 .claude/
+
+# промежуточный HTML и профиль Chrome для tools/make_posters.py
+print/posters/src/
