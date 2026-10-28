@@ -2,7 +2,7 @@
 // 1) Меню из data/menu.json вшивается в index.html — показывается сразу, без ожидания скриптов и данных.
 // 2) JS/CSS минифицируются, к ссылкам добавляется хеш содержимого — можно кэшировать «навсегда».
 // 3) Service worker получает тот же список файлов и версию.
-// 4) Сервер заказов (server/) собирается в dist/_worker.js и обслуживает только /api/* (dist/_routes.json).
+// 4) Сервер заказов (server/) собирается в dist/_worker.js и обслуживает только /api/* и /r/* (dist/_routes.json).
 import { createHash } from 'node:crypto';
 import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
@@ -124,7 +124,7 @@ await esbuild.build({
   legalComments: 'none',
   logLevel: 'warning'
 });
-write('_routes.json', JSON.stringify({ version: 1, include: ['/api/*'], exclude: [] }));
+write('_routes.json', JSON.stringify({ version: 1, include: ['/api/*', '/r/*'], exclude: [] }));
 
 write('_headers', read('tools/_headers')
   .replace('{{SCRIPT_HASHES}}', scriptHashes.join(' '))

@@ -318,3 +318,12 @@ test('вкладка «Клиенты»: /sheet выдаёт формулу, CSV
   assert.equal((await fetch(`${BASE}/api/sheet/customers.csv?key=wrong`)).status, 403);
   assert.equal((await fetch(`${BASE}/api/sheet/customers.csv`)).status, 403);
 });
+
+test('короткие ссылки QR с постеров ведут на отзывы из «Настроек»', async () => {
+  for (const [key, host] of [['google', 'google.'], ['yandex', 'yandex.'], ['2gis', '2gis.']]) {
+    const r = await fetch(`${BASE}/r/${key}`, { redirect: 'manual' });
+    assert.equal(r.status, 302);
+    assert.ok(r.headers.get('location').includes(host), r.headers.get('location'));
+  }
+  assert.equal((await fetch(`${BASE}/r/unknown`, { redirect: 'manual' })).status, 404);
+});

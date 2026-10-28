@@ -1,5 +1,5 @@
 // Серверная часть сайта (Cloudflare Pages, advanced mode: сборка кладёт её в dist/_worker.js).
-// Обрабатывает только /api/* (см. dist/_routes.json), остальное отдаёт статика Pages.
+// Обрабатывает /api/* и короткие ссылки /r/* (см. dist/_routes.json), остальное отдаёт статика Pages.
 //
 // Нужно в настройках проекта Pages:
 //   DB         — привязка базы D1 (Settings → Bindings → D1 database)
@@ -7,11 +7,11 @@
 import { handleUpdate, setupBot } from './bot.js';
 import { customersCsv } from './customers.js';
 import { ensureSchema, getKV, setKV } from './db.js';
-import { loadModel } from './menu.js';
+import { loadModel, R, setting } from './menu.js';
 import { accepting, cancelBySelf, createOrder, publicOrder } from './orders.js';
 import { checkWebhook, groupLang, tg, webhookSecret } from './tg.js';
 import { tick } from './tick.js';
-import { fail, json, safeEqual } from './util.js';
+import { fail, json, safeEqual, SITE } from './util.js';
 
 const ORIGINS = ['https://buddy.cheking.uz', 'https://buddy-coffee-menu.pages.dev'];
 
@@ -97,9 +97,25 @@ async function route(request, env, ctx) {
   return fail('not_found', 404);
 }
 
+// Короткие ссылки из QR-кодов на постерах (tools/make_qr.py): ведут на ссылку из «Настроек» таблицы,
+// поэтому постер печатается один раз, а адрес страницы отзывов можно поменять в таблице
+const SHORT = { google: 'отзыв_google', yandex: 'отзыв_yandex', '2gis': 'отзыв_2gis' };
+
+async function shortLink(env, key) {
+  let target = '';
+  try {
+    target = R.safeUrl(setting(await loadModel(env), SHORT[key], 'ru'));
+  } catch (e) {
+    console.warn('short link', key, e && e.message);
+  }
+  return new Response(null, { status: 302, headers: { location: target || SITE, 'cache-control': 'no-store', 'referrer-policy': 'no-referrer' } });
+}
+
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    const short = url.pathname.match(/^\/r\/([\w-]+)\/?$/);
+    if (short && Object.hasOwn(SHORT, short[1])) return shortLink(env, short[1]);
     if (!url.pathname.startsWith('/api/')) return env.ASSETS.fetch(request);
     if (!env.DB) return fail('server', 503, { detail: 'D1 binding DB is missing' });
     try {
