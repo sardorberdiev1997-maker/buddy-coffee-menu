@@ -1270,8 +1270,9 @@ html.has-cart .info { padding-bottom: calc(100px + env(safe-area-inset-bottom));
 
 .track__actions { display: grid; gap: 8px; margin-top: 14px; }
 .track__actions .cta { width: 100%; }
-.cta--tg { background: #229ED9; }
-.track__tg { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 0; min-height: 44px; font-weight: 600; color: #229ED9; }
+.cta--tg { background: #1A73A8; } /* белый текст 5.2:1 (фирменный #229ED9 даёт только 3:1) */
+.track__tg { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 0; min-height: 44px; font-weight: 600; color: #1A73A8; }
+@media (prefers-color-scheme: dark) { .track__tg { color: #6CC4F0; } }
 .track__tg svg { width: 20px; height: 20px; }
 
 .track__card { margin-top: 14px; padding: 4px 20px 18px; border-radius: 24px; background: var(--card); box-shadow: var(--shadow); }
@@ -1294,7 +1295,8 @@ html.has-cart .info { padding-bottom: calc(100px + env(safe-area-inset-bottom));
 .track__cancel { margin-top: 6px; color: var(--err); }
 .track__upd { margin: 14px 0 0; font-size: 13px; color: var(--ink-3); text-align: center; }
 .track__back { margin: 6px 0 0; text-align: center; }
-.track__back .link { display: inline-flex; align-items: center; gap: 6px; text-decoration: none; }
+.track__back .link { display: inline-flex; align-items: center; gap: 6px; text-decoration: none; color: var(--red-deep); }
+@media (prefers-color-scheme: dark) { .track__back .link { color: var(--yellow); } }
 .track__back svg { width: 18px; height: 18px; }
 
 @keyframes sheet-up { from { transform: translateY(48px); opacity: 0; } }
