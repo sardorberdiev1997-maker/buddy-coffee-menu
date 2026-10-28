@@ -1,0 +1,5 @@
+/* Отдельно от style.css: не нужен для первой отрисовки, подключается в конце страницы */
+::view-transition-group(dish) { animation-duration: .38s; animation-timing-function: var(--ease-out); }
+::view-transition-old(dish),
+::view-transition-new(dish) { height: 100%; object-fit: cover; }
+::view-transition-group(root) { animation-duration: .3s; }

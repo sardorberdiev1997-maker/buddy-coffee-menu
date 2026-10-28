@@ -39,13 +39,13 @@ mkdirSync(DIST, { recursive: true });
 
 // Скрипты и стили: минификация + хеш
 const versions = {};
-for (const file of ['assets/boot.js', 'assets/config.js', 'assets/render.js', 'assets/app.js', 'assets/style.css']) {
+for (const file of ['assets/boot.js', 'assets/config.js', 'assets/render.js', 'assets/app.js', 'assets/style.css', 'assets/vt.css']) {
   const isCss = file.endsWith('.css');
   const out = await esbuild.transform(read(file), { loader: isCss ? 'css' : 'js', minify: true, target: isCss ? undefined : 'es2020', charset: 'utf8' });
   write(file, out.code);
   versions[file] = hash(out.code);
 }
-const withVersions = (s) => s.replace(/(assets\/(?:boot|config|render|app)\.js|assets\/style\.css)\?v=[\w-]+/g, (m, file) => `${file}?v=${versions[file]}`);
+const withVersions = (s) => s.replace(/(assets\/(?:boot|config|render|app)\.js|assets\/(?:style|vt)\.css)\?v=[\w-]+/g, (m, file) => `${file}?v=${versions[file]}`);
 
 // index.html: вставляем готовую разметку по меткам <!--name-->…<!--/name-->
 let html = withVersions(read('index.html'));

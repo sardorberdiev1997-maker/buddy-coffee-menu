@@ -7,6 +7,7 @@ const CORE = [
   'assets/config.js?v=3',
   'assets/render.js?v=3',
   'assets/app.js?v=3',
+  'assets/vt.css?v=3',
   'data/menu.json',
   'favicon.svg',
   'assets/fonts/rubik-latin.woff2',

@@ -24,11 +24,11 @@ Google Таблица ──(export CSV в браузере)──► сайт �
 
 - **Хостинг:** Cloudflare Pages, проект `buddy-coffee-menu` (сборка `npm run build`, папка `dist`, Node 20). Каждый push в `main` — новая сборка. Резервный адрес: https://buddy-coffee-menu.pages.dev
 - **Домен:** `buddy.cheking.uz` — запись CNAME `buddy` → `buddy-coffee-menu.pages.dev` в DNS cheking.uz на ahost.uz.
-- **Сборка** (`tools/build.mjs`): вшивает меню из `data/menu.json` в `index.html` (страница показывается сразу, без ожидания данных), минифицирует JS/CSS (esbuild), ставит хеши версий для кэша, кладёт `_headers` (CSP, HSTS, X-Frame-Options и др.).
+- **Сборка** (`tools/build.mjs`): вшивает меню из `data/menu.json` в `index.html` (страница показывается сразу, без ожидания данных), встраивает CSS и `boot.js` в HTML и добавляет их sha256 в CSP, минифицирует JS/CSS (esbuild), ставит хеши версий для кэша, кладёт `_headers` (CSP, HSTS, X-Frame-Options и др.). Правила View Transitions лежат в `assets/vt.css` отдельно: валидатор W3C пока не знает этот синтаксис.
 - **В браузере** (`assets/app.js` + общий `assets/render.js`): меню из HTML → кэш прошлого визита → свежие данные из таблицы (перерисовка только если что-то изменилось). Языки UZ/RU, поиск, шторка блюда, офлайн-режим (`sw.js`).
 - **Запасная копия** `data/menu.json` — обновляется GitHub Action'ом `.github/workflows/sync-menu.yml` (`tools/sync_menu.py`). Если 60 дней в репозитории нет коммитов, GitHub отключит расписание и пришлёт письмо — включить в Actions одной кнопкой.
 - **Статистика:** Cloudflare Web Analytics (без cookie) — dash.cloudflare.com → Analytics → Web analytics → buddy.cheking.uz.
-- **Фото:** `img/xs` (240 px), `img/s` (360 px), `img/l` (960 px) в AVIF и WebP. В таблице в колонке «фото» — имя файла без расширения, прямая ссылка на картинку или ссылка на файл Google Диска с доступом по ссылке.
+- **Фото:** `img/xs` (240 px), `img/s` (360 px), `img/l` (960 px) в AVIF и WebP. Кэшируются на год — при замене фото давать файлу новое имя. В таблице в колонке «фото» — имя файла без расширения, прямая ссылка на картинку или ссылка на файл Google Диска с доступом по ссылке.
 - `print/` — QR-код и постеры (`tools/make_qr.py`).
 
 ## Локально
@@ -45,6 +45,12 @@ python3 -m http.server 8766 --directory dist
 - Безопасность: CSP без inline-скриптов, `frame-ancestors 'none'`, HSTS, nosniff, Permissions-Policy; ссылки из таблицы фильтруются (http/https/tel/mailto); нет сторонних JS-библиотек.
 - Производительность: меню в HTML, свой шрифт, AVIF + srcset, долгий кэш для файлов с хешем.
 - SEO: canonical, hreflang uz/ru, Open Graph, schema.org `CafeOrCoffeeShop` + `Menu`, `robots.txt`, `sitemap.xml`.
+
+## Проверки (28.10.2026, живой сайт)
+
+- PageSpeed Insights: мобильный 98 / 100 / 100 / 100, десктоп 100 / 100 / 100 / 100 (LCP 2,0 с / 0,5 с, CLS ≈ 0).
+- Mozilla Observatory (заголовки безопасности): A+.
+- W3C HTML validator: 0 ошибок, 0 предупреждений.
 
 ## Фото
 

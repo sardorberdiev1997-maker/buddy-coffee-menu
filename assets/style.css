@@ -796,12 +796,6 @@ a.pill--ghost:active { background: rgb(0 0 0 / .3); }
 }
 .sheet__done:active { transform: scale(.98); }
 
-/* Плавный «перелёт» фото из карточки в шторку (View Transitions) */
-::view-transition-group(dish) { animation-duration: .38s; animation-timing-function: var(--ease-out); }
-::view-transition-old(dish),
-::view-transition-new(dish) { height: 100%; object-fit: cover; }
-::view-transition-group(root) { animation-duration: .3s; }
-
 @keyframes sheet-up { from { transform: translateY(48px); opacity: 0; } }
 @keyframes sheet-down { to { transform: translateY(110%); } }
 @keyframes fade { from { opacity: 0; } }
