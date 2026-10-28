@@ -572,6 +572,7 @@
     t,
     openSheet,
     closeSheet,
+    setLang,
     // После «цены обновились» — перечитать таблицу сразу
     reload: () => loadSheet().then((tables) => { if (tables) apply(tables); }).catch(() => {})
   };

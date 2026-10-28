@@ -248,15 +248,16 @@ export function groupKeyboard(o, L, mode) {
   const cb = (text, data) => ({ text, callback_data: data });
   if (mode === 'cancel') {
     const reasons = ['stock', 'noanswer', 'client', 'busy', o.type === 'delivery' ? 'zone' : null, 'other'].filter(Boolean);
-    const rows = [];
-    for (let i = 0; i < reasons.length; i += 2) rows.push(reasons.slice(i, i + 2).map((r) => cb(OC.CANCEL_REASONS[r][L], `x:${o.id}:${r}`)));
+    // По одной причине в строке — иначе в узком окне Telegram подписи обрезаются
+    const rows = reasons.map((r) => [cb(OC.CANCEL_REASONS[r][L], `x:${o.id}:${r}`)]);
     rows.push([cb(X.back, `b:${o.id}`)]);
     return { inline_keyboard: rows };
   }
   if (OC.FINAL.includes(o.status)) return { inline_keyboard: canUndo(o) ? [[cb(X.undo, `u:${o.id}`)]] : [] };
   if (o.status === 'new') {
     const mins = o.type === 'pickup' ? [10, 15, 20, 30] : [15, 30, 45, 60];
-    return { inline_keyboard: [mins.map((m) => cb(X.accept(m), `a:${o.id}:${m}`)), [cb(X.cancel, `c:${o.id}`)]] };
+    const acc = mins.map((m) => cb(X.accept(m), `a:${o.id}:${m}`));
+    return { inline_keyboard: [acc.slice(0, 2), acc.slice(2), [cb(X.cancel, `c:${o.id}`)]] };
   }
   const next = nextStatus(o);
   return { inline_keyboard: [[cb(X.next[next], `n:${o.id}:${next}`)], [cb(X.undo, `u:${o.id}`), cb(X.cancel, `c:${o.id}`)]] };

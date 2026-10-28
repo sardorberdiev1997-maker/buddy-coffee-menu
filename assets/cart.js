@@ -820,6 +820,10 @@
       if (typeof w.setHeaderColor === 'function') w.setHeaderColor('#E31B23');
       w.BackButton.onClick(() => history.back());
     } catch (e) { /* старые версии Telegram */ }
+    // Язык из Telegram, если человек ещё не выбирал его сам
+    const code = w.initDataUnsafe && w.initDataUnsafe.user && w.initDataUnsafe.user.language_code;
+    const chosen = store((s) => s.getItem('buddy-menu:lang')) || new URLSearchParams(location.search).get('lang');
+    if (!chosen && /^ru/i.test(code || '') && lang() !== 'ru') app().setLang('ru');
     const sheet = $('#sheet');
     new MutationObserver(tgBack).observe(sheet, { attributes: true, attributeFilter: ['open'] });
     tgBack(); // после страницы заказа кнопка «Назад» могла остаться видимой

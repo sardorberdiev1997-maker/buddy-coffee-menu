@@ -126,7 +126,7 @@ test('заказ с доставкой: создаётся, приходит в 
   assert.match(msg.body.text, /без лука/);
   assert.match(msg.body.text, /\+998901234567/);
   assert.match(msg.body.text, /сдача с 200 000/);
-  assert.equal(msg.body.reply_markup.inline_keyboard[0].length, 4);
+  assert.deepEqual(msg.body.reply_markup.inline_keyboard.map((r) => r.length), [2, 2, 1], "кнопки «принять» сеткой 2×2 и «отменить»");
   assert.ok(calls.some((c) => c.method === 'sendLocation'), 'точка на карте');
   const pub = await api('/api/orders/' + order.token);
   assert.equal(pub.body.status, 'new');
