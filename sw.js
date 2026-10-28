@@ -1,10 +1,10 @@
 // Офлайн-кэш меню. При изменении состава файлов — поднять VERSION.
-const VERSION = 'bm-v2';
+const VERSION = 'bm-v3';
 const CORE = [
   './',
-  'assets/style.css?v=2',
-  'assets/app.js?v=2',
-  'assets/config.js?v=2',
+  'assets/style.css?v=3',
+  'assets/app.js?v=3',
+  'assets/config.js?v=3',
   'data/menu.json',
   'favicon.svg',
   'assets/fonts/rubik-latin.woff2',

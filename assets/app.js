@@ -281,8 +281,27 @@
     return it['sizes_' + lang].length ? it['sizes_' + lang] : it.sizes_uz;
   }
 
+  // «150 / 200 / 250 g» → ['150 g', '200 g', '250 g']; единицы — под язык (g/г, ml/мл, kg/кг, l/л)
+  const UNITS = { g: ['g', 'г'], kg: ['kg', 'кг'], ml: ['ml', 'мл'], l: ['l', 'л'] };
+  const UNIT_ALIASES = { g: 'g', gr: 'g', 'г': 'g', 'гр': 'g', kg: 'kg', 'кг': 'kg', ml: 'ml', 'мл': 'ml', l: 'l', 'л': 'l' };
+
+  function weightsOf(it) {
+    const parts = splitList(it.weight);
+    if (!parts.length) return [];
+    const tail = parts[parts.length - 1].match(/(\p{L}+)\.?\s*$/u);
+    return parts.map((p) => {
+      const m = p.match(/^([\d.,]+)\s*(\p{L}*)\.?$/u);
+      if (!m) return p;
+      const unit = UNIT_ALIASES[(m[2] || (tail ? tail[1] : '')).toLowerCase()];
+      return unit ? `${m[1]}\u00a0${UNITS[unit][lang === 'ru' ? 1 : 0]}` : p;
+    });
+  }
+
+  // Вес у каждого размера показываем в плашке размера, а здесь — только общий
   function weightHTML(it) {
-    return it.weight ? `<span class="weight">${esc(it.weight)}</span>` : '';
+    const w = weightsOf(it);
+    if (!w.length || (it.avail && it.prices.length > 1 && w.length === it.prices.length)) return '';
+    return `<span class="weight">${esc(w.join(' / '))}</span>`;
   }
 
   function pricesHTML(it) {
@@ -295,8 +314,10 @@
   function variantsHTML(it) {
     if (!it.avail || it.prices.length < 2) return '';
     const sizes = sizesOf(it);
+    const w = weightsOf(it);
+    const ws = w.length === it.prices.length ? w : [];
     return `<div class="variants">${it.prices.map((p, i) =>
-      `<span class="variant">${sizes[i] ? `<small>${esc(sizes[i])}</small>` : ''}<b>${fmt(p)}<span class="sr-only"> ${esc(t('currency'))}</span></b></span>`).join('')}</div>`;
+      `<span class="variant">${sizes[i] ? `<small>${esc(sizes[i])}</small>` : ''}<b>${fmt(p)}<span class="sr-only"> ${esc(t('currency'))}</span></b>${ws[i] ? `<small class="variant__w">${esc(ws[i])}</small>` : ''}</span>`).join('')}</div>`;
   }
 
   function itemHTML(it, index) {
@@ -518,13 +539,15 @@
     els.sheetTitle.textContent = it[lang];
     els.sheetDesc.textContent = it['desc_' + lang];
     els.sheetDesc.hidden = !it['desc_' + lang];
-    els.sheetMeta.textContent = it.weight;
+    const weights = weightsOf(it);
+    const perSize = it.prices.length > 1 && weights.length === it.prices.length;
+    els.sheetMeta.textContent = perSize ? '' : weights.join(' / ');
 
     const sizes = sizesOf(it);
     const cur = esc(t('currency'));
     let rows = '';
     if (!it.avail) rows = `<li class="is-out">${esc(t('out'))}</li>`;
-    else if (it.prices.length > 1) rows = it.prices.map((p, i) => `<li><span>${esc(sizes[i] || '')}</span><b>${fmt(p)} ${cur}</b></li>`).join('');
+    else if (it.prices.length > 1) rows = it.prices.map((p, i) => `<li><span>${esc(sizes[i] || '')}${perSize ? ` <small>· ${esc(weights[i])}</small>` : ''}</span><b>${fmt(p)} ${cur}</b></li>`).join('');
     else if (it.prices.length === 1) rows = `<li><span>${esc(t('price'))}</span><b>${fmt(it.prices[0])} ${cur}</b></li>`;
     els.sheetPrices.innerHTML = rows;
 

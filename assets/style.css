@@ -508,6 +508,7 @@ a.pill--ghost:active { background: rgb(0 0 0 / .3); }
 }
 .variant small { font-size: 12px; font-weight: 600; opacity: .75; line-height: 1.2; }
 .variant b { font-size: 16px; font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.variant .variant__w { font-size: 11px; font-weight: 500; opacity: .7; }
 
 .item__media { position: relative; }
 .item__frame {
@@ -771,6 +772,7 @@ a.pill--ghost:active { background: rgb(0 0 0 / .3); }
   white-space: nowrap;
 }
 .sheet__prices .is-out { color: var(--ink-2); }
+.sheet__prices small { font-size: 14px; font-weight: 500; color: var(--ink-3); }
 
 /* Большая кнопка внизу — удобно закрыть одной рукой */
 .sheet__done {
