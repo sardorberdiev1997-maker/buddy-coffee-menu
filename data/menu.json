@@ -22,11 +22,11 @@
     ["burger", "Big burger", "Биг бургер", "Ikki qavat mol go‘shti kotleti, ikki qavat pishloq, sabzavotlar va sous.", "Две говяжьи котлеты, двойной сыр, овощи и соус.", "45000", "", "", "burger-big", "хит", "да", "350 g", "", "950", "56", "54", "60", "глютен, молоко, яйца, горчица, кунжут"],
     ["ichimlik", "Americano", "Американо", "Espresso va issiq suv.", "Эспрессо и горячая вода.", "15000", "", "", "americano", "", "да", "250 ml", "Klassik / Tovuqli lavash / Strips", "5", "0", "0", "1", ""],
     ["ichimlik", "Espresso", "Эспрессо", "Kuchli va xushbo‘y qahva.", "Крепкий ароматный кофе.", "12000", "", "", "espresso", "", "да", "40 ml", "Klassik / Tovuqli lavash / Strips", "4", "0", "0", "1", ""],
-    ["ichimlik", "Cappuccino", "Капучино", "Espresso va ko‘pirtirilgan sut.", "Эспрессо и молочная пенка.", "20000", "", "", "cappuccino", "", "да", "300 ml", "Klassik / Tovuqli lavash / Strips", "110", "6", "6", "9", "молоко"],
-    ["ichimlik", "Iced latte", "Айс латте", "Espresso, sovuq sut va muz.", "Эспрессо, холодное молоко и лёд.", "25000", "", "", "iced-latte", "новинка", "да", "400 ml", "Klassik / Strips / Kartoshka fri", "140", "8", "7", "11", "молоко"],
-    ["ichimlik", "Milkshake", "Милкшейк", "Sut va muzqaymoq: qulupnay, shokolad yoki vanil.", "Молоко и мороженое: клубника, шоколад или ваниль.", "25000", "", "", "milkshake", "", "да", "400 ml", "Kartoshka fri / Big burger / Strips", "520", "12", "15", "85", "молоко"],
-    ["ichimlik", "Mojito", "Мохито", "Alkogolsiz: yalpiz, laym, muz va gazli suv.", "Безалкогольный: мята, лайм, лёд и газировка.", "20000", "", "", "mojito", "", "да", "400 ml", "Kartoshka fri / Big burger / Strips", "120", "0", "0", "30", ""],
-    ["ichimlik", "Limonad", "Лимонад", "Yangi limon, yalpiz va muz.", "Свежий лимон, мята и лёд.", "20000", "", "", "lemonade", "", "да", "400 ml", "Kartoshka fri / Big burger / Strips", "140", "0", "0", "35", ""]
+    ["ichimlik", "Cappuccino", "Капучино", "Espresso va ko‘pirtirilgan sut.", "Эспрессо и молочная пенка.", "15000", "", "", "cappuccino", "", "да", "300 ml", "Klassik / Tovuqli lavash / Strips", "110", "6", "6", "9", "молоко"],
+    ["ichimlik", "Iced latte", "Айс латте", "Espresso, sovuq sut va muz.", "Эспрессо, холодное молоко и лёд.", "20000", "", "", "iced-latte", "новинка", "да", "400 ml", "Klassik / Strips / Kartoshka fri", "140", "8", "7", "11", "молоко"],
+    ["ichimlik", "Milkshake", "Милкшейк", "Sut va muzqaymoq: qulupnay, shokolad yoki vanil.", "Молоко и мороженое: клубника, шоколад или ваниль.", "20000", "", "", "milkshake", "", "да", "400 ml", "Kartoshka fri / Big burger / Strips", "520", "12", "15", "85", "молоко"],
+    ["ichimlik", "Mojito", "Мохито", "Alkogolsiz: yalpiz, laym, muz va gazli suv.", "Безалкогольный: мята, лайм, лёд и газировка.", "15000", "", "", "mojito", "", "да", "400 ml", "Kartoshka fri / Big burger / Strips", "120", "0", "0", "30", ""],
+    ["ichimlik", "Limonad", "Лимонад", "Yangi limon, yalpiz va muz.", "Свежий лимон, мята и лёд.", "15000", "", "", "lemonade", "", "да", "400 ml", "Kartoshka fri / Big burger / Strips", "140", "0", "0", "35", ""]
   ],
   "Категории": [
     ["id", "название_uz", "название_ru", "иконка", "с_этим_берут"],
