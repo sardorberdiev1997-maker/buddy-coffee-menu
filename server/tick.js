@@ -5,6 +5,7 @@ import { continueBroadcasts } from './broadcast.js';
 import { claimKV, getKV, parseOrder, setKV } from './db.js';
 import { loadModel } from './menu.js';
 import { sendGroup, UNDO_WINDOW } from './orders.js';
+import { callButton } from './call.js';
 import { askRatings } from './ratings.js';
 import { reportText } from './stats.js';
 import { T } from './texts.js';
@@ -46,10 +47,10 @@ export async function tick(env, now = Date.now()) {
     }
 
     // 3. Через 15 минут после «Доставлен / Выдан / Отменён» кнопка «Шаг назад» больше не нужна — убираем
-    const closed = (await env.DB.prepare("SELECT id, group_chat, group_msg FROM orders WHERE status IN ('delivered', 'picked', 'canceled') AND group_msg IS NOT NULL AND done_at >= ? AND done_at < ? LIMIT 20")
+    const closed = (await env.DB.prepare("SELECT id, token, phone, group_chat, group_msg FROM orders WHERE status IN ('delivered', 'picked', 'canceled') AND group_msg IS NOT NULL AND done_at >= ? AND done_at < ? LIMIT 20")
       .bind(now - UNDO_WINDOW - 3 * MIN, now - UNDO_WINDOW).all()).results;
     for (const o of closed) {
-      await tg(env, 'editMessageReplyMarkup', { chat_id: o.group_chat, message_id: o.group_msg, reply_markup: { inline_keyboard: [] } });
+      await tg(env, 'editMessageReplyMarkup', { chat_id: o.group_chat, message_id: o.group_msg, reply_markup: { inline_keyboard: callButton(o, L) ? [callButton(o, L)] : [] } });
       done.closed = (done.closed || 0) + 1;
     }
 

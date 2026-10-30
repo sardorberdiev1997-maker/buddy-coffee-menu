@@ -6,6 +6,7 @@
 // • ссылки на Google, Яндекс и 2ГИС видят все, при любой оценке: звать на карты только довольных
 //   запрещают правила Google («selectively solicit positive reviews»), вознаграждение за отзыв — тоже;
 // • те же оценка, причины и ссылки — на странице заказа на сайте (для тех, кто не в Telegram).
+import { callButton } from './call.js';
 import { getKV, orderById, orderByToken, parseOrder, setKV } from './db.js';
 import { loadModel, OC, R, setting } from './menu.js';
 import { C, T } from './texts.js';
@@ -59,12 +60,13 @@ async function alertGroup(env, o, r) {
     reason: r.reason ? OC.RATE_REASONS[r.reason][L] : '', comment: r.comment ? h(r.comment) : '',
     who: [o.name && h(o.name), o.phone && OC.fmtPhone(o.phone)].filter(Boolean).join(' · ')
   });
+  const reply_markup = callButton(o, L) && !(r.stars > LOW) ? { inline_keyboard: [callButton(o, L)] } : undefined;
   if (r.alert_msg) {
-    await tg(env, 'editMessageText', { chat_id: group, message_id: r.alert_msg, text, parse_mode: 'HTML' });
+    await tg(env, 'editMessageText', { chat_id: group, message_id: r.alert_msg, text, parse_mode: 'HTML', reply_markup });
     return;
   }
   const sent = await tg(env, 'sendMessage', {
-    chat_id: group, text, parse_mode: 'HTML',
+    chat_id: group, text, parse_mode: 'HTML', reply_markup,
     reply_parameters: o.group_msg && String(o.group_chat) === String(group) ? { message_id: o.group_msg, allow_sending_without_reply: true } : undefined
   });
   if (sent.ok) await env.DB.prepare('UPDATE ratings SET alert_msg = ? WHERE order_id = ?').bind(sent.result.message_id, o.id).run();

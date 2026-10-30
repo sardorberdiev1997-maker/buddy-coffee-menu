@@ -5,6 +5,7 @@ import { OC, cafeInfo, loadModel } from './menu.js';
 import { C, T } from './texts.js';
 import { groupChat, groupLang, tg, verifyInitData } from './tg.js';
 import { fail, fmt, h, hhmm, json, MIN, randomToken, sha256, SITE } from './util.js';
+import { callButton } from './call.js';
 import { canRate, publicRating, ratingOf, reviewSites } from './ratings.js';
 
 const RATE_WINDOW = 10 * MIN;
@@ -241,7 +242,7 @@ export function groupText(o, L) {
     if (it.note) out.push(`     ↳ <i>${h(o.items.length > 12 ? it.note.slice(0, 40) + (it.note.length > 40 ? '…' : '') : it.note)}</i>`);
   });
   out.push('', `💰 <b>${X.sum(o.total)}</b> · ${o.payment === 'card' ? '💳 ' + X.card : '💵 ' + X.cash}${o.change_from ? `, ${X.change(o.change_from)}` : ''}`, '');
-  if (o.name || o.phone) out.push(`👤 ${h(o.name || '')}${o.phone ? ' · +' + o.phone : ''}`);
+  if (o.name || o.phone) out.push(`👤 ${h(o.name || '')}${o.phone ? ' · ' + OC.fmtPhone(o.phone) : ''}`);
   if (delivery && o.address) {
     out.push(`📍 ${h(o.address.street)}${o.address.apt ? ', ' + h(o.address.apt) : ''}`);
     if (o.address.landmark) out.push(`     ${X.landmark.toLowerCase()}: ${h(o.address.landmark)}`);
@@ -273,14 +274,16 @@ export function groupKeyboard(o, L, mode) {
     rows.push([cb(X.back, `b:${o.id}`)]);
     return { inline_keyboard: rows };
   }
-  if (OC.FINAL.includes(o.status)) return { inline_keyboard: canUndo(o) ? [[cb(X.undo, `u:${o.id}`)]] : [] };
+  // Последней строкой — «Позвонить клиенту» (server/call.js)
+  const keyboard = (rows) => ({ inline_keyboard: callButton(o, L) ? [...rows, callButton(o, L)] : rows });
+  if (OC.FINAL.includes(o.status)) return keyboard(canUndo(o) ? [[cb(X.undo, `u:${o.id}`)]] : []);
   if (o.status === 'new') {
     const mins = o.type === 'pickup' ? [10, 15, 20, 30] : [15, 30, 45, 60];
     const acc = mins.map((m) => cb(X.accept(m), `a:${o.id}:${m}`));
-    return { inline_keyboard: [acc.slice(0, 2), acc.slice(2), [cb(X.cancel, `c:${o.id}`)]] };
+    return keyboard([acc.slice(0, 2), acc.slice(2), [cb(X.cancel, `c:${o.id}`)]]);
   }
   const next = nextStatus(o);
-  return { inline_keyboard: [[cb(X.next[next], `n:${o.id}:${next}`)], [cb(X.undo, `u:${o.id}`), cb(X.cancel, `c:${o.id}`)]] };
+  return keyboard([[cb(X.next[next], `n:${o.id}:${next}`)], [cb(X.undo, `u:${o.id}`), cb(X.cancel, `c:${o.id}`)]]);
 }
 
 export async function sendGroup(env, o) {

@@ -1,5 +1,5 @@
 // Серверная часть сайта (Cloudflare Pages, advanced mode: сборка кладёт её в dist/_worker.js).
-// Обрабатывает /api/* и короткие ссылки /r/* (см. dist/_routes.json), остальное отдаёт статика Pages.
+// Обрабатывает /api/*, короткие ссылки /r/* и звонок клиенту /c/* (см. dist/_routes.json), остальное отдаёт статика Pages.
 //
 // Нужно в настройках проекта Pages:
 //   DB         — привязка базы D1 (Settings → Bindings → D1 database)
@@ -10,6 +10,7 @@ import { ensureSchema, getKV, setKV } from './db.js';
 import { loadModel, R, setting } from './menu.js';
 import { accepting, cancelBySelf, createOrder, publicOrder } from './orders.js';
 import { checkWebhook, groupChat, groupLang, tg, webhookSecret } from './tg.js';
+import { callPage } from './call.js';
 import { rateBySite } from './ratings.js';
 import { tick } from './tick.js';
 import { fail, json, safeEqual, SITE } from './util.js';
@@ -128,6 +129,9 @@ async function shortLink(env, ctx, key) {
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    // «Позвонить клиенту» из группы: страница сразу открывает набор номера (server/call.js)
+    const call = url.pathname.match(/^\/c\/([\w-]{10,40})\/?$/);
+    if (call && env.DB) return callPage(env, call[1]).catch(() => fail('server', 500));
     const short = url.pathname.match(/^\/r\/([\w-]+)\/?$/);
     if (short && Object.hasOwn(SHORT, short[1])) return shortLink(env, ctx, short[1]);
     if (!url.pathname.startsWith('/api/')) return env.ASSETS.fetch(request);

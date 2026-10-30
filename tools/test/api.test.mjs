@@ -9,7 +9,7 @@ import { after, before, test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
-const PORT = 8799;
+const PORT = 8823 + (process.pid % 100); // свой порт: 8799 бывает занят другими локальными сервисами
 const BASE = `http://127.0.0.1:${PORT}`;
 const GROUP = -1001234567890;
 const STAFF = { id: 111, first_name: 'Ali', is_bot: false };
@@ -123,9 +123,18 @@ test('заказ с доставкой: создаётся, приходит в 
   assert.ok(msg, 'сообщение в группу');
   assert.match(msg.body.text, new RegExp(`НОВЫЙ ЗАКАЗ №${order.number}`));
   assert.match(msg.body.text, /без лука/);
-  assert.match(msg.body.text, /\+998901234567/);
+  assert.match(msg.body.text, /\+998 90 123 45 67/);
   assert.match(msg.body.text, /сдача с 200 000/);
-  assert.deepEqual(msg.body.reply_markup.inline_keyboard.map((r) => r.length), [2, 2, 1], "кнопки «принять» сеткой 2×2 и «отменить»");
+  assert.deepEqual(msg.body.reply_markup.inline_keyboard.map((r) => r.length), [2, 2, 1, 1], "кнопки «принять» сеткой 2×2, «отменить», «позвонить»");
+  // «Позвонить клиенту»: страница сайта сразу открывает набор номера; телефона в ссылке нет
+  const callUrl = msg.body.reply_markup.inline_keyboard[3][0].url;
+  assert.match(callUrl, new RegExp(`/c/${order.token}$`));
+  const callRes = await fetch(BASE + new URL(callUrl).pathname);
+  assert.equal(callRes.status, 200);
+  const callHtml = await callRes.text();
+  assert.match(callHtml, /url=tel:\+998901234567/);
+  assert.match(callHtml, /href="tel:\+998901234567"/);
+  assert.equal((await fetch(BASE + '/c/no-such-order-token')).status, 404);
   assert.ok(calls.some((c) => c.method === 'sendLocation'), 'точка на карте');
   const pub = await api('/api/orders/' + order.token);
   assert.equal(pub.body.status, 'new');

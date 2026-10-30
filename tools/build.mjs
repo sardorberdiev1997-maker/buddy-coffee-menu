@@ -124,7 +124,7 @@ await esbuild.build({
   legalComments: 'none',
   logLevel: 'warning'
 });
-write('_routes.json', JSON.stringify({ version: 1, include: ['/api/*', '/r/*'], exclude: [] }));
+write('_routes.json', JSON.stringify({ version: 1, include: ['/api/*', '/r/*', '/c/*'], exclude: [] }));
 
 write('_headers', read('tools/_headers')
   .replace('{{SCRIPT_HASHES}}', scriptHashes.join(' '))
