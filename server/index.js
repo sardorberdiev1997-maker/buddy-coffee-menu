@@ -94,7 +94,13 @@ async function route(request, env, ctx) {
       setup_open: Date.now() - parseInt((await getKV(env, 'bind_open_at')) || '0', 10) < 30 * 60 * 1000, // открыто ли окно /bind
       last_tick: new Date(parseInt((await getKV(env, 'tick_at')) || '0', 10)).toISOString(),
       last_exception: await getKV(env, 'last_exception'),
-      last_skip: await getKV(env, 'last_skip')
+      last_skip: await getKV(env, 'last_skip'),
+      // Автоматика: какие сводки ушли в группу и насколько свежее меню из таблицы в кэше сервера
+      reports: (await env.DB.prepare("SELECT k, v FROM kv WHERE k LIKE 'report:%' ORDER BY CAST(v AS INTEGER) DESC LIMIT 6").all())
+        .results.map((x) => `${x.k.slice(7)} → ${new Date(parseInt(x.v, 10)).toISOString()}`),
+      menu_cache_age_s: await env.DB.prepare("SELECT json_extract(v, '$.at') AS at FROM kv WHERE k = 'menu_cache'").first()
+        .then((x) => (x && x.at ? Math.round((Date.now() - x.at) / 1000) : null)),
+      rating_requests: await env.DB.prepare('SELECT COUNT(*) AS n FROM ratings WHERE asked_at > 0').first().then((x) => (x ? x.n : 0))
     });
   }
 
