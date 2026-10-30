@@ -26,7 +26,7 @@ font-size:24px;font-weight:800;text-decoration:none;font-variant-numeric:tabular
 
 function page(title, body, go) {
   return `<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">`
-    + `${go ? `<meta http-equiv="refresh" content="0;url=${go}">` : ''}<title>${h(title)} · Buddy Coffee</title><style>${STYLE}</style></head>`
+    + `${go ? `<meta http-equiv="refresh" content="0; url=${go}">` : ''}<title>${h(title)} · Buddy Coffee</title><style>${STYLE}</style></head>`
     + `<body><main><h1>${h(title)}</h1>${body}</main></body></html>`;
 }
 

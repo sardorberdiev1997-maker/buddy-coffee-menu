@@ -29,6 +29,8 @@ const api = async (p, opts = {}) => {
   return { status: res.status, body: await res.json().catch(() => null) };
 };
 const tgCalls = async (since) => (await fetch(`${BASE}/__tg?since=${since}`)).json();
+// Отметка времени для tgCalls: лог заглушки — с точностью до миллисекунды, пауза отделяет сообщения прошлого шага
+const mark = async () => { await new Promise((r) => setTimeout(r, 3)); return Date.now(); };
 const update = (u) => fetch(`${BASE}/__tg/update`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ update_id: upd++, ...u }) });
 const groupMsg = (text, from = STAFF) => update({ message: { message_id: upd, date: 0, chat: { id: GROUP, type: 'supergroup', title: 'Buddy' }, from, text } });
 const privateMsg = (text, from = CLIENT) => update({ message: { message_id: upd, date: 0, chat: { id: from.id, type: 'private' }, from, text } });
@@ -181,27 +183,25 @@ test('статусы доставки: принят → готовится → �
 test('оценка: просьба через 45 минут, низкая — администратору, ссылки на карты при любой оценке', async () => {
   const sql = (q, ...args) => fetch(BASE + '/__sql', { method: 'POST', body: JSON.stringify({ sql: q, args }) });
   const tick = async () => { await sql("DELETE FROM kv WHERE k = 'tick_at'"); await api('/api/tick', { method: 'POST' }); };
-  // Лог заглушки Telegram — с точностью до миллисекунды: отделяем шаги паузой, чтобы не видеть сообщения прошлого шага
-  const since = async () => { await new Promise((r) => setTimeout(r, 3)); return Date.now(); };
   const sites = ['google', 'yandex', '2gis'].filter((k) => { const v = model.settings['отзыв_' + k]; return v && R.safeUrl(v.ru || v.uz); });
   // Доставлен 10 минут назад — рано; 50 минут — просим одним тихим сообщением
   await sql('UPDATE orders SET done_at = ? WHERE id = ?', Date.now() - 10 * 60000, order.number);
-  let t0 = await since();
+  let t0 = await mark();
   await tick();
   assert.ok(!(await tgCalls(t0)).some((c) => /Оцените/.test(c.body.text || '')), 'рано');
   await sql('UPDATE orders SET done_at = ? WHERE id = ?', Date.now() - 50 * 60000, order.number);
-  t0 = await since();
+  t0 = await mark();
   await tick();
   const ask = (await tgCalls(t0)).find((c) => c.method === 'sendMessage' && c.body.chat_id === CLIENT.id && /Оцените/.test(c.body.text));
   assert.ok(ask, 'просьба об оценке');
   assert.equal(ask.body.disable_notification, true);
   assert.equal(ask.body.reply_markup.inline_keyboard[0].length, 5);
-  t0 = await since();
+  t0 = await mark();
   await tick();
   assert.ok(!(await tgCalls(t0)).some((c) => /Оцените/.test(c.body.text || '')), 'второй раз не просим');
 
   // 2 звезды: администратору — оповещение; покупателю — причины, «Написать» и ссылки на карты
-  t0 = await since();
+  t0 = await mark();
   await press(`rt:${order.number}:2`, 77, CLIENT.id, CLIENT);
   let calls = await tgCalls(t0);
   assert.ok(calls.some((c) => c.method === 'sendMessage' && c.body.chat_id == GROUP && /Низкая оценка/.test(c.body.text)), 'группа: низкая оценка');
@@ -209,12 +209,12 @@ test('оценка: просьба через 45 минут, низкая — а
   assert.ok(btns.some((b) => b.callback_data === `rr:${order.number}:cold`));
   assert.equal(btns.filter((b) => /\/r\/(google|yandex|2gis)$/.test(b.url || '')).length, sites.length, 'карты — при любой оценке');
   // Чужой не может оценить чужой заказ
-  t0 = await since();
+  t0 = await mark();
   await press(`rt:${order.number}:1`, 77, 999, { id: 999, first_name: 'X', is_bot: false });
   assert.ok(!(await tgCalls(t0)).some((c) => c.method === 'editMessageText'));
 
   // Причина и комментарий дописываются в то же сообщение группы
-  t0 = await since();
+  t0 = await mark();
   await press(`rr:${order.number}:cold`, 77, CLIENT.id, CLIENT);
   await press(`rw:${order.number}`, 77, CLIENT.id, CLIENT);
   await privateMsg('Курьер опоздал на <b>20</b> минут');
@@ -224,7 +224,7 @@ test('оценка: просьба через 45 минут, низкая — а
   assert.ok(edits.some((c) => /опоздал на &lt;b&gt;20/.test(c.body.text)), 'комментарий, HTML экранирован');
 
   // С сайта: оценку можно поднять — в группе «изменил оценку»; страница заказа отдаёт оценку и площадки
-  t0 = await since();
+  t0 = await mark();
   assert.equal((await api(`/api/orders/${order.token}/rate`, { method: 'POST', body: JSON.stringify({ stars: 5 }) })).status, 200);
   assert.ok((await tgCalls(t0)).some((c) => c.method === 'editMessageText' && c.body.chat_id == GROUP && /изменил оценку/.test(c.body.text)));
   const pub = (await api('/api/orders/' + order.token)).body;
@@ -246,7 +246,7 @@ test('сторож бота: сброшенный вебхук ставит са
   const tick = async () => { await sql("DELETE FROM kv WHERE k IN ('tick_at', 'wh_at')"); await api('/api/tick', { method: 'POST' }); };
   // Вебхук кто-то сбросил — восстанавливаем молча
   await hook({ url: '', pending_update_count: 0 });
-  let t0 = Date.now();
+  let t0 = await mark();
   await tick();
   let calls = await tgCalls(t0);
   assert.ok(calls.some((c) => c.method === 'setWebhook' && c.body.url === 'https://buddy.cheking.uz/api/tg'), 'вебхук восстановлен');
@@ -254,11 +254,11 @@ test('сторож бота: сброшенный вебхук ставит са
   assert.match((await api('/api/tg/info')).body.bot_problem, /восстановлен/);
   // Вебхук на месте, но Telegram не может доставить сообщения — тревога в группу, один раз
   await hook({ url: 'https://buddy.cheking.uz/api/tg', pending_update_count: 5, last_error_date: Math.floor(Date.now() / 1000), last_error_message: 'Wrong response from the webhook: 500' });
-  t0 = Date.now();
+  t0 = await mark();
   await tick();
   calls = await tgCalls(t0);
   assert.ok(calls.some((c) => c.method === 'sendMessage' && c.body.chat_id == GROUP && /не получает сообщения/.test(c.body.text)), 'тревога');
-  t0 = Date.now();
+  t0 = await mark();
   await tick();
   assert.ok(!(await tgCalls(t0)).some((c) => /не получает/.test(c.body.text || '')), 'не чаще раза в 6 часов');
   await hook({ url: 'https://buddy.cheking.uz/api/tg', pending_update_count: 0 });

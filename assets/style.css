@@ -60,7 +60,7 @@
   --nav-h: 64px;
   --wrap: 600px;
   --sheet-w: 600px;
-  --link: var(--red);
+  --link: var(--red-deep); /* красный #E31B23 на бежевом — 3,97:1, тёмно-красный — 6,4:1 */
   --tg-text: #1A73A8;
   --back-link: var(--red-deep);
   --ease-out: cubic-bezier(.2, .9, .3, 1);
@@ -1197,7 +1197,7 @@ html.has-cart .info { padding-bottom: calc(100px + env(safe-area-inset-bottom));
 .pickup > svg { width: 22px; height: 22px; color: var(--red); }
 .pickup b { display: block; font-size: 15px; }
 .pickup span { display: block; margin-top: 2px; font-size: 14px; color: var(--ink-2); }
-.pickup a { display: inline-block; margin-top: 6px; font-size: 15px; font-weight: 700; color: var(--red); }
+.pickup a { display: inline-block; margin-top: 6px; font-size: 15px; font-weight: 700; color: var(--link); }
 
 .hp { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
 .form__err { margin: 16px 0 0; padding: 12px 14px; border-radius: 14px; background: color-mix(in srgb, var(--err) 12%, var(--card)); color: var(--err); font-size: 15px; font-weight: 600; line-height: 1.4; }
@@ -1352,7 +1352,7 @@ html.has-cart .info { padding-bottom: calc(100px + env(safe-area-inset-bottom));
 .track__dl dt { color: var(--ink-3); }
 .track__dl dd { margin: 0; font-weight: 500; overflow-wrap: anywhere; }
 .track__dl dd svg { width: 14px; height: 14px; vertical-align: -2px; color: var(--ok); }
-.track__dl a { color: var(--red); font-weight: 700; }
+.track__dl a { color: var(--link); font-weight: 700; }
 .track__cancel { margin-top: 6px; color: var(--err); }
 .track__upd { margin: 14px 0 0; font-size: 13px; color: var(--ink-3); text-align: center; }
 .track__back { margin: 6px 0 0; text-align: center; }
