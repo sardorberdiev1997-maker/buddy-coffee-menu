@@ -2,7 +2,8 @@
 // повторная отправка в группу, сводки в 00:00 по Ташкенту, удаление личных данных через 90 дней.
 // Всё идемпотентно — лишний вызов ничего не дублирует.
 import { continueBroadcasts } from './broadcast.js';
-import { claimKV, getKV, parseOrder, setKV } from './db.js';
+import { claimKV, getKV, parseOrder, setKV, throttle } from './db.js';
+import { cleanClientErrors, watchBot } from './health.js';
 import { loadModel } from './menu.js';
 import { sendGroup, UNDO_WINDOW } from './orders.js';
 import { callButton } from './call.js';
@@ -18,8 +19,7 @@ const KEEP_PERSONAL = 90 * DAY;
 
 export async function tick(env, now = Date.now()) {
   // Захват атомарный: параллельные вызовы /api/tick не повторят напоминания и рассылки
-  const won = await env.DB.prepare("UPDATE kv SET v = ? WHERE k = 'tick_at' AND CAST(v AS INTEGER) <= ?").bind(String(now), now - 30 * 1000).run();
-  if (!(won.meta && won.meta.changes) && !(await claimKV(env, 'tick_at', now))) return { skipped: true };
+  if (!(await throttle(env, 'tick_at', now, 30 * 1000))) return { skipped: true };
 
   const done = { resent: 0, reminded: 0, reports: [], cleaned: 0 };
   const group = await groupChat(env);
@@ -70,8 +70,11 @@ export async function tick(env, now = Date.now()) {
     }
   }
 
-  // Просьба оценить заказ — через 45 минут после доставки
-  if (env.BOT_TOKEN) done.rateAsked = await askRatings(env, now);
+  // Просьба оценить заказ — через 45 минут после доставки; сторож бота — раз в 10 минут
+  if (env.BOT_TOKEN) {
+    done.rateAsked = await askRatings(env, now);
+    done.bot = await watchBot(env, now);
+  }
 
   // 6. В заказах личные данные (адрес, точка, комментарий, имя, телефон) храним 90 дней; имя и телефон остаются в базе клиентов
   if (await claimKV(env, `cleanup:${dayKey(now)}`, now)) {
@@ -80,6 +83,7 @@ export async function tick(env, now = Date.now()) {
       .bind(now - KEEP_PERSONAL).run();
     done.cleaned = (r.meta && r.meta.changes) || 0;
     await env.DB.prepare('UPDATE ratings SET comment = NULL WHERE comment IS NOT NULL AND rated_at < ?').bind(now - KEEP_PERSONAL).run();
+    await cleanClientErrors(env, now);
   }
   // Держим кэш меню в D1 свежим — покупателям не приходится ждать Google Таблицу
   await loadModel(env, { fresh: true }).catch((e) => console.warn('tick: menu', e.message));

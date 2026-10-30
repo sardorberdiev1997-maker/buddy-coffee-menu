@@ -8,6 +8,27 @@
   document.documentElement.classList.add('js');
   if (l !== 'uz') document.documentElement.classList.add('is-booting');
 
+  // Ошибки JavaScript у посетителей — на сервер (без личных данных), видно в /api/tg/info.
+  // Сетевые сбои мобильного интернета и чужие скрипты (расширения браузера) не шлём
+  var sent = 0;
+  function report(msg, src, line) {
+    msg = String(msg || '');
+    if (sent >= 3 || !msg || !navigator.sendBeacon || /Failed to fetch|NetworkError|Load failed|aborted|AbortError|Script error/i.test(msg)) return;
+    if (src && String(src).indexOf(location.origin) !== 0) return;
+    sent++;
+    try {
+      navigator.sendBeacon('/api/log', JSON.stringify({
+        m: msg.slice(0, 300), s: String(src || '').replace(location.origin, '').split('?')[0], l: line || 0,
+        p: location.pathname, tg: /tgWebApp|[?&]tg=1\b/.test(location.hash + location.search)
+      }));
+    } catch (e) { /* без сети — не страшно */ }
+  }
+  window.addEventListener('error', function (e) { report(e.message, e.filename, e.lineno); });
+  window.addEventListener('unhandledrejection', function (e) {
+    var r = e.reason;
+    report(r && r.message ? (r.name ? r.name + ': ' : '') + r.message : r, location.href, 0);
+  });
+
   // Сайт открыт как Telegram Mini App — подключаем скрипт Telegram (обычным посетителям он не нужен)
   if (/tgWebApp/.test(location.hash) || /[?&]tg=1\b/.test(location.search)) {
     var s = document.createElement('script');

@@ -11,6 +11,7 @@ import { loadModel, R, setting } from './menu.js';
 import { accepting, cancelBySelf, createOrder, publicOrder } from './orders.js';
 import { checkWebhook, groupChat, groupLang, tg, webhookSecret } from './tg.js';
 import { callPage } from './call.js';
+import { clientErrors, logClientError } from './health.js';
 import { rateBySite } from './ratings.js';
 import { tick } from './tick.js';
 import { fail, json, safeEqual, SITE } from './util.js';
@@ -100,7 +101,10 @@ async function route(request, env, ctx) {
         .results.map((x) => `${x.k.slice(7)} → ${new Date(parseInt(x.v, 10)).toISOString()}`),
       menu_cache_age_s: await env.DB.prepare("SELECT json_extract(v, '$.at') AS at FROM kv WHERE k = 'menu_cache'").first()
         .then((x) => (x && x.at ? Math.round((Date.now() - x.at) / 1000) : null)),
-      rating_requests: await env.DB.prepare('SELECT COUNT(*) AS n FROM ratings WHERE asked_at > 0').first().then((x) => (x ? x.n : 0))
+      rating_requests: await env.DB.prepare('SELECT COUNT(*) AS n FROM ratings WHERE asked_at > 0').first().then((x) => (x ? x.n : 0)),
+      // Сторож бота (server/health.js) и последние ошибки в браузерах посетителей
+      bot_problem: await getKV(env, 'wh_problem'),
+      client_errors: await clientErrors(env)
     });
   }
 
@@ -114,6 +118,13 @@ async function route(request, env, ctx) {
   }
 
   if (path === '/api/tick') return json(await tick(env));
+
+  // Ошибки JavaScript в браузерах посетителей (assets/boot.js) — без личных данных
+  if (path === '/api/log' && method === 'POST') {
+    if (!sameOrigin(request)) return fail('forbidden', 403);
+    await logClientError(env, await request.text().catch(() => ''), request.headers.get('user-agent') || '');
+    return new Response(null, { status: 204 });
+  }
 
   return fail('not_found', 404);
 }

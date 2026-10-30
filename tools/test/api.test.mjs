@@ -240,6 +240,43 @@ test('оценка: просьба через 45 минут, низкая — а
   await sql('UPDATE orders SET done_at = ? WHERE id = ?', Date.now() - 50 * 60000, order.number);
 });
 
+test('сторож бота: сброшенный вебхук ставит сам, при сбоях доставки — тревога в группу', async () => {
+  const sql = (q, ...args) => fetch(BASE + '/__sql', { method: 'POST', body: JSON.stringify({ sql: q, args }) });
+  const hook = (h) => fetch(BASE + '/__tg/hook', { method: 'POST', body: JSON.stringify(h) });
+  const tick = async () => { await sql("DELETE FROM kv WHERE k IN ('tick_at', 'wh_at')"); await api('/api/tick', { method: 'POST' }); };
+  // Вебхук кто-то сбросил — восстанавливаем молча
+  await hook({ url: '', pending_update_count: 0 });
+  let t0 = Date.now();
+  await tick();
+  let calls = await tgCalls(t0);
+  assert.ok(calls.some((c) => c.method === 'setWebhook' && c.body.url === 'https://buddy.cheking.uz/api/tg'), 'вебхук восстановлен');
+  assert.ok(!calls.some((c) => c.method === 'sendMessage' && /не получает/.test(c.body.text || '')), 'без тревоги');
+  assert.match((await api('/api/tg/info')).body.bot_problem, /восстановлен/);
+  // Вебхук на месте, но Telegram не может доставить сообщения — тревога в группу, один раз
+  await hook({ url: 'https://buddy.cheking.uz/api/tg', pending_update_count: 5, last_error_date: Math.floor(Date.now() / 1000), last_error_message: 'Wrong response from the webhook: 500' });
+  t0 = Date.now();
+  await tick();
+  calls = await tgCalls(t0);
+  assert.ok(calls.some((c) => c.method === 'sendMessage' && c.body.chat_id == GROUP && /не получает сообщения/.test(c.body.text)), 'тревога');
+  t0 = Date.now();
+  await tick();
+  assert.ok(!(await tgCalls(t0)).some((c) => /не получает/.test(c.body.text || '')), 'не чаще раза в 6 часов');
+  await hook({ url: 'https://buddy.cheking.uz/api/tg', pending_update_count: 0 });
+});
+
+test('ошибки браузера: пишутся без повторов, видны в диагностике, чужой сайт не может слать', async () => {
+  const send = (body, headers = {}) => fetch(BASE + '/api/log', { method: 'POST', headers: { 'content-type': 'text/plain', 'user-agent': 'Mozilla/5.0 (iPhone)', ...headers }, body: JSON.stringify(body) });
+  const err = { m: 'TypeError: x is undefined', s: '/assets/cart.js', l: 42, p: '/', tg: true };
+  assert.equal((await send(err)).status, 204);
+  assert.equal((await send(err)).status, 204);
+  assert.equal((await send({ m: 'evil' }, { origin: 'https://evil.example' })).status, 403);
+  assert.equal((await fetch(BASE + '/api/log', { method: 'POST', body: 'not json' })).status, 204);
+  const list = (await api('/api/tg/info')).body.client_errors;
+  assert.equal(list.filter((x) => /x is undefined/.test(x)).length, 1, 'без повторов');
+  assert.match(list[0], /iPhone · Telegram · \/ · TypeError: x is undefined \(\/assets\/cart\.js:42\)/);
+  assert.ok(!list.some((x) => /evil/.test(x)));
+});
+
 test('самовывоз без минимальной суммы; отмена кафе с причиной', async () => {
   const cheap = model.items.find((x) => x.key === 'ichimlik-americano');
   const r = await api('/api/orders', { method: 'POST', body: JSON.stringify(orderBody({ type: 'pickup', address: null, geo: null, items: [{ key: cheap.key, size: 0, qty: 1, price: cheap.prices[0] }], total: cheap.prices[0] })) });

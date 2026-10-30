@@ -44,6 +44,7 @@ const DB = {
 
 const tgLog = [];
 let msgId = 1000;
+let hook = { url: '', pending_update_count: 0 }; // getWebhookInfo заглушки; тест сторожа меняет через /__tg/hook
 const realFetch = globalThis.fetch;
 globalThis.fetch = async (input, init) => {
   const url = typeof input === 'string' ? input : input.url;
@@ -60,6 +61,8 @@ globalThis.fetch = async (input, init) => {
       result = { message_id: body.message_id || ++msgId, chat: { id: body.chat_id }, date: Math.floor(Date.now() / 1000), text: body.text };
     } else if (method === 'getChatMember') result = { status: 'creator', user: { id: body.user_id } };
     else if (method === 'getMe') result = { id: 1, is_bot: true, username: 'buddy_coffee_uz_bot' };
+    else if (method === 'setWebhook') hook = { url: body.url, pending_update_count: 0 };
+    else if (method === 'getWebhookInfo') result = hook;
     return new Response(JSON.stringify({ ok: true, result }), { headers: { 'content-type': 'application/json' } });
   }
   return realFetch(input, init);
@@ -128,6 +131,9 @@ createServer(async (req, res) => {
     if (url.pathname === '/__tg') {
       const since = parseInt(url.searchParams.get('since') || '0', 10);
       out = Response.json(tgLog.filter((x) => x.at >= since));
+    } else if (url.pathname === '/__tg/hook' && req.method === 'POST') {
+      hook = JSON.parse(body.toString() || '{}');
+      out = Response.json({ ok: true });
     } else if (url.pathname === '/__sql' && req.method === 'POST') {
       const { sql, args = [] } = JSON.parse(body.toString() || '{}');
       sqlite.prepare(sql).run(...args);

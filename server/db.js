@@ -113,6 +113,12 @@ export async function setKV(env, k, v) {
 }
 
 // Вставить, только если ключа ещё нет (true — вставили мы). Для «отправить сводку один раз»
+// Не чаще раза в interval мс: атомарно, два параллельных вызова вдвоём не пройдут
+export async function throttle(env, k, now, interval) {
+  const r = await env.DB.prepare('UPDATE kv SET v = ? WHERE k = ? AND CAST(v AS INTEGER) <= ?').bind(String(now), k, now - interval).run();
+  return !!(r.meta && r.meta.changes) || claimKV(env, k, now);
+}
+
 export async function claimKV(env, k, v) {
   const r = await env.DB.prepare('INSERT OR IGNORE INTO kv (k, v) VALUES (?, ?)').bind(k, String(v)).run();
   return !!(r.meta && r.meta.changes);
