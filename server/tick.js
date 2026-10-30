@@ -84,6 +84,7 @@ export async function tick(env, now = Date.now()) {
     done.cleaned = (r.meta && r.meta.changes) || 0;
     await env.DB.prepare('UPDATE ratings SET comment = NULL WHERE comment IS NOT NULL AND rated_at < ?').bind(now - KEEP_PERSONAL).run();
     await cleanClientErrors(env, now);
+    await env.DB.prepare("DELETE FROM kv WHERE k >= 'ev:' AND k < ?").bind(`ev:${dayKey(now - 400 * DAY)}`).run(); // воронка — больше года не нужна
   }
   // Держим кэш меню в D1 свежим — покупателям не приходится ждать Google Таблицу
   await loadModel(env, { fresh: true }).catch((e) => console.warn('tick: menu', e.message));

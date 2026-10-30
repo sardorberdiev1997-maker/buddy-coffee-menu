@@ -22,6 +22,8 @@
 
   let cart = { lines: [], type: 'delivery' };
   let accepting; // ответ /api/state: true / false / null (нет сети); undefined — ещё не спросили
+  let rush = null; // «час пик» из группы кафе (/rush): { add, until } — сроки на сайте больше
+  const etaText = (type) => OC.shiftEta(cfg().eta(type, lang()), rush ? rush.add : 0);
   let step = 'cart';
   let sel = null; // выбор в шторке блюда: { id, size, qty, note }
   let geo = null;
@@ -102,6 +104,7 @@
   }
 
   function addLine(key, size, qty, note) {
+    if (app() && app().track) app().track('cart');
     const lines = cart.lines.slice();
     const same = lines.find((l) => l.key === key && l.size === size && (l.note || '') === (note || ''));
     if (same) same.qty = Math.min(20, same.qty + qty);
@@ -350,7 +353,7 @@
       return;
     }
     const m = minState(p.total);
-    const eta = cfg().eta(cart.type, lang());
+    const eta = etaText(cart.type);
     els.body.innerHTML = `<div class="cart__head">
         <h2 class="cart__title" id="cart-title" tabindex="-1">${esc(t('cart'))}</h2>
         <button type="button" class="link" data-clear>${esc(t('clear'))}</button>
@@ -359,6 +362,7 @@
       ${upsellHTML(p.lines)}
       <h3 class="cart__h">${esc(t('howGet'))}</h3>
       ${typeHTML()}
+      ${rush ? `<p class="cart__rush" role="status">🔥 ${esc(t('rushNote'))}</p>` : ''}
       <p class="cart__hint">${esc(cart.type === 'delivery' ? t('zoneNote', eta) : t('pickupNote', eta))}</p>
       ${m.ok ? '' : `<div class="minbar" role="status"><span class="minbar__track"><span data-w="${Math.min(100, Math.round((p.total / m.min) * 100))}"></span></span><p>${esc(t('minLeft', R.fmt(m.left), R.fmt(m.min)))}</p></div>`}
       ${totalsHTML(p)}
@@ -421,7 +425,7 @@
         </div>
         ${field('landmark', t('landmark'), `<input id="f-landmark" name="landmark" maxlength="120" placeholder="${esc(t('landmarkPh'))}" value="${esc(pf.landmark || '')}">`, '', true)}
         <div class="geo" id="geo">${geoHTML()}</div>` : `<h3 class="cart__h">${esc(t('pickupFrom'))}</h3>
-        <div class="pickup">${icon('i-pin')}<div><b>${esc(view().setting('адрес'))}</b><span>${esc(t('pickupNote', c.eta('pickup', lang())))}</span>
+        <div class="pickup">${icon('i-pin')}<div><b>${esc(view().setting('адрес'))}</b><span>${esc(t('pickupNote', etaText('pickup')))}</span>
           ${cafeMap ? `<a href="${esc(cafeMap)}" target="_blank" rel="noopener">${esc(t('route'))}</a>` : ''}</div></div>`}
         <h3 class="cart__h">${esc(t('payment'))}</h3>
         <div class="seg" role="radiogroup" aria-label="${esc(t('payment'))}">
@@ -646,7 +650,10 @@
     $('.sheet__card', els.dlg).scrollTop = 0;
     const title = $('#cart-title', els.body);
     if (title) title.focus({ preventScroll: true });
-    if (next === 'checkout') history.pushState({ cart: 2 }, '');
+    if (next === 'checkout') {
+      history.pushState({ cart: 2 }, '');
+      if (app() && app().track) app().track('checkout');
+    }
   }
 
   function closeCart() {
@@ -800,6 +807,8 @@
       const res = await fetch('/api/state', { cache: 'no-store', signal: AbortSignal.timeout(6000) });
       const d = res.ok ? await res.json() : null;
       accepting = !!(d && d.accepting);
+      rush = d && d.rush && d.rush.until > Date.now() ? d.rush : null;
+      if (d && app() && app().setStop) app().setStop(d.stop);
     } catch (e) {
       accepting = null; // нет сети: корзину собирать можно, отправим позже
     }

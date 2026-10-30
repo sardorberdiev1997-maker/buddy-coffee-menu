@@ -6,6 +6,7 @@ import { C, T } from './texts.js';
 import { groupChat, groupLang, tg, verifyInitData } from './tg.js';
 import { fail, fmt, h, hhmm, json, MIN, randomToken, sha256, SITE } from './util.js';
 import { callButton } from './call.js';
+import { rushState, stopList, withStop } from './live.js';
 import { canRate, publicRating, ratingOf, reviewSites } from './ratings.js';
 
 const RATE_WINDOW = 10 * MIN;
@@ -41,7 +42,8 @@ export async function createOrder(request, env, ctx) {
     if (dup) return json({ token: dup.token, number: dup.id, total: dup.total });
   }
 
-  let model = await loadModel(env);
+  const stop = await stopList(env);
+  let model = withStop(await loadModel(env), stop);
   if (!(await accepting(env, model))) return fail('paused', 503);
 
   const type = b.type === 'pickup' ? 'pickup' : 'delivery';
@@ -73,7 +75,7 @@ export async function createOrder(request, env, ctx) {
   const sameAsClient = () => !p.missing.length && p.total === +b.total &&
     p.lines.every((l, i) => !b.items[i] || +b.items[i].price === l.price);
   if (!sameAsClient()) {
-    model = await loadModel(env, { fresh: true });
+    model = withStop(await loadModel(env, { fresh: true }), stop);
     p = OC.price(model, lines);
   }
   if (p.missing.length) {
@@ -264,7 +266,8 @@ export function groupText(o, L) {
   return out.join('\n');
 }
 
-export function groupKeyboard(o, L, mode) {
+// add — минуты «часа пика»: кнопки «принять» сдвигаются (server/live.js)
+export function groupKeyboard(o, L, mode, add = 0) {
   const X = T[L];
   const cb = (text, data) => ({ text, callback_data: data });
   if (mode === 'cancel') {
@@ -278,7 +281,7 @@ export function groupKeyboard(o, L, mode) {
   const keyboard = (rows) => ({ inline_keyboard: callButton(o, L) ? [...rows, callButton(o, L)] : rows });
   if (OC.FINAL.includes(o.status)) return keyboard(canUndo(o) ? [[cb(X.undo, `u:${o.id}`)]] : []);
   if (o.status === 'new') {
-    const mins = o.type === 'pickup' ? [10, 15, 20, 30] : [15, 30, 45, 60];
+    const mins = (o.type === 'pickup' ? [10, 15, 20, 30] : [15, 30, 45, 60]).map((m) => m + add);
     const acc = mins.map((m) => cb(X.accept(m), `a:${o.id}:${m}`));
     return keyboard([acc.slice(0, 2), acc.slice(2), [cb(X.cancel, `c:${o.id}`)]]);
   }
@@ -286,12 +289,14 @@ export function groupKeyboard(o, L, mode) {
   return keyboard([[cb(X.next[next], `n:${o.id}:${next}`)], [cb(X.undo, `u:${o.id}`), cb(X.cancel, `c:${o.id}`)]]);
 }
 
+const rushAdd = async (env) => ((await rushState(env)) || { add: 0 }).add;
+
 export async function sendGroup(env, o) {
   const chat = await groupChat(env);
   if (!chat || !o) return;
   const L = await groupLang(env);
   const r = await tg(env, 'sendMessage', {
-    chat_id: chat, text: groupText(o, L), parse_mode: 'HTML', reply_markup: groupKeyboard(o, L),
+    chat_id: chat, text: groupText(o, L), parse_mode: 'HTML', reply_markup: groupKeyboard(o, L, undefined, await rushAdd(env)),
     link_preview_options: { is_disabled: true }
   });
   if (!r.ok) return;
@@ -311,7 +316,7 @@ export async function refreshGroup(env, o, mode) {
   const L = await groupLang(env);
   await tg(env, 'editMessageText', {
     chat_id: o.group_chat, message_id: o.group_msg, text: groupText(o, L), parse_mode: 'HTML',
-    reply_markup: groupKeyboard(o, L, mode), link_preview_options: { is_disabled: true }
+    reply_markup: groupKeyboard(o, L, mode, await rushAdd(env)), link_preview_options: { is_disabled: true }
   });
 }
 

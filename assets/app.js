@@ -95,8 +95,34 @@
   }
 
   // Перерисовываем, только если данные действительно изменились (сравниваем уже разобранную модель)
+  // Стоп-лист из группы кафе (/stop): эти блюда сейчас «нет в наличии». Приходит с /api/state (assets/cart.js)
+  let stopKeys = [];
+  let lastTables = null;
+  function build(tables) {
+    lastTables = tables;
+    const m = R.buildModel(tables);
+    if (stopKeys.length) m.items.forEach((it) => { if (stopKeys.includes(it.key)) it.avail = false; });
+    return m;
+  }
+
+  function setStop(keys) {
+    const next = (Array.isArray(keys) ? keys : []).filter((k) => typeof k === 'string').sort();
+    if (next.join() === stopKeys.join()) return;
+    stopKeys = next;
+    if (lastTables) apply(lastTables);
+  }
+
+  // Воронка для /stats: открыли меню → корзина → оформление. Каждое событие — раз за визит, без данных о человеке
+  function track(e) {
+    try {
+      if (sessionStorage.getItem('buddy-ev:' + e)) return;
+      sessionStorage.setItem('buddy-ev:' + e, '1');
+    } catch (err) { /* приватный режим — считаем как есть */ }
+    try { if (navigator.sendBeacon) navigator.sendBeacon('/api/ev', JSON.stringify({ e })); } catch (err) { /* без сети — не важно */ }
+  }
+
   function apply(tables) {
-    const next = R.buildModel(tables);
+    const next = build(tables);
     const json = JSON.stringify(next);
     if (json === shownJSON) return false;
     shownJSON = json;
@@ -107,7 +133,7 @@
 
   // Меню уже в HTML (предрендер на узбекском) — только «оживляем» без перерисовки
   function hydrate(tables) {
-    model = R.buildModel(tables);
+    model = build(tables);
     shownJSON = JSON.stringify(model);
     view = R.createView(model, lang);
     applyStatic();
@@ -516,6 +542,7 @@
   /* ---------- start ---------- */
 
   async function init() {
+    track('view');
     lang = detectLang();
     // После перезагрузки с открытой шторкой в истории остаётся её запись — убираем
     if (history.state && history.state.sheet) history.replaceState(null, '');
@@ -581,6 +608,8 @@
     openSheet,
     closeSheet,
     setLang,
+    setStop,
+    track,
     // После «цены обновились» — перечитать таблицу сразу
     reload: () => loadSheet().then((tables) => { if (tables) apply(tables); }).catch(() => {})
   };

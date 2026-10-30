@@ -11,6 +11,8 @@ import { loadModel, R, setting } from './menu.js';
 import { accepting, cancelBySelf, createOrder, publicOrder } from './orders.js';
 import { checkWebhook, groupChat, groupLang, tg, webhookSecret } from './tg.js';
 import { callPage } from './call.js';
+import { rushState, stopList } from './live.js';
+import { countEvent } from './stats.js';
 import { clientErrors, logClientError } from './health.js';
 import { rateBySite } from './ratings.js';
 import { tick } from './tick.js';
@@ -30,7 +32,8 @@ async function route(request, env, ctx) {
   const method = request.method;
 
   if (path === '/api/state' && method === 'GET') {
-    return json({ accepting: await accepting(env, await loadModel(env, { ctx })) }, 200, { 'cache-control': 'no-store' });
+    const [model, stop, rush] = await Promise.all([loadModel(env, { ctx }), stopList(env), rushState(env)]);
+    return json({ accepting: await accepting(env, model), stop: Object.keys(stop), rush: rush ? { add: rush.add, until: rush.until } : null }, 200, { 'cache-control': 'no-store' });
   }
 
   if (path === '/api/orders' && method === 'POST') {
@@ -118,6 +121,13 @@ async function route(request, env, ctx) {
   }
 
   if (path === '/api/tick') return json(await tick(env));
+
+  // Воронка для /stats: открыли меню → корзина → оформление (счётчики по дням, без данных о людях)
+  if (path === '/api/ev' && method === 'POST') {
+    if (!sameOrigin(request)) return fail('forbidden', 403);
+    await countEvent(env, await request.text().catch(() => ''));
+    return new Response(null, { status: 204 });
+  }
 
   // Ошибки JavaScript в браузерах посетителей (assets/boot.js) — без личных данных
   if (path === '/api/log' && method === 'POST') {

@@ -63,6 +63,7 @@
       minLeft: (left, min) => `Yetkazib berish ${min} so‘mdan. Yana ${left} so‘mlik taom qo‘shing yoki olib keting.`,
       zoneNote: (eta) => `Shahrisabz shahri bo‘ylab bepul · ${eta} daqiqa`,
       pickupNote: (eta) => `Tayyor bo‘ladi: ${eta} daqiqada`,
+      rushNote: 'Hozir buyurtmalar ko‘p — odatdagidan biroz uzoqroq tayyorlaymiz. Sabringiz uchun rahmat!',
       upsell: 'Buyurtmaga qo‘shasizmi?',
       checkout: 'Rasmiylashtirish', back: 'Orqaga', checkoutTitle: 'Rasmiylashtirish',
       contact: 'Bog‘lanish uchun', name: 'Ismingiz', phone: 'Telefon raqam', phoneHint: 'Kuryer yoki kafe shu raqamga qo‘ng‘iroq qiladi',
@@ -134,6 +135,7 @@
       minLeft: (left, min) => `Доставка — от ${min} сум. Добавьте блюд ещё на ${left} сум или заберите сами.`,
       zoneNote: (eta) => `Бесплатно по Шахрисабзу · ${eta} мин`,
       pickupNote: (eta) => `Будет готов через ${eta} мин`,
+      rushNote: 'Сейчас много заказов — готовим чуть дольше обычного. Спасибо за терпение!',
       upsell: 'Добавить к заказу?',
       checkout: 'Оформить заказ', back: 'Назад', checkoutTitle: 'Оформление',
       contact: 'Для связи', name: 'Имя', phone: 'Телефон', phoneHint: 'На этот номер позвонит курьер или кафе',
@@ -248,6 +250,11 @@
 
   const NO = /^(нет|no|false|0|-|yo[‘'ʻ’`]?q|o[‘'ʻ’`]?chiq|выкл)$/i;
 
+  // «Час пик» (/rush в группе кафе): «30–45» → «45–60» при add = 15
+  function shiftEta(s, add) {
+    return add ? String(s).replace(/\d+/g, (n) => String(+n + add)) : s;
+  }
+
   function config(model) {
     const s = (k) => {
       const v = model && model.settings && model.settings[k];
@@ -293,5 +300,5 @@
     return { lines: out, total, missing };
   }
 
-  root.OrderCore = { UI, ZONE, FLOW, FINAL, DONE, STATUS, CANCEL_REASONS, RATE_REASONS, inZone, normPhone, fmtPhone, config, price };
+  root.OrderCore = { UI, ZONE, FLOW, FINAL, DONE, STATUS, CANCEL_REASONS, RATE_REASONS, shiftEta, inZone, normPhone, fmtPhone, config, price };
 })(typeof window !== 'undefined' ? window : globalThis);

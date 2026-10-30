@@ -1305,6 +1305,7 @@ html.has-cart .info { padding-bottom: calc(100px + env(safe-area-inset-bottom));
 
 .track__actions { display: grid; gap: 8px; margin-top: 14px; }
 .track__rate { margin: 14px 0 0; }
+.cart__rush { margin: 0 0 8px; padding: 10px 12px; border-radius: 14px; background: var(--yellow); color: var(--on-yellow); font-size: 14px; font-weight: 600; line-height: 1.35; }
 .track__rate .rate__title:focus { outline: none; }
 .rate__pick { display: flex; justify-content: center; gap: 2px; margin: 4px 0 6px; }
 .rate__star { display: grid; place-items: center; width: 48px; height: 48px; padding: 0; border: 0; border-radius: 12px; background: none; color: var(--on-yellow); cursor: pointer; transition: transform .15s ease; }

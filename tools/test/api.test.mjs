@@ -318,6 +318,56 @@ test('ограничение частоты: не больше 4 заказов 
   assert.equal(last.body.error, 'rate');
 });
 
+test('/stop: блюдо сразу «нет в наличии» на сайте и в заказе, второе нажатие возвращает', async () => {
+  let t0 = await mark();
+  await groupMsg('/stop');
+  const menu = (await tgCalls(t0)).find((c) => c.method === 'sendMessage' && /Стоп-лист/.test(c.body.text || ''));
+  assert.ok(menu, 'список блюд кнопками');
+  assert.ok(menu.body.reply_markup.inline_keyboard.flat().some((b) => b.callback_data === 'sl:hotdog-klassik'));
+  t0 = await mark();
+  await press('sl:hotdog-klassik', 900);
+  assert.deepEqual((await api('/api/state')).body.stop, ['hotdog-klassik']);
+  assert.ok((await tgCalls(t0)).some((c) => c.method === 'editMessageText' && /нет в наличии:.*Классический|нет в наличии:.*Klassik/i.test(c.body.text)));
+  // Заказ с этим блюдом не принимается, даже если сайт не успел обновиться
+  const r = await api('/api/orders', { method: 'POST', body: JSON.stringify(orderBody({ phone: '90 765 43 21' })) });
+  assert.equal(r.status, 409);
+  assert.deepEqual(r.body.keys, ['hotdog-klassik']);
+  await press('sl:hotdog-klassik', 900);
+  assert.deepEqual((await api('/api/state')).body.stop, []);
+});
+
+test('/rush: сроки на сайте и кнопки «принять» сдвигаются, выключается кнопкой', async () => {
+  let t0 = await mark();
+  await groupMsg('/rush');
+  const msg = (await tgCalls(t0)).find((c) => c.method === 'sendMessage' && /Час пик/.test(c.body.text || ''));
+  assert.deepEqual(msg.body.reply_markup.inline_keyboard.flat().map((b) => b.callback_data), ['rush:15', 'rush:30']);
+  await press('rush:15', 901);
+  const st = (await api('/api/state')).body.rush;
+  assert.equal(st.add, 15);
+  assert.ok(st.until > Date.now() + 2.9 * 3600000);
+  t0 = await mark();
+  const r = await api('/api/orders', { method: 'POST', body: JSON.stringify(orderBody({ phone: '90 765 43 22', type: 'pickup', address: null, geo: null })) });
+  assert.equal(r.status, 201, JSON.stringify(r.body));
+  await fetch(BASE + '/__idle');
+  const card = (await tgCalls(t0)).find((c) => c.method === 'sendMessage' && c.body.chat_id == GROUP && /НОВЫЙ ЗАКАЗ/.test(c.body.text));
+  assert.deepEqual(card.body.reply_markup.inline_keyboard.slice(0, 2).flat().map((b) => b.callback_data.split(':')[2]), ['25', '30', '35', '45'], 'самовывоз +15');
+  await press(`a:${r.body.number}:35`, 902);
+  assert.equal((await api('/api/orders/' + r.body.token)).body.status, 'accepted', 'сдвинутый срок принимается');
+  await press('rush:0', 901);
+  assert.equal((await api('/api/state')).body.rush, null);
+  await press(`x:${r.body.number}:other`, 902);
+});
+
+test('воронка: события сайта по одному счётчику, видна в /stats', async () => {
+  const ev = (e, headers = {}) => fetch(BASE + '/api/ev', { method: 'POST', headers: { 'content-type': 'text/plain', ...headers }, body: JSON.stringify({ e }) });
+  for (const e of ['view', 'view', 'view', 'cart', 'checkout', 'hack']) assert.equal((await ev(e)).status, 204);
+  assert.equal((await ev('view', { origin: 'https://evil.example' })).status, 403);
+  const t0 = await mark();
+  await groupMsg('/stats');
+  const st = (await tgCalls(t0)).find((c) => c.method === 'sendMessage' && /Сегодня/.test(c.body.text));
+  assert.match(st.body.text, /Воронка: 3 открыли меню → 1 в корзине → 1 оформляли → \d+ заказов/);
+});
+
 test('/stats, /orders и /lang', async () => {
   let t0 = Date.now();
   await groupMsg('/stats');

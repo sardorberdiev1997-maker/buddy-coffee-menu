@@ -5,6 +5,7 @@ import { getKV, orderById, orderByToken, parseOrder, setKV } from './db.js';
 import { cafeInfo, loadModel, OC } from './menu.js';
 import { canUndo, linkCustomer, nextStatus, refreshGroup, setStatus, undoStatus } from './orders.js';
 import { onRateButton, takeComment } from './ratings.js';
+import { onLiveButton, rushState, rushView, stopList, stopView } from './live.js';
 import { liveStats, STAT_PERIODS, statsKeyboard } from './stats.js';
 import { C, T } from './texts.js';
 import { groupChat, groupLang, isAdmin, tg, tgUpload } from './tg.js';
@@ -83,6 +84,15 @@ async function onGroup(env, m) {
     await setKV(env, 'group', null);
     await setKV(env, 'bind_open_at', Date.now()); // 30 минут, чтобы подключить новую группу
     return reply(X.unbound);
+  }
+  // Стоп-лист и час пик — любой сотрудник в группе, без админских прав (server/live.js)
+  if (name === 'stop') {
+    const v = stopView(await loadModel(env), await stopList(env), L);
+    return reply(v.text, { reply_markup: v.reply_markup });
+  }
+  if (name === 'rush') {
+    const v = rushView(await rushState(env), L);
+    return reply(v.text, { reply_markup: v.reply_markup });
   }
   if (name === 'pause' || name === 'resume') {
     if (!(await admin())) return reply(X.adminOnly);
@@ -179,6 +189,7 @@ async function onCallback(env, q) {
   const X = T[L];
   const by = q.from ? [q.from.first_name, q.from.last_name].filter(Boolean).join(' ').slice(0, 40) : '';
 
+  if (kind === 'sl' || kind === 'sl_done' || kind === 'rush') return onLiveButton(env, q, data, await loadModel(env), L, by);
   if (kind === 'bc') return onBroadcastButton(env, q, data.split(':'), () => isAdmin(env, msg.chat, q.from));
 
   if (kind === 'st') {
@@ -195,7 +206,7 @@ async function onCallback(env, q) {
 
   if (kind === 'a') {
     if (o.status !== 'new') { await keep(); return answer(X.already); }
-    const eta = [10, 15, 20, 30, 45, 60, 90].includes(+arg) ? +arg : 30;
+    const eta = Number.isInteger(+arg) && +arg >= 5 && +arg <= 180 ? +arg : 30; // в час пик кнопки сдвинуты (+15/+30)
     return answer((await setStatus(env, o, 'accepted', { by, eta })) ? `✅ ${OC.STATUS.accepted[L]}` : X.already);
   }
   if (kind === 'n') {
@@ -282,6 +293,8 @@ export async function setupBot(env, webhookSecretValue) {
         { command: 'clients', description: isRu ? 'База клиентов (Excel)' : 'Mijozlar bazasi (Excel)' },
         { command: 'sheet', description: isRu ? 'Клиенты в Google Таблице' : 'Mijozlar Google Jadvalda' },
         { command: 'broadcast', description: isRu ? 'Рассылка: ответьте на сообщение' : 'Xabarnoma: xabarga javob bering' },
+        { command: 'stop', description: isRu ? 'Стоп-лист: нет в наличии' : 'Stop-ro‘yxat: tugagan taomlar' },
+        { command: 'rush', description: isRu ? 'Час пик: увеличить сроки' : 'Qizg‘in vaqt: muddatni oshirish' },
         { command: 'pause', description: isRu ? 'Остановить онлайн-заказы' : 'Onlayn buyurtmani to‘xtatish' },
         { command: 'resume', description: isRu ? 'Снова принимать заказы' : 'Buyurtmani qayta yoqish' },
         { command: 'lang', description: isRu ? 'Язык бота: рус/узб' : 'Bot tili: o‘zb/rus' },

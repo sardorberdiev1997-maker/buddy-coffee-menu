@@ -2,9 +2,19 @@
 // Набор как в ежедневных отчётах Square/Toast: выручка, заказы, средний чек, отмены, доставка/самовывоз,
 // время доставки, клиенты (новые), пиковый час, топ блюд и сравнение с прошлым периодом.
 import { T } from './texts.js';
-import { DAY, ddmm, h, local, periodStart, prevPeriod, TZ_OFFSET } from './util.js';
+import { DAY, dayKey, ddmm, h, local, periodStart, prevPeriod, TZ_OFFSET } from './util.js';
 
 const DONE = "status IN ('delivered', 'picked')";
+const EVENTS = ['view', 'cart', 'checkout'];
+
+// Воронка: один счётчик на событие в день (ev:2026-10-31:view). Браузер шлёт каждое событие раз за визит
+export async function countEvent(env, raw) {
+  let e = '';
+  try { e = JSON.parse(String(raw).slice(0, 200)).e; } catch (err) { return; }
+  if (!EVENTS.includes(e)) return;
+  await env.DB.prepare("INSERT INTO kv (k, v) VALUES (?, '1') ON CONFLICT(k) DO UPDATE SET v = CAST(v AS INTEGER) + 1")
+    .bind(`ev:${dayKey(Date.now())}:${e}`).run();
+}
 
 export async function collect(env, start, end, { bestDay } = {}) {
   const q = (sql, ...args) => env.DB.prepare(sql).bind(...args);
@@ -28,6 +38,7 @@ export async function collect(env, start, end, { bestDay } = {}) {
         GROUP BY dish ORDER BY qty DESC, dish LIMIT 5`, start, end),
     q(`SELECT ((created_at + ${TZ_OFFSET}) / 3600000) % 24 AS hour, COUNT(*) AS c FROM orders
         WHERE created_at >= ? AND created_at < ? AND status != 'canceled' GROUP BY hour ORDER BY c DESC, hour LIMIT 1`, start, end),
+    q(`SELECT k, v FROM kv WHERE k >= ? AND k < ?`, `ev:${dayKey(start)}:`, `ev:${dayKey(end - 1)};`),
     q(`SELECT AVG(r.stars) AS avg, COUNT(*) AS n, SUM(CASE WHEN r.stars <= 3 THEN 1 ELSE 0 END) AS low
         FROM ratings r JOIN orders o ON o.id = r.order_id WHERE r.stars IS NOT NULL AND o.created_at >= ? AND o.created_at < ?`, start, end)
   ];
@@ -35,7 +46,9 @@ export async function collect(env, start, end, { bestDay } = {}) {
     stmts.push(q(`SELECT (created_at + ${TZ_OFFSET}) / ${DAY} AS d, SUM(total) AS s FROM orders
         WHERE created_at >= ? AND created_at < ? AND ${DONE} GROUP BY d ORDER BY s DESC LIMIT 1`, start, end));
   }
-  const [main, fresh, top, peak, rate, best] = await env.DB.batch(stmts);
+  const [main, fresh, top, peak, ev, rate, best] = await env.DB.batch(stmts);
+  const funnel = { view: 0, cart: 0, checkout: 0 };
+  ev.results.forEach((r) => { const e = r.k.split(':')[2]; if (e in funnel) funnel[e] += parseInt(r.v, 10) || 0; });
   const rt = rate.results[0] || {};
   const m = main.results[0] || {};
   return {
@@ -45,6 +58,7 @@ export async function collect(env, start, end, { bestDay } = {}) {
     top: top.results || [],
     peak: peak.results[0] || null,
     rating: rt.n ? { avg: rt.avg, n: rt.n, low: rt.low || 0 } : null,
+    funnel,
     best: best && best.results[0] ? { day: best.results[0].d * DAY - TZ_OFFSET, sum: best.results[0].s } : null
   };
 }
@@ -60,6 +74,7 @@ export function statsText(L, title, sub, s, cmp) {
   const out = [`📊 <b>${title}</b>${sub ? ' · ' + sub : ''}`, ''];
   if (!s.n) {
     out.push(X.noOrders);
+    if (s.funnel && s.funnel.view) out.push(`👀 ${X.funnel(s.funnel.view, s.funnel.cart, s.funnel.checkout, 0)}`);
     if (cmp && cmp.s.revenue) out.push(`(${cmp.label}: ${X.sum(cmp.s.revenue)})`);
     return out.join('\n');
   }
@@ -76,6 +91,7 @@ export function statsText(L, title, sub, s, cmp) {
   }
   if (s.dtime) out.push(`⏱ ${X.deliveryTime}: ${Math.round(s.dtime / 60000)} ${X.min}`);
   if (s.clients) out.push(`👥 ${X.clients}: ${s.clients}${s.fresh ? ` (${X.newClients(s.fresh)})` : ''}`);
+  if (s.funnel && s.funnel.view) out.push(`👀 ${X.funnel(s.funnel.view, s.funnel.cart, s.funnel.checkout, s.n)}`);
   if (s.rating) out.push(`⭐ ${X.ratingStat(s.rating.avg.toFixed(1), s.rating.n, s.rating.low)}`);
   if (s.peak && s.peak.c > 1) out.push(`🕖 ${X.peak}: ${String(s.peak.hour).padStart(2, '0')}:00–${String((s.peak.hour + 1) % 24).padStart(2, '0')}:00 (${X.ordersShort(s.peak.c)})`);
   if (s.canceled) out.push(`❌ ${X.canceledN(s.canceled)}: ${X.sum(s.lost)} ${X.lost}`);
