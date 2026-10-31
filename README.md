@@ -1,6 +1,6 @@
 # Buddy Coffee — онлайн-меню и заказы
 
-Сайт: **https://buddy.cheking.uz** (сюда ведёт QR-код на столах). Telegram-бот: **@buddy_coffee_uz_bot** (тот же сайт как Mini App).
+Сайт: **https://buddycoffee.uz** (сюда ведут QR-коды на постерах; старый адрес buddy.cheking.uz перенаправляет сюда). Telegram-бот: **@buddy_coffee_uz_bot** (тот же сайт как Mini App).
 
 ## Как поменять меню (для владельца)
 
@@ -24,13 +24,14 @@ Google Таблица ──(export CSV в браузере)──► сайт �
 ```
 
 - **Хостинг:** Cloudflare Pages, проект `buddy-coffee-menu` (сборка `npm run build`, папка `dist`, Node 20). Каждый push в `main` — новая сборка. Резервный адрес: https://buddy-coffee-menu.pages.dev
-- **Домен:** `buddy.cheking.uz` — запись CNAME `buddy` → `buddy-coffee-menu.pages.dev` в DNS cheking.uz на ahost.uz.
+- **Домен:** `buddycoffee.uz` — куплен на ahost.uz (продление ежегодно до 31 октября), DNS — в Cloudflare (`jocelyn.ns.cloudflare.com`, `remy.ns.cloudflare.com`), привязан к проекту Pages как Custom domain; `www.buddycoffee.uz` → `buddycoffee.uz` правилом Redirect Rules.
+- **Старый адрес** `buddy.cheking.uz` (CNAME `buddy` → `buddy-coffee-menu.pages.dev` в DNS cheking.uz на ahost.uz) оставлен для старых QR-кодов и ссылок: страницы перенаправляет `assets/boot.js` (с путём, параметрами и `#hash` Mini App), короткие ссылки `/r/*` и звонки `/c/*` — сервер ответом 301, `/api/*` работает на обоих адресах. Пока он нужен, cheking.uz надо продлевать.
 - **Сборка** (`tools/build.mjs`): берёт меню прямо из Google Таблицы (при сбое — из `data/menu.json`) и вшивает его в `index.html` (страница показывается сразу, без ожидания данных), встраивает CSS и `boot.js` в HTML и добавляет их sha256 в CSP, минифицирует JS/CSS (esbuild), ставит хеши версий для кэша, кладёт `_headers` (CSP, HSTS, X-Frame-Options и др.). Правила View Transitions лежат в `assets/vt.css` отдельно: валидатор W3C пока не знает этот синтаксис.
 - **В браузере** (`assets/app.js` + общий `assets/render.js`): меню из HTML → кэш прошлого визита → свежие данные из таблицы (перерисовка только если что-то изменилось). Языки UZ/RU, поиск, шторка блюда, офлайн-режим (`sw.js`).
 - **Запасная копия** `data/menu.json` — обновляется GitHub Action'ом `.github/workflows/sync-menu.yml` (`tools/sync_menu.py`). Если 60 дней в репозитории нет коммитов, GitHub отключит расписание и пришлёт письмо — включить в Actions одной кнопкой.
 - **«С этим берут»** в карточке блюда: колонка `с_этим_берут` — во вкладке «Категории» (для всей категории) и «Меню» (для блюда, важнее). Названия через «/», до 3 штук, то, чего нет в наличии, не показывается.
 - **Отзывы:** ключи `отзыв_google`, `отзыв_yandex`, `отзыв_2gis` во вкладке «Настройки» — жёлтый блок «Понравилось?» с кнопками над контактами. Пустой ключ — кнопки нет.
-- **Статистика:** Cloudflare Web Analytics (без cookie) — dash.cloudflare.com → Analytics → Web analytics → buddy.cheking.uz.
+- **Статистика:** Cloudflare Web Analytics (без cookie) — dash.cloudflare.com → Analytics → Web analytics → buddycoffee.uz.
 - **Фото:** `img/xs` (240 px), `img/s` (360 px), `img/l` (960 px) в AVIF и WebP. Кэшируются на год — при замене фото давать файлу новое имя. В таблице в колонке «фото» — имя файла без расширения, прямая ссылка на картинку или ссылка на файл Google Диска с доступом по ссылке.
 - `print/` — QR-коды с логотипами (`tools/make_qr.py`, проверка распознавания — `swift tools/check_qr.swift файл.png`); `print/posters/` — постеры A4/A3/A2, карточки A6/A5, домик на стол и наклейка в светлой и тёмной версии: PDF с вылетами 3 мм для типографии и PNG 300 dpi (`tools/make_posters.py`).
 
@@ -64,11 +65,11 @@ buddy-cron (Worker, каждую минуту) ──► /api/tick: напоми
 
 1. D1: база `buddy-orders` → проект Pages `buddy-coffee-menu` → Settings → Bindings → D1 database, имя переменной `DB` (Production и Preview). Таблицы создаются сами.
 2. Секрет `BOT_TOKEN` (токен @BotFather) → Settings → Variables and Secrets → тип Secret.
-3. После деплоя открыть `https://buddy.cheking.uz/api/tg/setup` — ставит вебхук, команды и кнопку «Menyu».
+3. После деплоя открыть `https://buddycoffee.uz/api/tg/setup` — ставит вебхук, команды и кнопку «Menyu».
 4. В группе кафе (бот добавлен) администратор отправляет `/bind`.
 5. Worker `buddy-cron` (код — `cron/worker.js`), Settings → Triggers → Cron `* * * * *`.
 
-Проверка: `https://buddy.cheking.uz/api/tg/info` — доходят ли сообщения от Telegram (`pending`, `last_error`), подключена ли группа, когда последний раз работал cron (`last_tick`), какие сводки ушли в группу (`reports`), насколько свежее меню в кэше сервера (`menu_cache_age_s`), сколько раз бот попросил оценку (`rating_requests`), что нашёл сторож бота (`bot_problem`) и последние ошибки JavaScript у посетителей (`client_errors`).
+Проверка: `https://buddycoffee.uz/api/tg/info` — доходят ли сообщения от Telegram (`pending`, `last_error`), подключена ли группа, когда последний раз работал cron (`last_tick`), какие сводки ушли в группу (`reports`), насколько свежее меню в кэше сервера (`menu_cache_age_s`), сколько раз бот попросил оценку (`rating_requests`), что нашёл сторож бота (`bot_problem`) и последние ошибки JavaScript у посетителей (`client_errors`).
 
 **Сторож бота** (`server/health.js`, раз в 10 минут из `/api/tick`): если вебхук Telegram сброшен (например, токен подключили к другой программе), ставит его заново сам; если Telegram не может доставить сообщения нашему серверу — пишет в группу «⚠️ Бот не получает сообщения» (не чаще раза в 6 часов). **Ошибки у посетителей:** `assets/boot.js` отправляет ошибки JavaScript на `/api/log` — без личных данных (текст ошибки, файл, страница, тип устройства), одинаковые — одной записью в час, не больше 30 в час, хранятся неделю; сетевые сбои мобильного интернета и чужие скрипты (расширения браузера) не отправляются. Подключить группу (`/bind`) можно 30 минут после первой настройки (`/api/tg/setup`); перенести заказы в другую группу — `/unbind` в прежней группе, затем `/bind` в новой (тоже 30 минут). Повторный `/api/tg/setup` окно не открывает — чужой не перехватит заказы. Бот: @buddy_coffee_uz_bot (токен — у владельца сайта в @BotFather).
 
