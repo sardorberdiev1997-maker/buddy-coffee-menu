@@ -51,8 +51,8 @@ def dump(data):
 
 
 def main():
-    if not SHEET_ID:
-        print('sheetId пуст — синхронизировать нечего')
+    if not SHEET_ID and not PUB:
+        print('нет ни sheetId, ни pub — синхронизировать нечего')
         return
     try:
         data = {tab: fetch(tab) for tab in TABS}
