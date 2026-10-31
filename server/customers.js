@@ -1,7 +1,8 @@
 // База клиентов: кто заказывал (по телефону) и кто пользуется ботом (по Telegram).
 // Показатели как в CRM: заказы, сумма, средний чек, давность, любимое блюдо, сегмент.
 import { OC } from './menu.js';
-import { DAY, ddmm } from './util.js';
+import { salt } from './db.js';
+import { DAY, ddmm, sha256 } from './util.js';
 import { xlsx } from './xlsx.js';
 
 const DONE = "status IN ('delivered', 'picked')";
@@ -64,6 +65,34 @@ async function mergeChat(env, row, phoneHash, chatId) {
     await env.DB.prepare('UPDATE customers SET tg_chat = NULL WHERE id = ?').bind(chatRow.id).run();
   }
   return row;
+}
+
+/* ---------- удаление по просьбе клиента (/forget в группе кафе) ---------- */
+
+// Право на удаление (закон РУз «О персональных данных», GDPR ст. 17): карточка в базе, личные данные и хеш телефона
+// в завершённых заказах, комментарии к оценкам. Суммы и блюда остаются обезличенными — для статистики.
+// Активные заказы не трогаем: их ещё готовят и везут; команду повторяют после выполнения
+export async function forgetCustomer(env, who) {
+  // who — телефон (только цифры, OC.normPhone) или @username подписчика бота
+  const byTg = who.startsWith('@');
+  const ph = byTg ? null : await sha256('ph:' + who + (await salt(env))); // как в server/orders.js
+  const c = byTg
+    ? await env.DB.prepare('SELECT id, phone_hash, tg_chat FROM customers WHERE lower(tg_username) = lower(?)').bind(who.slice(1)).first()
+    : await env.DB.prepare('SELECT id, phone_hash, tg_chat FROM customers WHERE phone_hash = ?').bind(ph).first();
+  const phoneHash = byTg ? c && c.phone_hash : ph;
+  const conds = [];
+  const args = [];
+  if (phoneHash) { conds.push('phone_hash = ?'); args.push(phoneHash); }
+  if (c && c.tg_chat) { conds.push('tg_chat = ?', 'tg_user = ?'); args.push(c.tg_chat, c.tg_chat); }
+  if (!conds.length) return { customer: false, orders: 0, active: 0 };
+  const mine = `(${conds.join(' OR ')})`;
+  const active = await env.DB.prepare(`SELECT COUNT(*) AS n FROM orders WHERE ${mine} AND status NOT IN ('delivered', 'picked', 'canceled')`).bind(...args).first();
+  await env.DB.prepare(`UPDATE ratings SET comment = NULL WHERE order_id IN (SELECT id FROM orders WHERE ${mine} AND status IN ('delivered', 'picked', 'canceled'))`).bind(...args).run();
+  const r = await env.DB.prepare(`UPDATE orders SET name = NULL, phone = NULL, phone_hash = NULL, address = NULL, lat = NULL, lng = NULL, acc = NULL,
+      comment = NULL, ip_hash = NULL, tg_user = NULL, tg_chat = NULL, tg_msg = NULL, anonymized = 1
+      WHERE ${mine} AND status IN ('delivered', 'picked', 'canceled')`).bind(...args).run();
+  if (c) await env.DB.prepare('DELETE FROM customers WHERE id = ?').bind(c.id).run();
+  return { customer: !!c, orders: (r.meta && r.meta.changes) || 0, active: (active && active.n) || 0 };
 }
 
 /* ---------- аудитории рассылки ---------- */

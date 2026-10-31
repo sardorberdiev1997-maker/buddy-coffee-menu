@@ -4,7 +4,7 @@ import { getKV, orderById, orderByToken, parseOrder, salt, updateOrder } from '.
 import { OC, cafeInfo, loadModel } from './menu.js';
 import { C, T } from './texts.js';
 import { groupChat, groupLang, tg, verifyInitData } from './tg.js';
-import { fail, fmt, h, hhmm, json, MIN, randomToken, sha256, SITE } from './util.js';
+import { fail, fmt, h, hhmm, json, MIN, randomToken, redact, sha256, SITE } from './util.js';
 import { callButton } from './call.js';
 import { rushState, stopList, withStop } from './live.js';
 import { canRate, publicRating, ratingOf, reviewSites } from './ratings.js';
@@ -124,11 +124,11 @@ export async function createOrder(request, env, ctx) {
   // Сообщения отправляем после ответа покупателю; если Telegram недоступен — /api/tick повторит
   ctx.waitUntil((async () => {
     await upsertFromOrder(env, { phone, phoneHash, name, lang, source: user ? 'tg' : 'site', tgChat: user ? user.id : null, tgUsername: user ? user.username : null })
-      .catch((e) => console.error('customer', e));
+      .catch((e) => console.error('customer', redact((e && e.stack) || e)));
     const o = await orderById(env, id);
     await sendGroup(env, o);
     if (o.tg_chat) await notifyCustomer(env, o);
-  })().catch((e) => console.error('notify', e)));
+  })().catch((e) => console.error('notify', redact((e && e.stack) || e))));
 
   return json({ token, number: id, total: p.total }, 201);
 }

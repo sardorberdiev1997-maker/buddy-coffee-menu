@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="uz-Latn">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#E31B23">
+  <title>Buddy Coffee — maxfiylik siyosati · политика конфиденциальности</title>
+  <meta name="description" content="Buddy Coffee shaxsiy ma’lumotlarni qanday saqlaydi va himoya qiladi. Как Buddy Coffee хранит и защищает персональные данные.">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <!-- Значения {{…}} подставляет tools/build.mjs из вкладки «Настройки» (продавец, адрес, телефон).
+       Сроки и состав данных сверены с кодом: server/tick.js (90 дней, 3 года), server/health.js (7 дней),
+       server/orders.js (хеш IP, лимит заказов), assets/cart.js (память браузера). Меняете код — поправьте и эту страницу и дату редакции -->
+  <style>
+    :root { --bg: #FFF6EA; --card: #fff; --ink: #1B1612; --ink-2: #5E534A; --line: #EEDFCB; --link: #A80E17; --red: #E31B23; }
+    @media (prefers-color-scheme: dark) { :root { --bg: #15100C; --card: #221A14; --ink: #FBF3EA; --ink-2: #D2C4B6; --line: #3A2E25; --link: #FF8A8F; } }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+    body { margin: 0; padding: 24px 16px 48px; font: 16px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      color: var(--ink); background: var(--bg); -webkit-text-size-adjust: 100%; }
+    .wrap { max-width: 720px; margin: 0 auto; }
+    header { margin-bottom: 16px; }
+    .brand { margin: 0; font-weight: 800; color: var(--red); letter-spacing: -.01em; }
+    h1 { margin: 4px 0 6px; font-size: 26px; line-height: 1.2; }
+    .meta { margin: 0; color: var(--ink-2); font-size: 14px; }
+    nav { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+    nav a, .back { display: inline-block; padding: 10px 16px; border-radius: 999px; background: var(--card); color: var(--ink);
+      border: 1px solid var(--line); font-weight: 600; text-decoration: none; }
+    article { margin-top: 16px; padding: 24px 20px; border-radius: 24px; background: var(--card); box-shadow: 0 8px 24px rgb(70 35 10 / .08); }
+    article + article { margin-top: 24px; }
+    h2 { margin: 0 0 4px; font-size: 22px; line-height: 1.25; }
+    h3 { margin: 22px 0 6px; font-size: 17px; line-height: 1.3; }
+    p, li { color: var(--ink); }
+    p { margin: 6px 0; }
+    ul { margin: 6px 0; padding-left: 20px; }
+    li { margin: 4px 0; }
+    li::marker { color: var(--red); }
+    .muted { color: var(--ink-2); }
+    a { color: var(--link); text-underline-offset: 2px; }
+    a:focus-visible, nav a:focus-visible, .back:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
+    .back { margin-top: 24px; background: var(--red); color: #fff; border-color: var(--red); }
+    footer { text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <p class="brand">Buddy Coffee</p>
+      <h1>Maxfiylik siyosati · <span lang="ru">Политика конфиденциальности</span></h1>
+      <p class="meta">Tahrir: 31.10.2026 · <span lang="ru">Редакция от 31.10.2026</span></p>
+      <nav aria-label="Til · Язык">
+        <a href="#uz" hreflang="uz">O‘zbekcha</a>
+        <a href="#ru" hreflang="ru" lang="ru">Русский</a>
+      </nav>
+    </header>
+
+    <main>
+      <article id="uz" lang="uz-Latn" aria-labelledby="uz-title">
+        <h2 id="uz-title">Ma’lumotlaringiz bilan qanday ishlaymiz</h2>
+        <p class="muted">Qisqasi: buyurtmani tayyorlash va yetkazish uchun keraklisini olamiz, hech kimga sotmaymiz, reklama uchun bermaymiz va muddati tugagach o‘chiramiz.</p>
+
+        <h3>Kim qayta ishlaydi</h3>
+        <p>Operator: {{seller_uz}}. Manzil: {{address_uz}}. Telefon: <a href="{{tel}}">{{phone}}</a>.</p>
+        <p>Siyosat ushbu sayt, uning Telegram ichidagi ilovasi (Mini App) va <a href="https://t.me/buddy_coffee_uz_bot">@buddy_coffee_uz_bot</a> botiga tegishli.</p>
+
+        <h3>Qanday ma’lumotlar va nima uchun</h3>
+        <ul>
+          <li><b>Buyurtma berganda:</b> ism, telefon, manzil va xaritadagi nuqta (agar belgilasangiz), izoh, to‘lov usuli, buyurtma tarkibi — buyurtmani tayyorlash, yetkazish va u bo‘yicha siz bilan bog‘lanish uchun.</li>
+          <li><b>Telegram orqali buyurtma bersangiz yoki botga yozsangiz:</b> Telegram ID, ism, @username va til — buyurtma holatini yuborish, baholashni so‘rash va buyruqlarga javob berish uchun. Aksiya va yangiliklar faqat bot obunachilariga yuboriladi.</li>
+          <li><b>Baho va izohlar:</b> xizmat sifatini oshirish uchun; past baho qo‘ysangiz, administrator siz bilan bog‘lanishi mumkin.</li>
+          <li><b>Mijozlar bazasi:</b> ism, telefon, Telegram va buyurtmalar tarixi — doimiy mehmonlarni tanish, aksiya va chegirmalar uchun.</li>
+          <li><b>Suiiste’moldan himoya:</b> IP-manzil faqat qaytarib bo‘lmaydigan xesh ko‘rinishida — bir raqam yoki manzildan ko‘p soxta buyurtmalarni to‘xtatish uchun.</li>
+          <li><b>Texnik ma’lumotlar:</b> tashriflarning anonim statistikasi (Cloudflare Web Analytics, cookie-fayllarsiz), brauzer xatolari haqidagi hisobotlar (xato matni, sahifa va qurilma turi — shaxsiy ma’lumotlarsiz) va «menyuni ko‘rdi / savatga qo‘shdi / buyurtma berdi» hisoblagichlari — shaxsga bog‘lanmagan holda.</li>
+        </ul>
+        <p>Biometrik ma’lumotlar, pasport ma’lumotlari va bank kartasi raqamlarini to‘plamaymiz.</p>
+
+        <h3>Asos</h3>
+        <p>Buyurtma berib yoki bot bilan muloqot boshlab, siz ushbu siyosatga muvofiq ma’lumotlaringizni qayta ishlashga rozilik bildirasiz; ma’lumotlar siz bergan buyurtmani bajarish uchun ham zarur. Rozilikni istalgan vaqtda qaytarib olishingiz mumkin — pastda qarang.</p>
+
+        <h3>Qurilmangizda nima saqlanadi</h3>
+        <p>Sayt cookie-fayllardan foydalanmaydi. Qulaylik uchun brauzer xotirasida (localStorage) til, savat, keyingi buyurtma uchun ism, telefon va manzil, oxirgi buyurtmalaringiz ro‘yxati saqlanadi. Bu ma’lumotlar qurilmangizdan chiqmaydi; brauzerda sayt ma’lumotlarini tozalab, ularni o‘chirishingiz mumkin.</p>
+
+        <h3>Ma’lumotlarni kim ko‘radi</h3>
+        <ul>
+          <li><b>Kafe xodimlari:</b> buyurtmalar kafening ishchi Telegram chatiga keladi; mijozlar bazasi (Excel va Google Jadvaldagi yopiq varaq) faqat kafe uchun ochiq; kuryer yetkazish uchun manzil va telefonni ko‘radi.</li>
+          <li><b>Sayt ishlaydigan xizmatlar</b> (bizning topshirig‘imiz bilan qayta ishlaydi): Cloudflare — sayt va buyurtmalar bazasi, Telegram — bildirishnomalar va bot, Google — mijozlar bazasi bilan yopiq jadval.</li>
+          <li><b>Davlat organlari</b> — faqat qonuniy talab bo‘yicha.</li>
+        </ul>
+        <p>Ma’lumotlarni sotmaymiz va reklama uchun bermaymiz. Bu xizmatlarning serverlari O‘zbekistondan tashqarida bo‘lishi mumkin. Xaritadagi sharh havolalari (Google, Yandex) va Telegram — o‘z maxfiylik siyosatiga ega alohida xizmatlar.</p>
+
+        <h3>Qancha saqlaymiz</h3>
+        <ul>
+          <li>Buyurtmadagi manzil, nuqta, izoh, ism va telefon — <b>90 kun</b>, keyin anonimlashtiriladi: statistika uchun faqat summa va taomlar qoladi.</li>
+          <li>Baholarga izohlar — <b>90 kun</b>.</li>
+          <li>Mijozlar bazasi — oxirgi buyurtma yoki botga oxirgi xabardan <b>3 yil</b>.</li>
+          <li>Brauzer xatolari hisobotlari — <b>7 kun</b>; tashriflar hisoblagichlari (shaxssiz) — 400 kungacha.</li>
+          <li>Kafening ishchi Telegram chatidagi buyurtma xabarlari chat tarixida qoladi.</li>
+        </ul>
+
+        <h3>Huquqlaringiz</h3>
+        <p>Siz haqingizda qanday ma’lumot borligini bilish, uni tuzatish yoki o‘chirish, rozilikni qaytarib olish mumkin — <a href="{{tel}}">{{phone}}</a> raqamiga qo‘ng‘iroq qiling. 30 kun ichida, odatda tezroq bajaramiz. Faol buyurtma yetkazilgandan keyin o‘chiriladi.</p>
+        <p>Aksiya va yangiliklardan obunani bekor qilish: botga /stop yuboring yoki istalgan xabardagi «Obunadan chiqish» tugmasini bosing. Buyurtma holatlari baribir keladi.</p>
+        <p>Huquqlaringiz buzilgan deb hisoblasangiz, shaxsiy ma’lumotlar sohasidagi vakolatli davlat organiga shikoyat qilishingiz mumkin.</p>
+
+        <h3>Himoya</h3>
+        <p>Sayt faqat HTTPS orqali ishlaydi; bazaga kirish faqat kafe va sayt dasturida; telefon va IP soxta buyurtmalarga qarshi tekshiruv uchun xesh ko‘rinishida solishtiriladi; kerakli minimumdan ortiq ma’lumot so‘ramaymiz.</p>
+
+        <h3>Bolalar</h3>
+        <p>Bolalar ma’lumotlarini ataylab to‘plamaymiz. Farzandingiz ma’lumot qoldirgan deb hisoblasangiz, qo‘ng‘iroq qiling — o‘chiramiz.</p>
+
+        <h3>O‘zgarishlar</h3>
+        <p>Ma’lumotlar bilan ishlash o‘zgarsa, ushbu sahifani yangilaymiz; tahrir sanasi — yuqorida.</p>
+      </article>
+
+      <article id="ru" lang="ru" aria-labelledby="ru-title">
+        <h2 id="ru-title">Как мы обращаемся с вашими данными</h2>
+        <p class="muted">Коротко: берём только то, что нужно, чтобы приготовить и доставить заказ, никому не продаём, не отдаём для рекламы и удаляем по истечении срока.</p>
+
+        <h3>Кто обрабатывает</h3>
+        <p>Оператор: {{seller_ru}}. Адрес: {{address_ru}}. Телефон: <a href="{{tel}}">{{phone}}</a>.</p>
+        <p>Политика действует для этого сайта, его приложения в Telegram (Mini App) и бота <a href="https://t.me/buddy_coffee_uz_bot">@buddy_coffee_uz_bot</a>.</p>
+
+        <h3>Какие данные и зачем</h3>
+        <ul>
+          <li><b>При заказе:</b> имя, телефон, адрес и точка на карте (если вы её отметили), комментарий, способ оплаты, состав заказа — чтобы приготовить и доставить заказ и связаться с вами по нему.</li>
+          <li><b>Если заказываете через Telegram или пишете боту:</b> Telegram ID, имя, @username и язык — чтобы присылать статус заказа, просить оценку и отвечать на команды. Акции и новости получают только подписчики бота.</li>
+          <li><b>Оценки и комментарии:</b> чтобы становиться лучше; при низкой оценке администратор может с вами связаться.</li>
+          <li><b>База клиентов:</b> имя, телефон, Telegram и история заказов — чтобы узнавать постоянных гостей и предлагать акции и скидки.</li>
+          <li><b>Защита от злоупотреблений:</b> IP-адрес только в виде необратимого хеша — чтобы останавливать поток ложных заказов с одного номера или адреса.</li>
+          <li><b>Технические данные:</b> анонимная статистика посещений (Cloudflare Web Analytics, без cookie), отчёты об ошибках в браузере (текст ошибки, страница и тип устройства — без личных данных) и счётчики «посмотрели меню / положили в корзину / оформили заказ» — без привязки к человеку.</li>
+        </ul>
+        <p>Биометрические и паспортные данные, номера банковских карт мы не собираем.</p>
+
+        <h3>Основание</h3>
+        <p>Оформляя заказ или начиная диалог с ботом, вы даёте согласие на обработку данных по этой политике; кроме того, данные нужны, чтобы выполнить ваш заказ. Согласие можно отозвать в любой момент — см. ниже.</p>
+
+        <h3>Что хранится на вашем устройстве</h3>
+        <p>Сайт не использует cookie. Для удобства в памяти браузера (localStorage) хранятся язык, корзина, имя, телефон и адрес для следующего заказа и список ваших последних заказов. Эти данные не покидают ваше устройство; удалить их можно, очистив данные сайта в браузере.</p>
+
+        <h3>Кто видит данные</h3>
+        <ul>
+          <li><b>Сотрудники кафе:</b> заказы приходят в рабочий чат кафе в Telegram; база клиентов (Excel и закрытая вкладка Google Таблицы) доступна только кафе; курьер видит адрес и телефон для доставки.</li>
+          <li><b>Сервисы, на которых работает сайт</b> (обрабатывают данные по нашему поручению): Cloudflare — сайт и база заказов, Telegram — уведомления и бот, Google — закрытая таблица с базой клиентов.</li>
+          <li><b>Государственные органы</b> — только по законному запросу.</li>
+        </ul>
+        <p>Мы не продаём данные и не передаём их для рекламы. Серверы этих сервисов могут находиться за пределами Узбекистана. Ссылки на отзывы на картах (Google, Яндекс) и сам Telegram — отдельные сервисы со своими политиками конфиденциальности.</p>
+
+        <h3>Сколько храним</h3>
+        <ul>
+          <li>Адрес, точка, комментарий, имя и телефон в заказе — <b>90 дней</b>, затем заказ обезличивается: для статистики остаются только сумма и блюда.</li>
+          <li>Комментарии к оценкам — <b>90 дней</b>.</li>
+          <li>База клиентов — <b>3 года</b> с последнего заказа или сообщения боту.</li>
+          <li>Отчёты об ошибках в браузере — <b>7 дней</b>; счётчики посещений (без личных данных) — до 400 дней.</li>
+          <li>Сообщения о заказах в рабочем чате кафе в Telegram остаются в истории чата.</li>
+        </ul>
+
+        <h3>Ваши права</h3>
+        <p>Вы можете узнать, какие данные о вас есть, исправить или удалить их, отозвать согласие — позвоните по номеру <a href="{{tel}}">{{phone}}</a>. Выполним в течение 30 дней, обычно быстрее. Данные активного заказа удаляются после его выполнения.</p>
+        <p>Отписаться от акций и новостей: отправьте боту /stop или нажмите «Отписаться» в любом сообщении рассылки. Статусы заказов всё равно будут приходить.</p>
+        <p>Если считаете, что ваши права нарушены, вы можете пожаловаться в уполномоченный государственный орган в области персональных данных.</p>
+
+        <h3>Защита</h3>
+        <p>Сайт работает только по HTTPS; доступ к базе — только у кафе и программы сайта; телефон и IP для защиты от ложных заказов сравниваются в виде хеша; лишних данных мы не запрашиваем.</p>
+
+        <h3>Дети</h3>
+        <p>Мы не собираем намеренно данные детей. Если вы считаете, что ваш ребёнок оставил данные, позвоните — удалим.</p>
+
+        <h3>Изменения</h3>
+        <p>Если работа с данными изменится, мы обновим эту страницу; дата редакции — вверху.</p>
+      </article>
+    </main>
+
+    <footer>
+      <a class="back" href="/">Menyuga qaytish · <span lang="ru">Вернуться в меню</span></a>
+    </footer>
+  </div>
+</body>
+</html>

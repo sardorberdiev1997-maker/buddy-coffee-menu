@@ -18,6 +18,12 @@ export const fail = (error, status = 400, extra = {}) => json({ error, ...extra 
 // Экранирование для parse_mode=HTML в Telegram
 export const h = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
+// Тексты ошибок для логов и диагностики — без секретов (CWE-209, CWE-532): токен бота «123456:AA…»
+// (в т. ч. внутри адреса api.telegram.org/bot…) и ключи/токены в параметрах ссылок
+export const redact = (s) => String(s == null ? '' : s)
+  .replace(/\d{6,12}:[\w-]{30,}/g, '<token>')
+  .replace(/([?&](?:key|token|t|hash|secret)=)[^&\s"'<>]+/gi, '$1<…>');
+
 export const fmt = (n) => String(Math.round(n || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
 
 /* ---------- время ---------- */

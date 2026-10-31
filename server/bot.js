@@ -1,6 +1,6 @@
 // Вебхук Telegram: команды и кнопки в группе кафе, личные сообщения покупателей.
 import { onBroadcastButton, setSubscribed, startDraft } from './broadcast.js';
-import { customersXlsx, touchBotUser } from './customers.js';
+import { customersXlsx, forgetCustomer, touchBotUser } from './customers.js';
 import { getKV, orderById, orderByToken, parseOrder, setKV } from './db.js';
 import { cafeInfo, loadModel, OC } from './menu.js';
 import { canUndo, linkCustomer, nextStatus, refreshGroup, setStatus, undoStatus } from './orders.js';
@@ -126,6 +126,20 @@ async function onGroup(env, m) {
     let key = await getKV(env, 'sheet_key');
     if (!key || cmd[1] === 'new') { key = randomToken(24); await setKV(env, 'sheet_key', key); }
     return reply(X.sheetHelp(`=IMPORTDATA("${SITE}api/sheet/customers.csv?key=${key}")`));
+  }
+  if (name === 'diag') {
+    // Диагностика бота с текстами ошибок (без ключа /api/tg/info показывает только флаги); /diag new — новая ссылка
+    if (!(await admin())) return reply(X.adminOnly);
+    let key = await getKV(env, 'diag_key');
+    if (!key || cmd[1] === 'new') { key = randomToken(24); await setKV(env, 'diag_key', key); }
+    return reply(X.diagHelp(`${SITE}api/tg/info?key=${key}`));
+  }
+  if (name === 'forget') {
+    // Клиент просит удалить его данные: /forget +998 90 123 45 67 или /forget @username
+    if (!(await admin())) return reply(X.adminOnly);
+    const who = cmd[1].startsWith('@') ? cmd[1].split(/\s/)[0] : OC.normPhone(cmd[1]);
+    if (!who || who === '@') return reply(X.forgetHelp);
+    return reply(X.forgotten(await forgetCustomer(env, who)));
   }
   if (name === 'broadcast') {
     if (!(await admin())) return reply(X.adminOnly);
@@ -254,6 +268,8 @@ async function onPrivate(env, m) {
     return;
   }
   if (cmd && cmd[0] === 'start') return send(env, m.chat.id, X.hello, { reply_markup: menu });
+  // Кнопка «Политика конфиденциальности» в профиле бота присылает /privacy, если адрес не задан в @BotFather
+  if (cmd && cmd[0] === 'privacy') return send(env, m.chat.id, X.privacy(`${SITE}privacy#${L}`));
   if (cmd && cmd[0] === 'orders') {
     const rows = (await env.DB.prepare('SELECT * FROM orders WHERE tg_chat = ? OR tg_user = ? ORDER BY id DESC LIMIT 5').bind(m.chat.id, m.chat.id).all()).results.map(parseOrder);
     if (!rows.length) return send(env, m.chat.id, X.noOrders, { reply_markup: menu });
@@ -282,7 +298,8 @@ export async function setupBot(env, webhookSecretValue) {
       commands: [
         { command: 'start', description: isRu ? 'Открыть меню и заказать' : 'Menyuni ochish va buyurtma berish' },
         { command: 'orders', description: isRu ? 'Мои заказы' : 'Buyurtmalarim' },
-        { command: 'stop', description: isRu ? 'Отписаться от акций' : 'Aksiyalardan obunani bekor qilish' }
+        { command: 'stop', description: isRu ? 'Отписаться от акций' : 'Aksiyalardan obunani bekor qilish' },
+        { command: 'privacy', description: isRu ? 'Политика конфиденциальности' : 'Maxfiylik siyosati' }
       ]
     });
     await call(`group_${L}${lang ? '' : '_default'}`, 'setMyCommands', {
@@ -298,6 +315,7 @@ export async function setupBot(env, webhookSecretValue) {
         { command: 'pause', description: isRu ? 'Остановить онлайн-заказы' : 'Onlayn buyurtmani to‘xtatish' },
         { command: 'resume', description: isRu ? 'Снова принимать заказы' : 'Buyurtmani qayta yoqish' },
         { command: 'lang', description: isRu ? 'Язык бота: рус/узб' : 'Bot tili: o‘zb/rus' },
+        { command: 'forget', description: isRu ? 'Удалить данные клиента по просьбе' : 'Mijoz so‘rovi bilan ma’lumotini o‘chirish' },
         { command: 'help', description: isRu ? 'Все команды' : 'Barcha buyruqlar' }
       ]
     });

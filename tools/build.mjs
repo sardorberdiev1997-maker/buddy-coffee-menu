@@ -54,7 +54,8 @@ try {
   if (!R.validTables(tables)) throw new Error('data/menu.json: неожиданная структура');
   console.log(`Данные: data/menu.json (таблица недоступна: ${e.message})`);
 }
-const view = R.createView(R.buildModel(tables), 'uz');
+const model = R.buildModel(tables);
+const view = R.createView(model, 'uz');
 
 rmSync(DIST, { recursive: true, force: true });
 mkdirSync(DIST, { recursive: true });
@@ -97,10 +98,22 @@ inline(/<link rel="stylesheet" href="assets\/style\.css\?v=[\w-]+">/, `<style>${
 write('index.html', html);
 // Страница заказа: без встроенных скриптов и стилей — CSP не нужны хеши
 write('order.html', withVersions(read('order.html')));
-// Встроенные стили страниц 404 и «нет сети» тоже разрешаем по хешу
+// Политика конфиденциальности: оператор, адрес и телефон — из вкладки «Настройки» (как в подвале сайта)
+const setting = (key, lang) => { const s = model.settings[key]; return s ? (s[lang] || s.uz || s.ru || '') : ''; };
+const privacyVars = {
+  seller_uz: setting('продавец', 'uz'), seller_ru: setting('продавец', 'ru'),
+  address_uz: setting('адрес', 'uz'), address_ru: setting('адрес', 'ru'),
+  phone: setting('телефон', 'uz'), tel: 'tel:' + setting('телефон', 'uz').replace(/[^\d+]/g, '')
+};
+const privacy = read('privacy.html').replace(/\{\{(\w+)\}\}/g, (m, k) => {
+  if (!privacyVars[k]) throw new Error(`privacy.html: пустое значение {{${k}}} — заполните вкладку «Настройки»`);
+  return R.esc(privacyVars[k]);
+});
+write('privacy.html', privacy);
+// Встроенные стили страниц 404, «нет сети» и политики тоже разрешаем по хешу
 const inlineStyle = (file) => (read(file).match(/<style>([\s\S]*?)<\/style>/) || [])[1];
 const scriptHashes = [sha(bootCode)];
-const styleHashes = [sha(cssCode)].concat(['404.html', 'offline.html'].map(inlineStyle).filter(Boolean).map(sha));
+const styleHashes = [sha(cssCode)].concat(['404.html', 'offline.html', 'privacy.html'].map(inlineStyle).filter(Boolean).map(sha));
 
 // Service worker: тот же список файлов и версия по их хешам
 const sw = withVersions(read('sw.js'))

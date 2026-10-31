@@ -16,7 +16,7 @@ import { countEvent } from './stats.js';
 import { clientErrors, logClientError } from './health.js';
 import { rateBySite } from './ratings.js';
 import { tick } from './tick.js';
-import { fail, json, safeEqual, SITE } from './util.js';
+import { fail, json, redact, safeEqual, SITE } from './util.js';
 
 // Старый адрес buddy.cheking.uz оставлен: открытые до переезда страницы ещё могут слать запросы
 const ORIGINS = ['https://buddycoffee.uz', 'https://www.buddycoffee.uz', 'https://buddy.cheking.uz', 'https://buddy-coffee-menu.pages.dev'];
@@ -68,8 +68,9 @@ async function route(request, env, ctx) {
     const update = await request.json().catch(() => null);
     // Ошибку обработки запоминаем — её видно на /api/tg/info (Telegram получает 200 и не повторяет)
     if (update) ctx.waitUntil(handleUpdate(env, update).catch((e) => {
-      console.error('update', e);
-      return setKV(env, 'last_exception', `${new Date().toISOString()} ${(e && e.stack) || e}`.slice(0, 600));
+      const text = redact((e && e.stack) || e);
+      console.error('update', text);
+      return setKV(env, 'last_exception', `${new Date().toISOString()} ${text}`.slice(0, 600));
     }));
     return json({ ok: true });
   }
@@ -87,19 +88,30 @@ async function route(request, env, ctx) {
     return json(await setupBot(env, await webhookSecret(env)));
   }
 
-  // Диагностика бота: доставляет ли Telegram сообщения (без секретов)
+  // Диагностика бота: доставляет ли Telegram сообщения. Всем — только числа и флаги «есть проблема»;
+  // тексты ошибок (внутренние подробности, OWASP: не показывать их наружу) — по ключу из команды /diag в группе кафе
   if (path === '/api/tg/info' && method === 'GET') {
     if (!env.BOT_TOKEN) return fail('no_token', 503);
+    const key = await getKV(env, 'diag_key');
+    const full = !!key && safeEqual(url.searchParams.get('key'), key);
     const r = await tg(env, 'getWebhookInfo', {});
     const w = r.ok ? r.result : {};
+    const exception = await getKV(env, 'last_exception');
+    const problem = await getKV(env, 'wh_problem');
+    const errors = await clientErrors(env);
+    const details = full ? {
+      last_error: w.last_error_message || null,
+      last_exception: exception,
+      last_skip: await getKV(env, 'last_skip'),
+      bot_problem: problem,
+      client_errors: errors
+    } : { has_exception: !!exception, has_bot_problem: !!problem, client_errors: errors.length };
     return json({
-      ok: !!r.ok, url: w.url, pending: w.pending_update_count, last_error: w.last_error_message || null,
+      ok: !!r.ok, url: w.url, pending: w.pending_update_count,
       last_error_at: w.last_error_date ? new Date(w.last_error_date * 1000).toISOString() : null,
       group: (await getKV(env, 'group')) ? 'bound' : 'not bound',
       setup_open: Date.now() - parseInt((await getKV(env, 'bind_open_at')) || '0', 10) < 30 * 60 * 1000, // открыто ли окно /bind
       last_tick: new Date(parseInt((await getKV(env, 'tick_at')) || '0', 10)).toISOString(),
-      last_exception: await getKV(env, 'last_exception'),
-      last_skip: await getKV(env, 'last_skip'),
       // Автоматика: какие сводки ушли в группу и насколько свежее меню из таблицы в кэше сервера
       reports: (await env.DB.prepare("SELECT k, v FROM kv WHERE k LIKE 'report:%' ORDER BY CAST(v AS INTEGER) DESC LIMIT 6").all())
         .results.map((x) => `${x.k.slice(7)} → ${new Date(parseInt(x.v, 10)).toISOString()}`),
@@ -107,9 +119,8 @@ async function route(request, env, ctx) {
         .then((x) => (x && x.at ? Math.round((Date.now() - x.at) / 1000) : null)),
       rating_requests: await env.DB.prepare('SELECT COUNT(*) AS n FROM ratings WHERE asked_at > 0').first().then((x) => (x ? x.n : 0)),
       // Сторож бота (server/health.js) и последние ошибки в браузерах посетителей
-      bot_problem: await getKV(env, 'wh_problem'),
-      client_errors: await clientErrors(env)
-    });
+      ...details
+    }, 200, { 'x-robots-tag': 'noindex' });
   }
 
   // Вкладка «Клиенты» в Google Таблице: =IMPORTDATA("…/api/sheet/customers.csv?key=…"). Ключ выдаёт /sheet в группе кафе
@@ -178,7 +189,7 @@ export default {
       res.headers.set('x-content-type-options', 'nosniff');
       return res;
     } catch (e) {
-      console.error('api', url.pathname, e && e.stack ? e.stack : e);
+      console.error('api', url.pathname, redact(e && e.stack ? e.stack : e));
       return fail('server', 500);
     }
   }

@@ -1,6 +1,6 @@
 // Telegram Bot API: вызовы, проверка вебхука и данных Mini App.
 import { getKV, setKV } from './db.js';
-import { hmac, safeEqual, DAY } from './util.js';
+import { hmac, redact, safeEqual, DAY, MIN } from './util.js';
 
 export async function tg(env, method, body, retried) {
   if (!env.BOT_TOKEN) return { ok: false, description: 'BOT_TOKEN is not set' };
@@ -13,7 +13,7 @@ export async function tg(env, method, body, retried) {
       signal: AbortSignal.timeout(10000)
     });
   } catch (e) {
-    return { ok: false, description: e.message };
+    return { ok: false, description: redact(e.message) };
   }
   const j = await res.json().catch(() => ({ ok: false, description: 'HTTP ' + res.status }));
   // Группа стала супергруппой — у неё новый id: запоминаем и повторяем
@@ -38,7 +38,7 @@ export async function tgUpload(env, method, fields, file) {
     if (!j.ok) console.warn('telegram', method, j.error_code, j.description);
     return j;
   } catch (e) {
-    return { ok: false, description: e.message };
+    return { ok: false, description: redact(e.message) };
   }
 }
 
@@ -69,7 +69,9 @@ export async function verifyInitData(env, initData) {
   const secret = await hmac('WebAppData', env.BOT_TOKEN, true);
   if (!safeEqual(await hmac(secret, check), hash)) return null;
   const auth = parseInt(p.get('auth_date'), 10) * 1000;
-  if (!auth || Date.now() - auth > 7 * DAY) return null; // Mini App может долго висеть свёрнутым
+  // Подпись доказывает, что данные от Telegram, но не что они свежие: перехваченная строка годна, пока не истечёт.
+  // Сутки — с запасом на свёрнутое Mini App; при каждом открытии Telegram выдаёт новую. Из будущего — не принимаем
+  if (!auth || Date.now() - auth > DAY || auth - Date.now() > 5 * MIN) return null;
   try {
     return JSON.parse(p.get('user') || 'null');
   } catch (e) {

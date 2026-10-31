@@ -52,10 +52,16 @@ export const T = {
     langSet: 'Язык бота в группе: русский',
     noActive: 'Сейчас заказов в работе нет 👌',
     activeTitle: (n) => `📋 Заказы в работе: ${n}`,
-    help: 'Команды бота:\n/stats — статистика продаж\n/orders — заказы в работе\n/clients — база клиентов (Excel)\n/broadcast — рассылка акций: ответьте этой командой на сообщение\n/stop — стоп-лист: закончилось блюдо — убрать с сайта\n/rush — час пик: увеличить сроки\n/pause — остановить онлайн-заказы\n/resume — снова принимать заказы\n/lang — язык бота (рус/узб)\n/bind, /unbind — подключить или отключить группу',
+    help: 'Команды бота:\n/stats — статистика продаж\n/orders — заказы в работе\n/clients — база клиентов (Excel)\n/broadcast — рассылка акций: ответьте этой командой на сообщение\n/stop — стоп-лист: закончилось блюдо — убрать с сайта\n/rush — час пик: увеличить сроки\n/pause — остановить онлайн-заказы\n/resume — снова принимать заказы\n/lang — язык бота (рус/узб)\n/bind, /unbind — подключить или отключить группу\n/forget +998… — удалить данные клиента по его просьбе\n/diag — диагностика бота (для техподдержки)',
     clientsCaption: (n, d) => `📇 База клиентов на ${d}: ${n}.\nЛист «Итоги» — сводка и сегменты. Файл с личными данными — не пересылайте его за пределы группы.`,
     clientsEmpty: 'В базе пока нет клиентов.',
     sheetHelp: (f) => `📇 <b>Клиенты в Google Таблице</b>\nВставьте эту формулу в ячейку A1 вкладки «Клиенты» (нажмите на формулу — она скопируется):\n\n<code>${h(f)}</code>\n\nТаблица обновляется сама примерно раз в час. Ссылка секретная — вкладку не публикуйте. Новая ссылка (старая перестанет работать): /sheet new`,
+    diagHelp: (u) => `🩺 <b>Диагностика бота</b>\nСсылка с текстами ошибок — для техподдержки, никому больше не пересылайте:\n${h(u)}\n\nНовая ссылка (старая перестанет работать): /diag new`,
+    forgetHelp: '🗑 <b>Удаление данных клиента</b> — по его просьбе.\nНапишите номер телефона: <code>/forget +998 90 123 45 67</code>\nили Telegram подписчика бота: <code>/forget @username</code>\n\nУдалятся карточка в базе клиентов, имя, телефон, адрес и комментарии в выполненных заказах. Суммы и блюда останутся без имени — для статистики.',
+    forgotten: (r) => (r.customer || r.orders
+      ? `🗑 Готово: ${r.customer ? 'карточка клиента удалена' : 'в базе клиентов карточки не было'}, обезличено заказов: ${r.orders}.\nВкладка «Клиенты» в таблице обновится сама в течение часа; старые Excel-файлы из /clients удалите из чата вручную.`
+      : '🤷 Клиент с такими данными не найден — проверьте номер или @username.')
+      + (r.active ? `\n⚠️ Активных заказов: ${r.active} — их не трогали. Повторите команду после выполнения.` : ''),
     bcHelp: '📣 Как сделать рассылку:\n1. Напишите в эту группу сообщение для клиентов — текст, фото с подписью, видео.\n2. Ответьте на него командой /broadcast.\n3. Бот покажет, кому уйдёт, даст отправить пробное себе и попросит подтвердить.\n\nПолучат только подписчики бота; в каждом сообщении есть кнопка «Отписаться».',
     bcChoose: (id, n) => `📣 <b>Рассылка №${id}</b>\nКому отправить сообщение выше?\n\nВсем подписчикам: <b>${n.all}</b>\nАктивным (заказывали за 30 дней): <b>${n.active}</b>\nУснувшим (не заказывали 30+ дней): <b>${n.sleep}</b>\n\nСовет: сначала нажмите «Пробное мне».`,
     bcAll: '📣 Всем подписчикам', bcActive: '🔥 Активным', bcSleep: '💤 Уснувшим', bcTest: '🧪 Пробное мне', bcCancel: '❌ Отмена', bcStop: '⏹ Остановить',
@@ -124,10 +130,16 @@ export const T = {
     langSet: 'Guruhdagi bot tili: o‘zbekcha',
     noActive: 'Hozir jarayondagi buyurtmalar yo‘q 👌',
     activeTitle: (n) => `📋 Jarayondagi buyurtmalar: ${n}`,
-    help: 'Bot buyruqlari:\n/stats — savdo statistikasi\n/orders — jarayondagi buyurtmalar\n/clients — mijozlar bazasi (Excel)\n/broadcast — aksiya xabarnomasi: xabarga shu buyruq bilan javob bering\n/stop — stop-ro‘yxat: tugagan taomni saytdan olib tashlash\n/rush — qizg‘in vaqt: muddatlarni oshirish\n/pause — onlayn buyurtmani to‘xtatish\n/resume — buyurtmani qayta yoqish\n/lang — bot tili (o‘zb/rus)\n/bind, /unbind — guruhni ulash yoki uzish',
+    help: 'Bot buyruqlari:\n/stats — savdo statistikasi\n/orders — jarayondagi buyurtmalar\n/clients — mijozlar bazasi (Excel)\n/broadcast — aksiya xabarnomasi: xabarga shu buyruq bilan javob bering\n/stop — stop-ro‘yxat: tugagan taomni saytdan olib tashlash\n/rush — qizg‘in vaqt: muddatlarni oshirish\n/pause — onlayn buyurtmani to‘xtatish\n/resume — buyurtmani qayta yoqish\n/lang — bot tili (o‘zb/rus)\n/bind, /unbind — guruhni ulash yoki uzish\n/forget +998… — mijoz so‘rovi bilan uning ma’lumotlarini o‘chirish\n/diag — bot diagnostikasi (texnik yordam uchun)',
     clientsCaption: (n, d) => `📇 ${d} holatiga mijozlar bazasi: ${n}.\n«Yakun» varag‘ida — umumiy ko‘rsatkichlar va segmentlar. Faylda shaxsiy ma’lumotlar bor — guruhdan tashqariga yubormang.`,
     clientsEmpty: 'Bazada hali mijozlar yo‘q.',
     sheetHelp: (f) => `📇 <b>Mijozlar Google Jadvalda</b>\nUshbu formulani «Клиенты» varag‘ining A1 katagiga qo‘ying (formulani bosing — nusxalanadi):\n\n<code>${h(f)}</code>\n\nJadval taxminan soatiga bir marta o‘zi yangilanadi. Havola maxfiy — varaqni e’lon qilmang. Yangi havola (eskisi ishlamay qoladi): /sheet new`,
+    diagHelp: (u) => `🩺 <b>Bot diagnostikasi</b>\nXatolar matni bilan havola — texnik yordam uchun, boshqa hech kimga yubormang:\n${h(u)}\n\nYangi havola (eskisi ishlamay qoladi): /diag new`,
+    forgetHelp: '🗑 <b>Mijoz ma’lumotlarini o‘chirish</b> — uning so‘rovi bo‘yicha.\nTelefon raqamini yozing: <code>/forget +998 90 123 45 67</code>\nyoki bot obunachisining Telegrami: <code>/forget @username</code>\n\nMijozlar bazasidagi kartochka, bajarilgan buyurtmalardagi ism, telefon, manzil va izohlar o‘chiriladi. Summalar va taomlar statistika uchun ismsiz qoladi.',
+    forgotten: (r) => (r.customer || r.orders
+      ? `🗑 Tayyor: ${r.customer ? 'mijoz kartochkasi o‘chirildi' : 'mijozlar bazasida kartochka yo‘q edi'}, anonimlashtirilgan buyurtmalar: ${r.orders}.\nJadvaldagi «Клиенты» varag‘i bir soat ichida o‘zi yangilanadi; /clients orqali olingan eski Excel fayllarni chatdan qo‘lda o‘chiring.`
+      : '🤷 Bunday mijoz topilmadi — raqam yoki @username ni tekshiring.')
+      + (r.active ? `\n⚠️ Faol buyurtmalar: ${r.active} — ularga tegilmadi. Bajarilgandan keyin buyruqni takrorlang.` : ''),
     bcHelp: '📣 Xabarnoma qanday yuboriladi:\n1. Shu guruhga mijozlar uchun xabar yozing — matn, izohli rasm, video.\n2. Unga /broadcast buyrug‘i bilan javob bering.\n3. Bot kimga ketishini ko‘rsatadi, avval o‘zingizga sinov yuborish va tasdiqlashni so‘raydi.\n\nFaqat bot obunachilari oladi; har bir xabarda «Obunadan chiqish» tugmasi bor.',
     bcChoose: (id, n) => `📣 <b>Xabarnoma №${id}</b>\nYuqoridagi xabar kimga yuborilsin?\n\nBarcha obunachilarga: <b>${n.all}</b>\nFaol (30 kun ichida buyurtma bergan): <b>${n.active}</b>\nUxlab qolgan (30+ kun buyurtma yo‘q): <b>${n.sleep}</b>\n\nMaslahat: avval «Menga sinov» tugmasini bosing.`,
     bcAll: '📣 Barcha obunachilarga', bcActive: '🔥 Faollarga', bcSleep: '💤 Uxlab qolganlarga', bcTest: '🧪 Menga sinov', bcCancel: '❌ Bekor qilish', bcStop: '⏹ To‘xtatish',
@@ -183,7 +195,8 @@ export const C = {
     rateLate: 'Оценить заказ можно в течение недели после доставки.',
     unsub: '🔕 Отписаться от акций',
     unsubbed: 'Вы отписались от акций и новостей. Статусы ваших заказов будут приходить как раньше.\nВернуться: /subscribe',
-    subbed: 'Готово! Вы снова будете получать акции и скидки Buddy Coffee 🎉\nОтписаться: /stop'
+    subbed: 'Готово! Вы снова будете получать акции и скидки Buddy Coffee 🎉\nОтписаться: /stop',
+    privacy: (u) => `🔒 Как Buddy Coffee обращается с вашими данными: что храним, зачем, сколько и как удалить —\n${u}`
   },
   uz: {
     hello: 'Assalomu alaykum! Bu <b>Buddy Coffee</b> boti 👋\n\nMenyuni oching, taom tanlang va buyurtma bering. Shahrisabz bo‘ylab yetkazib berish — bepul, kecha-kunduz ishlaymiz.\n\nBuyurtma holati shu yerga keladi.',
@@ -206,6 +219,7 @@ export const C = {
     rateLate: 'Buyurtmani yetkazilgandan keyin bir hafta ichida baholash mumkin.',
     unsub: '🔕 Aksiyalardan obunani bekor qilish',
     unsubbed: 'Aksiya va yangiliklardan obunani bekor qildingiz. Buyurtma holatlari avvalgidek keladi.\nQaytish: /subscribe',
-    subbed: 'Tayyor! Buddy Coffee aksiya va chegirmalari yana keladi 🎉\nObunani bekor qilish: /stop'
+    subbed: 'Tayyor! Buddy Coffee aksiya va chegirmalari yana keladi 🎉\nObunani bekor qilish: /stop',
+    privacy: (u) => `🔒 Buddy Coffee ma’lumotlaringiz bilan qanday ishlaydi: nimani, nima uchun, qancha saqlaymiz va qanday o‘chirish mumkin —\n${u}`
   }
 };
