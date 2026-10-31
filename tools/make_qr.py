@@ -13,7 +13,7 @@ import os
 import qrcode
 from qrcode.constants import ERROR_CORRECT_H
 
-SITE = 'https://buddy.cheking.uz'
+SITE = 'https://buddycoffee.uz'
 CODES = {
     'qr': (SITE, 'buddy'),
     'qr-bot': ('https://t.me/buddy_coffee_uz_bot', 'tg'),

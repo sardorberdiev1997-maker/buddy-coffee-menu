@@ -249,11 +249,11 @@ test('сторож бота: сброшенный вебхук ставит са
   let t0 = await mark();
   await tick();
   let calls = await tgCalls(t0);
-  assert.ok(calls.some((c) => c.method === 'setWebhook' && c.body.url === 'https://buddy.cheking.uz/api/tg'), 'вебхук восстановлен');
+  assert.ok(calls.some((c) => c.method === 'setWebhook' && c.body.url === 'https://buddycoffee.uz/api/tg'), 'вебхук восстановлен');
   assert.ok(!calls.some((c) => c.method === 'sendMessage' && /не получает/.test(c.body.text || '')), 'без тревоги');
   assert.match((await api('/api/tg/info')).body.bot_problem, /восстановлен/);
   // Вебхук на месте, но Telegram не может доставить сообщения — тревога в группу, один раз
-  await hook({ url: 'https://buddy.cheking.uz/api/tg', pending_update_count: 5, last_error_date: Math.floor(Date.now() / 1000), last_error_message: 'Wrong response from the webhook: 500' });
+  await hook({ url: 'https://buddycoffee.uz/api/tg', pending_update_count: 5, last_error_date: Math.floor(Date.now() / 1000), last_error_message: 'Wrong response from the webhook: 500' });
   t0 = await mark();
   await tick();
   calls = await tgCalls(t0);
@@ -261,7 +261,7 @@ test('сторож бота: сброшенный вебхук ставит са
   t0 = await mark();
   await tick();
   assert.ok(!(await tgCalls(t0)).some((c) => /не получает/.test(c.body.text || '')), 'не чаще раза в 6 часов');
-  await hook({ url: 'https://buddy.cheking.uz/api/tg', pending_update_count: 0 });
+  await hook({ url: 'https://buddycoffee.uz/api/tg', pending_update_count: 0 });
 });
 
 test('ошибки браузера: пишутся без повторов, видны в диагностике, чужой сайт не может слать', async () => {
@@ -467,7 +467,7 @@ test('вкладка «Клиенты»: /sheet выдаёт формулу, CSV
   await groupMsg('/sheet');
   const msg = (await tgCalls(t0)).find((c) => /IMPORTDATA/.test(c.body.text || ''));
   assert.ok(msg);
-  const url = msg.body.text.match(/https:\/\/buddy\.cheking\.uz\/(api\/sheet\/customers\.csv\?key=[\w-]+)/)[1];
+  const url = msg.body.text.match(/https:\/\/buddycoffee\.uz\/(api\/sheet\/customers\.csv\?key=[\w-]+)/)[1];
   const ok = await fetch(`${BASE}/${url}`);
   assert.equal(ok.status, 200);
   const csv = await ok.text();

@@ -1,6 +1,6 @@
 // Общие мелочи сервера: ответы, время по Ташкенту, хеши.
 
-export const SITE = 'https://buddy.cheking.uz/';
+export const SITE = 'https://buddycoffee.uz/';
 export const TZ_OFFSET = 5 * 3600 * 1000; // Asia/Tashkent, UTC+5 без перехода на летнее время
 export const MIN = 60 * 1000;
 export const HOUR = 60 * MIN;

@@ -3,7 +3,7 @@
 // Код вставлен в редактор воркера в панели Cloudflare; расписание — Settings → Triggers → Cron: * * * * *
 export default {
   async scheduled(event, env, ctx) {
-    ctx.waitUntil(fetch('https://buddy.cheking.uz/api/tick', { method: 'POST', headers: { 'user-agent': 'buddy-cron' } }));
+    ctx.waitUntil(fetch('https://buddycoffee.uz/api/tick', { method: 'POST', headers: { 'user-agent': 'buddy-cron' } }));
   },
   async fetch() {
     return new Response('buddy-cron: ok');

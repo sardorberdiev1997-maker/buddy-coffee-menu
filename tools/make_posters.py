@@ -48,7 +48,7 @@ BRAND = '<div class="brand"><span class="mark"><svg><use href="#cup"/></svg></sp
 OPEN = f'<div class="open">{ic("clock")}<div><b>24/7</b><span>Har kuni · Ежедневно</span></div></div>'
 HEAD = '<h1>Menyu va buyurtma <em>bitta skanerda</em></h1><p>Меню и заказ — в один скан</p>'
 MAIN = (f'<div class="stage"><div class="qcard"><div class="cta">{ic("camera")}<b>Skanerlang</b><span>Сканируйте</span></div>'
-        '<img src="../../qr.svg" alt=""><div class="url">buddy.cheking.uz</div></div></div>')
+        '<img src="../../qr.svg" alt=""><div class="url">buddycoffee.uz</div></div></div>')
 tile = lambda qr, name: f'<div class="tile"><div class="q"><img src="../../{qr}.svg" alt=""></div><b>{name}</b></div>'
 SOCIAL = tile('qr-bot', 'Telegram') + tile('qr-instagram', 'Instagram')
 REVIEWS = tile('qr-google', 'Google') + tile('qr-yandex', 'Yandex') + tile('qr-2gis', '2GIS')

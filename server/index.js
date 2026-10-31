@@ -18,7 +18,9 @@ import { rateBySite } from './ratings.js';
 import { tick } from './tick.js';
 import { fail, json, safeEqual, SITE } from './util.js';
 
-const ORIGINS = ['https://buddy.cheking.uz', 'https://buddy-coffee-menu.pages.dev'];
+// Старый адрес buddy.cheking.uz оставлен: открытые до переезда страницы ещё могут слать запросы
+const ORIGINS = ['https://buddycoffee.uz', 'https://www.buddycoffee.uz', 'https://buddy.cheking.uz', 'https://buddy-coffee-menu.pages.dev'];
+const OLD_HOST = 'buddy.cheking.uz';
 
 // Запросы, меняющие данные, — только с нашего сайта (или без Origin: Telegram, cron)
 function sameOrigin(request) {
@@ -156,6 +158,9 @@ async function shortLink(env, ctx, key) {
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    // Переезд на buddycoffee.uz: короткие ссылки и звонки со старого адреса — постоянным перенаправлением
+    // (страницы перенаправляет assets/boot.js, /api/* работает на обоих адресах, пока cron и вебхук не переключены)
+    if (url.hostname === OLD_HOST && /^\/(r|c)\//.test(url.pathname)) return Response.redirect(SITE + url.pathname.slice(1) + url.search, 301);
     // «Позвонить клиенту» из группы: страница сразу открывает набор номера (server/call.js)
     const call = url.pathname.match(/^\/c\/([\w-]{10,40})\/?$/);
     if (call && env.DB) return callPage(env, call[1]).catch(() => fail('server', 500));

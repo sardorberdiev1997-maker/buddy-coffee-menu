@@ -1,6 +1,12 @@
 // Выбор языка до первой отрисовки. Меню в HTML собрано на узбекском:
 // если нужен русский, прячем его до перерисовки в app.js (страховка в CSS — показать через 2,5 с).
 (function () {
+  // Сайт переехал на buddycoffee.uz: со старого адреса (напечатанные QR, ссылки в Telegram) и с www — туда же,
+  // с той же страницей, параметрами и данными Mini App в #hash
+  if (/^(buddy\.cheking\.uz|www\.buddycoffee\.uz)$/.test(location.hostname)) {
+    location.replace('https://buddycoffee.uz' + location.pathname + location.search + location.hash);
+    return;
+  }
   var l = new URLSearchParams(location.search).get('lang');
   if (l !== 'uz' && l !== 'ru') { try { l = localStorage.getItem('buddy-menu:lang'); } catch (e) { l = null; } }
   if (l !== 'uz' && l !== 'ru') l = /^ru\b/i.test(navigator.language || '') ? 'ru' : 'uz';

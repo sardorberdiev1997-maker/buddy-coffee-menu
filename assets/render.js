@@ -3,7 +3,7 @@
 (function (root) {
   'use strict';
 
-  const SITE = 'https://buddy.cheking.uz/';
+  const SITE = 'https://buddycoffee.uz/';
 
   const UI = {
     uz: {

@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url>
-    <loc>https://buddy.cheking.uz/</loc>
-    <xhtml:link rel="alternate" hreflang="uz" href="https://buddy.cheking.uz/?lang=uz"/>
-    <xhtml:link rel="alternate" hreflang="ru" href="https://buddy.cheking.uz/?lang=ru"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://buddy.cheking.uz/"/>
+    <loc>https://buddycoffee.uz/</loc>
+    <xhtml:link rel="alternate" hreflang="uz" href="https://buddycoffee.uz/?lang=uz"/>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://buddycoffee.uz/?lang=ru"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://buddycoffee.uz/"/>
     <changefreq>weekly</changefreq>
   </url>
 </urlset>

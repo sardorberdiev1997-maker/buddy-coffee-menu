@@ -4,6 +4,7 @@ import '../assets/config.js';
 import '../assets/order.js';
 import '../assets/render.js';
 import { getKV, setKV } from './db.js';
+import { SITE } from './util.js';
 
 export const R = globalThis.MenuRender;
 export const OC = globalThis.OrderCore;
@@ -26,7 +27,7 @@ async function fromSheet() {
 }
 
 async function fromAssets(env) {
-  const res = await env.ASSETS.fetch(new Request(new URL('/data/menu.json', 'https://buddy.cheking.uz')));
+  const res = await env.ASSETS.fetch(new Request(new URL('/data/menu.json', SITE)));
   const data = await res.json();
   return { menu: data[CFG.tabs.menu], categories: data[CFG.tabs.categories], settings: data[CFG.tabs.settings] };
 }
