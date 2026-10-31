@@ -16,8 +16,11 @@ concurrency:
 jobs:
   sync:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
+      # Закреплено по SHA коммита, а не по тегу: тег можно тихо перевесить на чужой код (атаки 2025–2026 на Actions).
+      # Обновлять вручную: SHA тега — gh api repos/actions/checkout/git/ref/tags/<версия>
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Fetch sheet into data/menu.json
         run: python3 tools/sync_menu.py
       - name: Commit if changed

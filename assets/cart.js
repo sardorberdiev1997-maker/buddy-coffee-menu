@@ -440,7 +440,7 @@
         <input class="hp" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
         ${totalsHTML(p)}
         <p class="form__err" id="form-err" role="alert"${formError ? '' : ' hidden'}>${formError}</p>
-        <p class="form__note">${esc(t('dataNote'))}</p>
+        <p class="form__note">${esc(t('dataNote'))} <a href="/privacy#${lang()}" target="_blank" rel="noopener">${esc(t('privacyLink'))}</a></p>
         <div class="cart__foot"><button type="submit" class="cta" id="submit"${sending ? ' disabled' : ''}>${esc(sending ? t('sending') : t('confirm', money(p.total)))}</button></div>
       </form>`;
   }

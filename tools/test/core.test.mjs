@@ -4,12 +4,12 @@ import { createHmac } from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
 import { test } from 'node:test';
 
-import { ensureSchema } from '../../server/db.js';
+import { ensureSchema, SCHEMA } from '../../server/db.js';
 import { OC } from '../../server/menu.js';
 import { reportText } from '../../server/stats.js';
 import { tick } from '../../server/tick.js';
 import { verifyInitData } from '../../server/tg.js';
-import { DAY, periodStart, prevPeriod, TZ_OFFSET } from '../../server/util.js';
+import { DAY, periodStart, prevPeriod, redact, TZ_OFFSET } from '../../server/util.js';
 
 // Мини-D1 в памяти
 function memoryD1() {
@@ -57,17 +57,22 @@ test('периоды по Ташкенту (UTC+5): неделя с понеде
   assert.deepEqual(prevPeriod('day', Date.UTC(2026, 2, 1) - TZ_OFFSET), [Date.UTC(2026, 1, 28) - TZ_OFFSET, Date.UTC(2026, 2, 1) - TZ_OFFSET]);
 });
 
-test('подпись Mini App (initData) проверяется по токену бота', async () => {
+test('подпись Mini App (initData) проверяется по токену бота и годна сутки', async () => {
   const token = '123456:ABC';
   const user = JSON.stringify({ id: 42, first_name: 'Aziz' });
-  const fields = { auth_date: String(Math.floor(Date.now() / 1000)), query_id: 'AAH', user };
-  const check = Object.keys(fields).sort().map((k) => `${k}=${fields[k]}`).join('\n');
-  const secret = createHmac('sha256', 'WebAppData').update(token).digest();
-  const hash = createHmac('sha256', secret).update(check).digest('hex');
-  const good = new URLSearchParams({ ...fields, hash }).toString();
+  const sign = (ageMs) => {
+    const fields = { auth_date: String(Math.floor((Date.now() - ageMs) / 1000)), query_id: 'AAH', user };
+    const check = Object.keys(fields).sort().map((k) => `${k}=${fields[k]}`).join('\n');
+    const secret = createHmac('sha256', 'WebAppData').update(token).digest();
+    return new URLSearchParams({ ...fields, hash: createHmac('sha256', secret).update(check).digest('hex') }).toString();
+  };
+  const good = sign(0);
   assert.equal((await verifyInitData({ BOT_TOKEN: token }, good)).id, 42);
   assert.equal(await verifyInitData({ BOT_TOKEN: 'other:token' }, good), null);
   assert.equal(await verifyInitData({ BOT_TOKEN: token }, good.replace('Aziz', 'Hack')), null);
+  assert.equal((await verifyInitData({ BOT_TOKEN: token }, sign(23 * 3600 * 1000))).id, 42, 'свёрнутое на 23 часа');
+  assert.equal(await verifyInitData({ BOT_TOKEN: token }, sign(DAY + 3600 * 1000)), null, 'старше суток');
+  assert.equal(await verifyInitData({ BOT_TOKEN: token }, sign(-3600 * 1000)), null, 'из будущего');
 });
 
 test('сводки в 00:00: день, неделя, месяц — по одному разу, с сравнением', async () => {
@@ -111,4 +116,35 @@ test('сводки в 00:00: день, неделя, месяц — по одн�
   } finally {
     globalThis.fetch = realFetch;
   }
+});
+
+test('сроки хранения: имя и адрес в заказе — 90 дней, база клиентов — 3 года без активности', async () => {
+  const env = { DB: memoryD1(), BOT_TOKEN: 'x:y' };
+  await env.DB.batch(SCHEMA.map((q) => env.DB.prepare(q))); // ensureSchema помнит первую базу процесса
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = async () => new Response(JSON.stringify({ ok: true, result: {} }));
+  try {
+    const now = Date.now();
+    const order = (days) => env.DB.prepare(`INSERT INTO orders (token, created_at, updated_at, status, type, items, total, name, phone, phone_hash, address)
+      VALUES (?, ?, ?, 'delivered', 'delivery', '[]', 1000, 'Aziz', '998901234567', 'h', 'Ipak yo‘li')`).bind('t' + days, now - days * DAY, now - days * DAY).run();
+    const customer = (days) => env.DB.prepare('INSERT INTO customers (phone_hash, name, created_at, last_seen) VALUES (?, ?, ?, ?)')
+      .bind('c' + days, 'Aziz', now - days * DAY, now - days * DAY).run();
+    for (const d of [10, 100, 4 * 365]) await order(d);
+    for (const d of [30, 4 * 365]) await customer(d);
+    await tick(env, now);
+    const rows = (await env.DB.prepare('SELECT name, address, phone_hash, anonymized FROM orders ORDER BY created_at DESC').all()).results;
+    assert.deepEqual(rows.map((r) => [r.name, r.address, r.anonymized, r.phone_hash]),
+      [['Aziz', 'Ipak yo‘li', 0, 'h'], [null, null, 1, 'h'], [null, null, 1, null]], '10 дней — как есть; 100 — обезличен; 4 года — и без хеша телефона');
+    assert.deepEqual((await env.DB.prepare('SELECT phone_hash FROM customers').all()).results.map((r) => r.phone_hash), ['c30']);
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+});
+
+test('тексты ошибок для логов и диагностики — без секретов', () => {
+  assert.equal(redact('fetch https://api.telegram.org/bot123456789:AAHdqTcvCH1vGWJxfSeofSAs0K5PALDsaw/sendMessage failed'),
+    'fetch https://api.telegram.org/bot<token>/sendMessage failed');
+  assert.equal(redact('GET /api/sheet/customers.csv?key=abc123&x=1'), 'GET /api/sheet/customers.csv?key=<…>&x=1');
+  assert.equal(redact('/order?t=tok_en-1 /api/tg/info?key=K'), '/order?t=<…> /api/tg/info?key=<…>');
+  assert.equal(redact(null), '');
 });

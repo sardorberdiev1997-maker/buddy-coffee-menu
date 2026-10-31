@@ -718,6 +718,7 @@ a.pill--ghost:active { background: rgb(0 0 0 / .3); }
 
 .info__note { margin: 16px 4px 0; font-size: 13px; color: var(--ink-3); text-align: center; text-wrap: balance; }
 .info__note + .info__note { margin-top: 4px; }
+.info__note a, .form__note a { color: var(--link); font-weight: 600; text-underline-offset: 2px; }
 
 /* ---------- Отзывы ---------- */
 

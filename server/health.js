@@ -3,7 +3,7 @@ import { setupBot } from './bot.js';
 import { claimKV, setKV, throttle } from './db.js';
 import { T } from './texts.js';
 import { groupChat, groupLang, tg, webhookSecret } from './tg.js';
-import { DAY, h, HOUR, MIN, sha256, SITE } from './util.js';
+import { DAY, h, HOUR, MIN, redact, sha256, SITE } from './util.js';
 
 /* ---------- сторож бота (из /api/tick раз в 10 минут) ---------- */
 
@@ -14,7 +14,7 @@ export async function watchBot(env, now = Date.now()) {
   if (!(await throttle(env, 'wh_at', now, 10 * MIN))) return null;
   const r = await tg(env, 'getWebhookInfo', {});
   if (!r.ok) {
-    await setKV(env, 'wh_problem', `${new Date(now).toISOString()} getWebhookInfo: ${r.description}`);
+    await setKV(env, 'wh_problem', `${new Date(now).toISOString()} getWebhookInfo: ${redact(r.description)}`);
     return 'api';
   }
   const w = r.result || {};
@@ -26,9 +26,9 @@ export async function watchBot(env, now = Date.now()) {
   if (w.url !== want) {
     const fix = await setupBot(env, await webhookSecret(env));
     problem += fix.webhook === true ? ' — восстановлен' : ` — восстановить не удалось: ${fix.webhook}`;
-    await setKV(env, 'wh_problem', `${new Date(now).toISOString()} ${problem}`);
+    await setKV(env, 'wh_problem', `${new Date(now).toISOString()} ${redact(problem)}`);
     if (fix.webhook === true) return 'repaired';
-  } else await setKV(env, 'wh_problem', `${new Date(now).toISOString()} ${problem}`);
+  } else await setKV(env, 'wh_problem', `${new Date(now).toISOString()} ${redact(problem)}`);
 
   const group = await groupChat(env);
   if (group && (await throttle(env, 'wh_alert', now, 6 * HOUR))) {
@@ -50,7 +50,7 @@ export async function logClientError(env, raw, ua) {
   } catch (e) {
     return;
   }
-  const m = String((b && b.m) || '').slice(0, 300);
+  const m = redact((b && b.m) || '').slice(0, 300);
   if (!m) return;
   const hour = new Date().toISOString().slice(0, 13);
   const n = await env.DB.prepare('SELECT COUNT(*) AS n FROM kv WHERE k >= ? AND k < ?').bind(`err:${hour}:`, `err:${hour};`).first();

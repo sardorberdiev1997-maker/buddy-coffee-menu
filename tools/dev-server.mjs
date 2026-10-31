@@ -136,8 +136,8 @@ createServer(async (req, res) => {
       out = Response.json({ ok: true });
     } else if (url.pathname === '/__sql' && req.method === 'POST') {
       const { sql, args = [] } = JSON.parse(body.toString() || '{}');
-      sqlite.prepare(sql).run(...args);
-      out = Response.json({ ok: true });
+      const st = sqlite.prepare(sql);
+      out = Response.json(/^\s*select/i.test(sql) ? { rows: st.all(...args) } : (st.run(...args), { ok: true }));
     } else if (url.pathname === '/__idle') {
       await Promise.all([...pending]);
       out = Response.json({ ok: true });

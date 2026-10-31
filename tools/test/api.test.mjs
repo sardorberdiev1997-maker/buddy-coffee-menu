@@ -34,6 +34,13 @@ const mark = async () => { await new Promise((r) => setTimeout(r, 3)); return Da
 const update = (u) => fetch(`${BASE}/__tg/update`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ update_id: upd++, ...u }) });
 const groupMsg = (text, from = STAFF) => update({ message: { message_id: upd, date: 0, chat: { id: GROUP, type: 'supergroup', title: 'Buddy' }, from, text } });
 const privateMsg = (text, from = CLIENT) => update({ message: { message_id: upd, date: 0, chat: { id: from.id, type: 'private' }, from, text } });
+// Диагностика целиком — по ключу из /diag; без ключа /api/tg/info отдаёт только числа и флаги
+const diag = async () => {
+  const t0 = await mark();
+  await groupMsg('/diag');
+  const msg = (await tgCalls(t0)).find((c) => /api\/tg\/info\?key=/.test(c.body.text || ''));
+  return (await api('/api/tg/info?key=' + msg.body.text.match(/api\/tg\/info\?key=([\w-]+)/)[1])).body;
+};
 const press = (data, msgId, chat = GROUP, from = STAFF) => update({ callback_query: { id: 'q' + upd, from, data, message: { message_id: msgId, chat: { id: chat, type: chat < 0 ? 'supergroup' : 'private' } } } });
 
 function orderBody(over = {}) {
@@ -251,7 +258,11 @@ test('сторож бота: сброшенный вебхук ставит са
   let calls = await tgCalls(t0);
   assert.ok(calls.some((c) => c.method === 'setWebhook' && c.body.url === 'https://buddycoffee.uz/api/tg'), 'вебхук восстановлен');
   assert.ok(!calls.some((c) => c.method === 'sendMessage' && /не получает/.test(c.body.text || '')), 'без тревоги');
-  assert.match((await api('/api/tg/info')).body.bot_problem, /восстановлен/);
+  const pub = (await api('/api/tg/info')).body;
+  assert.equal(pub.has_bot_problem, true);
+  assert.equal(pub.bot_problem, undefined, 'тексты проблем без ключа не показываем');
+  assert.equal((await api('/api/tg/info?key=wrong')).body.bot_problem, undefined);
+  assert.match((await diag()).bot_problem, /восстановлен/);
   // Вебхук на месте, но Telegram не может доставить сообщения — тревога в группу, один раз
   await hook({ url: 'https://buddycoffee.uz/api/tg', pending_update_count: 5, last_error_date: Math.floor(Date.now() / 1000), last_error_message: 'Wrong response from the webhook: 500' });
   t0 = await mark();
@@ -271,7 +282,8 @@ test('ошибки браузера: пишутся без повторов, в�
   assert.equal((await send(err)).status, 204);
   assert.equal((await send({ m: 'evil' }, { origin: 'https://evil.example' })).status, 403);
   assert.equal((await fetch(BASE + '/api/log', { method: 'POST', body: 'not json' })).status, 204);
-  const list = (await api('/api/tg/info')).body.client_errors;
+  assert.equal(typeof (await api('/api/tg/info')).body.client_errors, 'number', 'без ключа — только количество');
+  const list = (await diag()).client_errors;
   assert.equal(list.filter((x) => /x is undefined/.test(x)).length, 1, 'без повторов');
   assert.match(list[0], /iPhone · Telegram · \/ · TypeError: x is undefined \(\/assets\/cart\.js:42\)/);
   assert.ok(!list.some((x) => /evil/.test(x)));
@@ -484,4 +496,34 @@ test('короткие ссылки QR с постеров ведут на от�
     assert.ok(r.headers.get('location').includes(host), r.headers.get('location'));
   }
   assert.equal((await fetch(`${BASE}/r/unknown`, { redirect: 'manual' })).status, 404);
+});
+
+test('/forget: данные клиента удаляются по его просьбе, активный заказ не трогаем; /privacy в боте', async () => {
+  const sql = async (q, ...args) => (await (await fetch(BASE + '/__sql', { method: 'POST', body: JSON.stringify({ sql: q, args }) })).json()).rows;
+  const make = async () => (await api('/api/orders', { method: 'POST', body: JSON.stringify(orderBody({ phone: '93 555 44 33', name: 'Забудь Меня' })) })).body;
+  const done = await make();
+  const live = await make();
+  await sql("UPDATE orders SET status = 'delivered' WHERE token = ?", done.token);
+  let t0 = await mark();
+  await groupMsg('/forget');
+  assert.ok((await tgCalls(t0)).some((c) => /\/forget \+998 90 123 45 67/.test(c.body.text || '')), 'без номера — подсказка');
+  t0 = await mark();
+  await groupMsg('/forget +998 93 555 44 33');
+  const reply = (await tgCalls(t0)).find((c) => /🗑/.test(c.body.text || ''));
+  assert.ok(reply, 'ответ об удалении');
+  assert.match(reply.body.text, /: 1\.[\s\S]*: 1 /, 'одна карточка обезличена, один активный заказ');
+  const [gone, kept] = await Promise.all([done, live].map((o) => sql('SELECT name, phone, phone_hash, address, anonymized FROM orders WHERE token = ?', o.token).then((r) => r[0])));
+  assert.deepEqual(gone, { name: null, phone: null, phone_hash: null, address: null, anonymized: 1 });
+  assert.equal(kept.name, 'Забудь Меня', 'активный заказ ещё везут');
+  assert.equal((await sql("SELECT COUNT(*) AS n FROM customers WHERE phone = '998935554433'"))[0].n, 0, 'карточки в базе нет');
+  t0 = await mark();
+  await groupMsg('/forget @nobody_here');
+  assert.ok((await tgCalls(t0)).some((c) => /🤷/.test(c.body.text || '')));
+  // Кнопка «Политика конфиденциальности» в профиле бота шлёт /privacy
+  t0 = await mark();
+  await privateMsg('/privacy');
+  assert.ok((await tgCalls(t0)).some((c) => /\/privacy#(uz|ru)/.test(c.body.text || '')));
+  // Страница политики собрана: значения из «Настроек» подставлены
+  const page = await (await fetch(BASE + '/privacy')).text();
+  assert.ok(!/\{\{\w+\}\}/.test(page) && /href="tel:\+998/.test(page));
 });

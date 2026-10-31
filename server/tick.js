@@ -16,6 +16,7 @@ import { DAY, dayKey, HOUR, MIN, periodStart, prevPeriod } from './util.js';
 const REMIND = [3 * MIN, 10 * MIN]; // первое и второе напоминание
 const REPORT_GRACE = 6 * HOUR; // сводку за период отправляем не позже 6 часов после его конца
 const KEEP_PERSONAL = 90 * DAY;
+const KEEP_CUSTOMER = 3 * 365 * DAY;
 
 export async function tick(env, now = Date.now()) {
   // Захват атомарный: параллельные вызовы /api/tick не повторят напоминания и рассылки
@@ -83,6 +84,10 @@ export async function tick(env, now = Date.now()) {
       .bind(now - KEEP_PERSONAL).run();
     done.cleaned = (r.meta && r.meta.changes) || 0;
     await env.DB.prepare('UPDATE ratings SET comment = NULL WHERE comment IS NOT NULL AND rated_at < ?').bind(now - KEEP_PERSONAL).run();
+    // База клиентов — 3 года с последнего заказа или сообщения боту (срок для маркетинговых баз, как у CNIL);
+    // тогда же из старых заказов уходит и хеш телефона — дальше только обезличенная статистика. Сроки — на /privacy
+    await env.DB.prepare('DELETE FROM customers WHERE last_seen < ?').bind(now - KEEP_CUSTOMER).run();
+    await env.DB.prepare('UPDATE orders SET phone_hash = NULL WHERE phone_hash IS NOT NULL AND created_at < ?').bind(now - KEEP_CUSTOMER).run();
     await cleanClientErrors(env, now);
     await env.DB.prepare("DELETE FROM kv WHERE k >= 'ev:' AND k < ?").bind(`ev:${dayKey(now - 400 * DAY)}`).run(); // воронка — больше года не нужна
   }

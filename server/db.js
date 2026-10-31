@@ -1,7 +1,7 @@
 // База заказов: Cloudflare D1 (SQLite). Таблицы создаются сами при первом запросе.
 import { randomToken } from './util.js';
 
-const SCHEMA = [
+export const SCHEMA = [
   `CREATE TABLE IF NOT EXISTS orders (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     token TEXT NOT NULL UNIQUE,

@@ -15,7 +15,8 @@
       delivery: 'Yetkazib berish', payment: 'To‘lov', wifi: 'Wi‑Fi', password: 'parol',
       copy: 'Nusxa olish', copied: 'Nusxalandi', call: 'Qo‘ng‘iroq qilish', map: 'Xaritada',
       pricesNote: 'Barcha narxlar so‘mda.',
-      privacy: 'Sayt cookie-fayllardan foydalanmaydi, tashriflar statistikasi anonim. Ism va telefon kafening mijozlar bazasida buyurtmalar, aksiya va chegirmalar uchun saqlanadi; manzil va izoh 90 kundan keyin o‘chiriladi. Xabarnomadan botda chiqish mumkin, ma’lumotlarni o‘chirish — kafega qo‘ng‘iroq orqali.',
+      privacy: 'Sayt cookie-fayllardan foydalanmaydi, tashriflar statistikasi anonim. Ism va telefon kafening mijozlar bazasida buyurtmalar, aksiya va chegirmalar uchun 3 yil saqlanadi; manzil va izoh 90 kundan keyin o‘chiriladi. Xabarnomadan botda chiqish mumkin, ma’lumotlarni o‘chirish — kafega qo‘ng‘iroq orqali.',
+      privacyLink: 'Maxfiylik siyosati',
       error: 'Menyuni yuklab bo‘lmadi. Internetni tekshirib, qayta urinib ko‘ring.',
       retry: 'Qayta urinish', other: 'Boshqa',
       pairs: 'Bu bilan olishadi', rateTitle: 'Sizga yoqdimi?', rateText: 'Baho va fikr qoldiring — bu bizga juda yordam beradi.',
@@ -38,7 +39,8 @@
       delivery: 'Доставка', payment: 'Оплата', wifi: 'Wi‑Fi', password: 'пароль',
       copy: 'Копировать', copied: 'Скопировано', call: 'Позвонить', map: 'На карте',
       pricesNote: 'Все цены указаны в сумах.',
-      privacy: 'Сайт не использует cookie, статистика посещений анонимная. Имя и телефон хранятся в базе клиентов кафе — для заказов, акций и скидок; адрес и комментарий удаляются через 90 дней. От рассылки можно отписаться в боте, удалить данные — по звонку в кафе.',
+      privacy: 'Сайт не использует cookie, статистика посещений анонимная. Имя и телефон хранятся в базе клиентов кафе 3 года — для заказов, акций и скидок; адрес и комментарий удаляются через 90 дней. От рассылки можно отписаться в боте, удалить данные — по звонку в кафе.',
+      privacyLink: 'Политика конфиденциальности',
       error: 'Не удалось загрузить меню. Проверьте интернет и попробуйте ещё раз.',
       retry: 'Повторить', other: 'Другое',
       pairs: 'С этим берут', rateTitle: 'Понравилось?', rateText: 'Оставьте оценку и отзыв — это очень нам помогает.',
@@ -251,7 +253,11 @@
     };
 
     const telHref = (v) => 'tel:' + String(v).replace(/[^\d+]/g, '');
-    const socialURL = (v, base) => (!v ? '' : /^https?:\/\//i.test(v) ? safeUrl(v) : safeUrl(base + v.replace(/^@/, '')));
+    // Ссылка без аккаунта («https://t.me/» — шаблон в «Настройках») — кнопку не показываем, а не ведём на главную соцсети
+    const socialURL = (v, base) => {
+      const url = !v ? '' : /^https?:\/\//i.test(v) ? safeUrl(v) : safeUrl(base + v.replace(/^@/, ''));
+      return url && /^https?:\/\/[^/]+\/?$/i.test(url) ? '' : url;
+    };
 
     function catIcon(it) {
       const c = model.cats.find((x) => x.id === it.cat);
@@ -508,7 +514,8 @@
         <ul class="info__list">${rows.join('')}</ul>
         ${actions.length ? `<div class="info__actions">${actions.join('')}</div>` : ''}
       </section>
-      ${notes.map((n) => `<p class="info__note">${esc(n)}</p>`).join('')}`;
+      ${notes.map((n) => `<p class="info__note">${esc(n)}</p>`).join('')}
+      <p class="info__note"><a href="/privacy#${lang}" target="_blank" rel="noopener">${esc(t('privacyLink'))}</a></p>`;
     }
 
     // Структурированные данные schema.org: кафе + меню (для поисковиков и карт)
@@ -534,7 +541,7 @@
           closes: '23:59'
         } : undefined,
         sameAs: [socialURL(setting('instagram'), 'https://instagram.com/'), socialURL(setting('telegram'), 'https://t.me/')]
-          .filter((u) => u && !/^https:\/\/(www\.)?(instagram\.com|t\.me)\/?$/.test(u)),
+          .filter(Boolean),
         hasMenu: {
           '@type': 'Menu',
           inLanguage: lang,
