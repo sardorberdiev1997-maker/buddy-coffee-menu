@@ -255,7 +255,7 @@ def chrome(*args):
     subprocess.run([CHROME, '--headless=new', '--disable-gpu', '--hide-scrollbars', '--allow-file-access-from-files',
                     '--no-pdf-header-footer', '--virtual-time-budget=4000',
                     f'--user-data-dir={os.path.join(SRC, ".chrome")}', *args],
-                   check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                   check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=150)  # зависший Chrome не держит сборку
 
 
 def render(name, html_pdf, html_png, size_mm, pages):
