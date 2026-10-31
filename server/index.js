@@ -18,7 +18,8 @@ import { rateBySite } from './ratings.js';
 import { tick } from './tick.js';
 import { fail, json, safeEqual, SITE } from './util.js';
 
-const ORIGINS = ['https://buddy.cheking.uz', 'https://buddy-coffee-menu.pages.dev'];
+// Старый адрес buddy.cheking.uz оставлен: открытые до переезда страницы ещё могут слать запросы
+const ORIGINS = ['https://buddycoffee.uz', 'https://www.buddycoffee.uz', 'https://buddy.cheking.uz', 'https://buddy-coffee-menu.pages.dev'];
 
 // Запросы, меняющие данные, — только с нашего сайта (или без Origin: Telegram, cron)
 function sameOrigin(request) {
