@@ -1,9 +1,11 @@
 // Выбор языка до первой отрисовки. Меню в HTML собрано на узбекском:
 // если нужен русский, прячем его до перерисовки в app.js (страховка в CSS — показать через 2,5 с).
 (function () {
-  // Сайт переехал на buddycoffee.uz: со старого адреса (напечатанные QR, ссылки в Telegram) и с www — туда же,
-  // с той же страницей, параметрами и данными Mini App в #hash
-  if (/^(buddy\.cheking\.uz|www\.buddycoffee\.uz)$/.test(location.hostname)) {
+  // Сайт переехал на buddycoffee.uz: со старого адреса (напечатанные QR, ссылки) и с www — туда же,
+  // с той же страницей и параметрами. Mini App не уводим: с Bot API 10.2 (июль 2026) Telegram отключает
+  // свои методы у Mini App, ушедшего на другой домен, — кнопки «Menyu» в старых сообщениях работают на старом адресе
+  var inTg = /tgWebApp/.test(location.hash) || /[?&]tg=1\b/.test(location.search);
+  if (/^(buddy\.cheking\.uz|www\.buddycoffee\.uz)$/.test(location.hostname) && !inTg) {
     location.replace('https://buddycoffee.uz' + location.pathname + location.search + location.hash);
     return;
   }
@@ -25,7 +27,7 @@
     try {
       navigator.sendBeacon('/api/log', JSON.stringify({
         m: msg.slice(0, 300), s: String(src || '').replace(location.origin, '').split('?')[0], l: line || 0,
-        p: location.pathname, tg: /tgWebApp|[?&]tg=1\b/.test(location.hash + location.search)
+        p: location.pathname, tg: inTg
       }));
     } catch (e) { /* без сети — не страшно */ }
   }
@@ -36,7 +38,7 @@
   });
 
   // Сайт открыт как Telegram Mini App — подключаем скрипт Telegram (обычным посетителям он не нужен)
-  if (/tgWebApp/.test(location.hash) || /[?&]tg=1\b/.test(location.search)) {
+  if (inTg) {
     var s = document.createElement('script');
     s.src = 'https://telegram.org/js/telegram-web-app.js?59';
     s.onload = function () { document.dispatchEvent(new Event('tg-ready')); };
