@@ -1,6 +1,6 @@
 """QR-коды для печати: векторный SVG с логотипом в центре и PNG 2400 px без логотипа.
 print/qr.svg — меню (сайт), qr-bot — Telegram-бот, qr-instagram — Instagram,
-qr-google / qr-yandex / qr-2gis — отзывы. Отзывы ведут на короткие ссылки сайта /r/… (server/index.js),
+qr-google / qr-yandex — отзывы (2ГИС не печатаем: в Шахрисабзе у него нет справочника организаций). Отзывы ведут на короткие ссылки сайта /r/… (server/index.js),
 а те — на ссылки из «Настроек» таблицы: настоящие ссылки можно вписать позже, не перепечатывая постеры.
 
 Уровень коррекции H (до 30 % потерь): центр кода (≈ 28 % ширины) очищается целыми модулями
@@ -20,7 +20,6 @@ CODES = {
     'qr-instagram': ('https://www.instagram.com/buddy_coffee_/', 'ig'),
     'qr-google': (SITE + '/r/google', 'google'),
     'qr-yandex': (SITE + '/r/yandex', 'yandex'),
-    'qr-2gis': (SITE + '/r/2gis', '2gis'),
 }
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(ROOT, 'print')
@@ -50,9 +49,6 @@ LOGOS = {
                '<path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></g>'),
     'yandex': (TILE + '<path d="M12 3.4a6.6 6.6 0 0 0-6.6 6.6c0 4.7 6.6 11 6.6 11s6.6-6.3 6.6-11A6.6 6.6 0 0 0 12 3.4z" fill="#FC3F1D"/>'
                '<circle cx="12" cy="10" r="2.6" fill="#fff"/>'),
-    '2gis': ('<rect width="24" height="24" rx="6" fill="#19AA1E"/>'
-             '<text x="12" y="15.2" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-weight="700" '
-             'font-size="8.4" fill="#fff" letter-spacing="-.2">2GIS</text>'),
 }
 
 

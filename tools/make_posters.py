@@ -51,7 +51,7 @@ MAIN = (f'<div class="stage"><div class="qcard"><div class="cta">{ic("camera")}<
         '<img src="../../qr.svg" alt=""><div class="url">buddycoffee.uz</div></div></div>')
 tile = lambda qr, name: f'<div class="tile"><div class="q"><img src="../../{qr}.svg" alt=""></div><b>{name}</b></div>'
 SOCIAL = tile('qr-bot', 'Telegram') + tile('qr-instagram', 'Instagram')
-REVIEWS = tile('qr-google', 'Google') + tile('qr-yandex', 'Yandex') + tile('qr-2gis', '2GIS')
+REVIEWS = tile('qr-google', 'Google') + tile('qr-yandex', 'Yandex')  # 2ГИС в Шахрисабзе не работает
 ADDRESS = f'{ic("pin")}<div>Fusunkor ko‘chasi, 70<span>ул. Фусункор, 70 · рядом с «Visol»</span></div>'
 BAND = f'<div class="band"><div class="ph">{ic("phone")}+998 90 896 54 00</div><div class="ad">{ADDRESS}</div></div>'
 
@@ -60,10 +60,10 @@ BODIES = {
 <div class="sticker"><div>{ic('scooter')}<b>BEPUL</b><span>yetkazib berish</span><small>Бесплатная доставка</small></div></div>
 {MAIN}{MASCOT}
 <div class="links"><div class="panel"><h2>Obuna bo‘ling <small>· Подпишитесь</small></h2><div class="row r2">{SOCIAL}</div></div>
-<div class="panel"><h2>Sharh qoldiring <small>· Оставьте отзыв</small>{STARS}</h2><div class="row r3">{REVIEWS}</div></div></div>{BAND}''',
+<div class="panel"><h2>Sharh qoldiring <small>· Оставьте отзыв</small>{STARS}</h2><div class="row r2">{REVIEWS}</div></div></div>{BAND}''',
     'front': f'''<div class="top">{BRAND}{OPEN}</div><div class="head">{HEAD}</div>{MAIN}
 <div class="foot"><div class="deal">{ic('scooter')}<div><b>BEPUL yetkazib berish</b><span>Бесплатная доставка</span></div></div>{MASCOT}</div>''',
-    'back': f'''<div class="sec s1"><h2>Sharh qoldiring {STARS}</h2><p>Оставьте отзыв — нам важно ваше мнение</p><div class="row r3">{REVIEWS}</div></div>
+    'back': f'''<div class="sec s1"><h2>Sharh qoldiring {STARS}</h2><p>Оставьте отзыв — нам важно ваше мнение</p><div class="row r2">{REVIEWS}</div></div>
 <div class="sec s2"><h2>Obuna bo‘ling</h2><p>Подпишитесь: акции и новинки</p><div class="row r3">{SOCIAL}
 <div class="thanks"><div class="bubble">Rahmat!<span>Спасибо!</span></div>{MASCOT}</div></div></div>{BAND}''',
     'sticker': f'{MAIN}',
@@ -151,7 +151,8 @@ h2 small { font-size: 3.3mm; font-weight: 500; color: var(--muted); }
 .poster .sticker span { display: block; font-size: 3.1mm; font-weight: 700; line-height: 1.1; }
 .poster .sticker small { display: block; margin-top: .9mm; font-size: 2.9mm; font-weight: 500; opacity: .85; }
 .poster .mascot { position: absolute; top: 150mm; right: 7mm; width: 40mm; transform: rotate(9deg); }
-.poster .links { position: absolute; top: 214mm; left: 16mm; right: 16mm; display: grid; grid-template-columns: 2fr 3fr; gap: 6mm; }
+.poster .links { position: absolute; top: 214mm; left: 16mm; right: 16mm; display: grid; grid-template-columns: 1fr 1fr; gap: 6mm; }
+.poster .row { grid-template-columns: repeat(2, 30mm); justify-content: center; gap: 6mm; }
 .poster .panel { padding: 3.6mm 4mm 3.2mm; border-radius: 5mm; background: var(--chip); border: .5mm solid var(--line); }
 .poster .panel h2 { height: 4.8mm; font-size: 4mm; }
 .poster .panel .stars { margin-left: auto; }
@@ -181,6 +182,7 @@ h2 small { font-size: 3.3mm; font-weight: 500; color: var(--muted); }
 /* карточка A6: оборот */
 .back .sec { position: absolute; left: 7mm; right: 7mm; }
 .back .s1 { top: 9mm; }
+.back .s1 .row { grid-template-columns: repeat(2, 33mm); justify-content: center; gap: 8mm; }
 .back .s2 { top: 66mm; }
 .back h2 { font-size: 5.2mm; }
 .back h2 .stars svg { width: 4mm; height: 4mm; }
