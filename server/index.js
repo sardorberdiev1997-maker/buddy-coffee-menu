@@ -7,7 +7,7 @@
 import { handleUpdate, setupBot } from './bot.js';
 import { customersCsv } from './customers.js';
 import { ensureSchema, getKV, setKV } from './db.js';
-import { loadModel, R, setting } from './menu.js';
+import { loadModel, OC, R, setting } from './menu.js';
 import { accepting, cancelBySelf, createOrder, publicOrder } from './orders.js';
 import { checkWebhook, groupChat, groupLang, tg, webhookSecret } from './tg.js';
 import { callPage } from './call.js';
@@ -144,11 +144,19 @@ async function route(request, env, ctx) {
 // Короткие ссылки из QR-кодов на постерах (tools/make_qr.py): ведут на ссылку из «Настроек» таблицы,
 // поэтому постер печатается один раз, а адрес страницы отзывов можно поменять в таблице
 const SHORT = { google: 'отзыв_google', yandex: 'отзыв_yandex', '2gis': 'отзыв_2gis' };
+// Пока у кафе нет карточки на этой карте (ссылка в «Настройках» пустая) — открываем точку кафе по «координатам»
+const POINT = {
+  google: (c) => `https://www.google.com/maps/search/?api=1&query=${c.lat},${c.lng}`,
+  yandex: (c) => `https://yandex.uz/maps/?mode=whatshere&whatshere%5Bpoint%5D=${c.lng},${c.lat}&whatshere%5Bzoom%5D=17`,
+  '2gis': (c) => `https://2gis.uz/geo/${c.lng},${c.lat}`
+};
 
 async function shortLink(env, ctx, key) {
   let target = '';
   try {
-    target = R.safeUrl(setting(await loadModel(env, { ctx }), SHORT[key], 'ru'));
+    const model = await loadModel(env, { ctx });
+    const cafe = OC.config(model).cafe;
+    target = R.safeUrl(setting(model, SHORT[key], 'ru')) || (cafe ? POINT[key](cafe) : '');
   } catch (e) {
     console.warn('short link', key, e && e.message);
   }
