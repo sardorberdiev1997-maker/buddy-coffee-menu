@@ -31,5 +31,11 @@
   Cache-Control: no-cache
   Referrer-Policy: no-referrer
 
+# Панель владельца (Telegram Mini App): не индексировать, всегда свежая
+/admin
+  Cache-Control: no-cache
+  Referrer-Policy: no-referrer
+  X-Robots-Tag: noindex, nofollow
+
 /manifest.webmanifest
   Cache-Control: public, max-age=86400

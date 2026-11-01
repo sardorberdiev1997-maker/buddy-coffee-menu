@@ -31,8 +31,9 @@ vm.runInContext(read('assets/render.js'), sandbox);
 const R = sandbox.MenuRender;
 const TABS = sandbox.MENU_CONFIG.tabs;
 
-// Данные: меню с сервера (панель владельца, server/content.js), до первого запуска панели — из Google Таблицы,
-// при сбое — запасная копия data/menu.json
+// Данные: меню с сервера (панель владельца, server/content.js), при сбое — запасная копия data/menu.json
+// (её раз в 15 минут обновляет GitHub Action из того же /api/menu). Google Таблицу для меню больше не читаем:
+// после переезда она устарела, а сайт в браузере всё равно берёт свежее меню с сервера
 async function fromApi() {
   const res = await fetch(new URL('api/menu', R.SITE), { signal: AbortSignal.timeout(15000) });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -40,20 +41,8 @@ async function fromApi() {
   if (!R.validTables(d.tables)) throw new Error('неожиданная структура меню');
   return d.tables;
 }
-async function fromSheet() {
-  const { sheetId, pub, gids } = sandbox.MENU_CONFIG;
-  if ((!sheetId && !pub) || !gids) throw new Error('нет sheetId/gids');
-  const get = async (key) => {
-    const res = await fetch(R.sheetCsvUrl(sandbox.MENU_CONFIG, key), { signal: AbortSignal.timeout(15000) });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return R.parseCSV(await res.text());
-  };
-  const t = { menu: await get('menu'), categories: await get('categories'), settings: await get('settings') };
-  if (!R.validTables(t)) throw new Error('неожиданная структура таблицы');
-  return t;
-}
 let tables;
-const sources = process.env.MENU_SOURCE === 'file' ? [] : [['сервер /api/menu', fromApi], ['Google Таблица', fromSheet]];
+const sources = process.env.MENU_SOURCE === 'file' ? [] : [['сервер /api/menu', fromApi]];
 for (const [name, load] of sources) {
   try {
     tables = await load();
@@ -152,6 +141,26 @@ await esbuild.build({
   legalComments: 'none',
   logLevel: 'warning'
 });
+// Панель владельца (Telegram Mini App /admin, docs/admin-panel.md): React + @telegram-apps/telegram-ui — свой JS и CSS,
+// гостям сайта не грузится. Версия в ссылке — по хешу содержимого
+await esbuild.build({
+  entryPoints: { admin: path.join(ROOT, 'assets/admin/main.jsx') },
+  outdir: path.join(DIST, 'assets'),
+  bundle: true,
+  format: 'iife',
+  target: 'es2020',
+  minify: true,
+  charset: 'utf8',
+  jsx: 'automatic',
+  define: { 'process.env.NODE_ENV': '"production"' },
+  loader: { '.svg': 'dataurl' },
+  legalComments: 'eof',
+  logLevel: 'warning'
+});
+const adminHash = (ext) => hash(readFileSync(path.join(DIST, `assets/admin.${ext}`), 'utf8'));
+write('admin.html', read('admin.html')
+  .replace('assets/admin.css?v=1', `assets/admin.css?v=${adminHash('css')}`)
+  .replace('assets/admin.js?v=1', `assets/admin.js?v=${adminHash('js')}`));
 write('_routes.json', JSON.stringify({ version: 1, include: ['/api/*', '/r/*', '/c/*'], exclude: [] }));
 
 write('_headers', read('tools/_headers')
@@ -159,5 +168,6 @@ write('_headers', read('tools/_headers')
   .replace('{{STYLE_HASHES}}', styleHashes.join(' ')));
 
 const kb = (p) => (readFileSync(path.join(DIST, p)).length / 1024).toFixed(1) + ' KB';
+console.log(`dist готов: admin.js ${kb('assets/admin.js')}, admin.css ${kb('assets/admin.css')}`);
 console.log(`dist готов: index.html ${kb('index.html')}, app.js ${kb('assets/app.js')}, cart.js ${kb('assets/cart.js')}, render.js ${kb('assets/render.js')}, style.css ${kb('assets/style.css')}, _worker.js ${kb('_worker.js')}`);
 if (!existsSync(path.join(DIST, 'img/og.jpg'))) throw new Error('нет img/og.jpg');

@@ -48,6 +48,8 @@ self.addEventListener('fetch', (e) => {
   if (url.origin !== self.location.origin) return;
   // Заказы и статусы — всегда из сети, никогда из кэша
   if (url.pathname.startsWith('/api/')) return;
+  // Панель владельца — всегда свежая, без кэша
+  if (url.pathname === '/admin' || url.pathname.startsWith('/assets/admin.')) return;
 
   // Фото и шрифты: сразу из кэша, в фоне обновляем
   if (url.pathname.startsWith('/img/') || url.pathname.startsWith('/assets/fonts/')) {

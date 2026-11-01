@@ -498,10 +498,10 @@ async function staffList(env) {
 // /start staff_<токен> в личке бота (server/bot.js): приглашение одноразовое, 48 часов
 export async function acceptInvite(env, token, from) {
   if (!/^[A-Za-z0-9]{6,32}$/.test(token)) return null;
-  const raw = await getKV(env, `invite:${token}`);
-  if (!raw) return null;
-  await setKV(env, `invite:${token}`, null);
-  const inv = JSON.parse(raw);
+  // Гасим атомарно: два человека с одной ссылкой одновременно не пройдут
+  const row = await env.DB.prepare('DELETE FROM kv WHERE k = ? RETURNING v').bind(`invite:${token}`).first();
+  if (!row) return null;
+  const inv = JSON.parse(row.v);
   if (!inv || inv.until < Date.now()) return null;
   const name = [from.first_name, from.last_name].filter(Boolean).join(' ') || String(from.id);
   await env.DB.prepare('INSERT INTO staff (tg_id, name, username, added_by, added_at) VALUES (?, ?, ?, ?, ?) ON CONFLICT(tg_id) DO UPDATE SET name = excluded.name, username = excluded.username')
