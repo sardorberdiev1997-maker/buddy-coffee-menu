@@ -600,10 +600,14 @@ test('панель: сотрудник по приглашению — толь�
 });
 
 test('панель: раздел «Пицца» и блюдо с двумя размерами — на сайте и в заказе; проверки; отмена', async () => {
+  const before = (await adm('/api/admin/state', OWNER)).body.doc.cats.map((c) => c.id);
   const cat = await adm('/api/admin/cat', OWNER, { uz: 'Pitsa', ru: 'Пицца', icon: '🍕' });
   assert.equal(cat.status, 200, JSON.stringify(cat.body));
-  const pizza = cat.body.doc.cats.find((c) => c.ru === 'Пицца');
-  assert.equal(pizza.id, 'pitsa');
+  const pizza = cat.body.doc.cats.find((c) => !before.includes(c.id));
+  // Раздел с таким именем мог уже прийти из таблицы («Pitsa») — новый id не совпадает с ним даже без учёта регистра
+  const ids = cat.body.doc.cats.map((c) => c.id.toLowerCase());
+  assert.equal(new Set(ids).size, ids.length, 'id разделов уникальны без учёта регистра');
+  assert.match(pizza.id, /^pitsa(-\d+)?$/);
   const bad = (b) => adm('/api/admin/item', OWNER, b).then((r) => r.status);
   assert.equal(await bad({ cat: pizza.id, ru: 'Без цены', variants: [{ price: 'abc' }] }), 400);
   assert.equal(await bad({ cat: 'nope', ru: 'Без раздела', variants: [{ price: 1000 }] }), 400);
@@ -616,12 +620,12 @@ test('панель: раздел «Пицца» и блюдо с двумя ра
   });
   assert.equal(it.status, 200, JSON.stringify(it.body));
   const item = it.body.doc.items.find((x) => x.ru === 'Маргарита');
-  assert.equal(item.key, 'pitsa-margarita');
+  assert.equal(item.key, `${pizza.id}-margarita`);
   let m = (await siteModel()).items.find((x) => x.key === item.key);
   assert.deepEqual(m.prices, [55000, 75000]);
   assert.equal(m.old[1], 80000);
   assert.equal(m.badge, 'new');
-  assert.ok((await siteModel()).cats.some((c) => c.id === 'pitsa'), 'раздел на сайте');
+  assert.ok((await siteModel()).cats.some((c) => c.id === pizza.id), 'раздел на сайте');
 
   // Заказать новое блюдо можно сразу
   const order = await api('/api/orders', { method: 'POST', body: JSON.stringify(orderBody({ items: [{ key: item.key, size: 1, qty: 1, note: '', price: 75000 }], total: 75000 })) });
@@ -647,16 +651,16 @@ test('панель: раздел «Пицца» и блюдо с двумя ра
   await adm('/api/admin/item/avail', OWNER, { key: item.key, avail: true });
 
   // Порядок разделов: «Пицца» первой
-  const ids = undo.body.doc.cats.map((c) => c.id);
-  const ord = await adm('/api/admin/order', OWNER, { kind: 'cats', keys: ['pitsa', ...ids.filter((x) => x !== 'pitsa')] });
-  assert.equal(ord.body.doc.cats[0].id, 'pitsa');
-  assert.equal((await siteModel()).cats[0].id, 'pitsa');
+  const catIds = undo.body.doc.cats.map((c) => c.id);
+  const ord = await adm('/api/admin/order', OWNER, { kind: 'cats', keys: [pizza.id, ...catIds.filter((x) => x !== pizza.id)] });
+  assert.equal(ord.body.doc.cats[0].id, pizza.id);
+  assert.equal((await siteModel()).cats[0].id, pizza.id);
 
   // Раздел с блюдами не удалить; после удаления блюда — можно
-  assert.equal((await adm('/api/admin/cat/delete', OWNER, { id: 'pitsa' })).status, 409);
+  assert.equal((await adm('/api/admin/cat/delete', OWNER, { id: pizza.id })).status, 409);
   const fresh = (await adm('/api/admin/state', OWNER)).body.doc.items.find((x) => x.key === item.key);
   assert.equal((await adm('/api/admin/item/delete', OWNER, { key: item.key, rev: fresh.rev })).status, 200);
-  assert.equal((await adm('/api/admin/cat/delete', OWNER, { id: 'pitsa' })).status, 200);
+  assert.equal((await adm('/api/admin/cat/delete', OWNER, { id: pizza.id })).status, 200);
   assert.ok(!(await siteModel()).items.some((x) => x.key === item.key));
   assert.ok(cur);
 });

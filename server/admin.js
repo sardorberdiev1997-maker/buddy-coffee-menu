@@ -89,9 +89,12 @@ function cleanItem(b, doc, prev) {
   };
 }
 
+// Новый ключ, не совпадающий с уже занятыми. Сравниваем как сайт (assets/render.js): без регистра —
+// раздел «Pitsa» из таблицы и новый «pitsa» сайт счёл бы одним
 const uniq = (list, base, field) => {
+  const taken = new Set(list.map((x) => slug(x[field])));
   let k = base || 'x', n = 2;
-  while (list.some((x) => x[field] === k)) k = `${base}-${n++}`;
+  while (taken.has(k)) k = `${base}-${n++}`;
   return k;
 };
 
