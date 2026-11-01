@@ -8,9 +8,10 @@
   <title>Buddy Coffee — maxfiylik siyosati · политика конфиденциальности</title>
   <meta name="description" content="Buddy Coffee shaxsiy ma’lumotlarni qanday saqlaydi va himoya qiladi. Как Buddy Coffee хранит и защищает персональные данные.">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="canonical" href="https://buddycoffee.uz/privacy">
   <!-- Значения {{…}} подставляет tools/build.mjs из вкладки «Настройки» (продавец, адрес, телефон).
        Сроки и состав данных сверены с кодом: server/tick.js (90 дней, 3 года), server/health.js (7 дней),
-       server/orders.js (хеш IP, лимит заказов), assets/cart.js (память браузера). Меняете код — поправьте и эту страницу и дату редакции -->
+       server/orders.js (хеш IP, лимит заказов), assets/cart.js (память браузера), assets/boot.js (Яндекс Метрика: без Вебвизора, не на /order, без #hash Telegram). Меняете код — поправьте и эту страницу и дату редакции -->
   <style>
     :root { --bg: #FFF6EA; --card: #fff; --ink: #1B1612; --ink-2: #5E534A; --line: #EEDFCB; --link: #A80E17; --red: #E31B23; }
     @media (prefers-color-scheme: dark) { :root { --bg: #15100C; --card: #221A14; --ink: #FBF3EA; --ink-2: #D2C4B6; --line: #3A2E25; --link: #FF8A8F; } }
@@ -48,7 +49,7 @@
     <header>
       <p class="brand">Buddy Coffee</p>
       <h1>Maxfiylik siyosati · <span lang="ru">Политика конфиденциальности</span></h1>
-      <p class="meta">Tahrir: 31.10.2026 · <span lang="ru">Редакция от 31.10.2026</span></p>
+      <p class="meta">Tahrir: 01.11.2026 · <span lang="ru">Редакция от 01.11.2026</span></p>
       <nav aria-label="Til · Язык">
         <a href="#uz" hreflang="uz">O‘zbekcha</a>
         <a href="#ru" hreflang="ru" lang="ru">Русский</a>
@@ -71,7 +72,8 @@
           <li><b>Baho va izohlar:</b> xizmat sifatini oshirish uchun; past baho qo‘ysangiz, administrator siz bilan bog‘lanishi mumkin.</li>
           <li><b>Mijozlar bazasi:</b> ism, telefon, Telegram va buyurtmalar tarixi — doimiy mehmonlarni tanish, aksiya va chegirmalar uchun.</li>
           <li><b>Suiiste’moldan himoya:</b> IP-manzil faqat qaytarib bo‘lmaydigan xesh ko‘rinishida — bir raqam yoki manzildan ko‘p soxta buyurtmalarni to‘xtatish uchun.</li>
-          <li><b>Texnik ma’lumotlar:</b> tashriflarning anonim statistikasi (Cloudflare Web Analytics, cookie-fayllarsiz), brauzer xatolari haqidagi hisobotlar (xato matni, sahifa va qurilma turi — shaxsiy ma’lumotlarsiz) va «menyuni ko‘rdi / savatga qo‘shdi / buyurtma berdi» hisoblagichlari — shaxsga bog‘lanmagan holda.</li>
+          <li><b>Tashriflar statistikasi (Yandex Metrika):</b> qaysi sahifalar ochilgani, qayerdan kelganingiz, qurilma va brauzer turi, IP bo‘yicha taxminiy shahar, «savatga qo‘shdi / rasmiylashtirishni boshladi / buyurtma berdi» harakatlari va buyurtma summasi — saytni yaxshilash uchun. Vebvizor (sahifadagi harakatlarni yozib olish) ishlatilmaydi; ism, telefon, manzil va Telegram ma’lumotlari Metrikaga yuborilmaydi.</li>
+          <li><b>Texnik ma’lumotlar:</b> brauzer xatolari haqidagi hisobotlar (xato matni, sahifa va qurilma turi — shaxsiy ma’lumotlarsiz) va «menyuni ko‘rdi / savatga qo‘shdi / buyurtma berdi» hisoblagichlari — shaxsga bog‘lanmagan holda.</li>
         </ul>
         <p>Biometrik ma’lumotlar, pasport ma’lumotlari va bank kartasi raqamlarini to‘plamaymiz.</p>
 
@@ -79,12 +81,14 @@
         <p>Buyurtma berib yoki bot bilan muloqot boshlab, siz ushbu siyosatga muvofiq ma’lumotlaringizni qayta ishlashga rozilik bildirasiz; ma’lumotlar siz bergan buyurtmani bajarish uchun ham zarur. Rozilikni istalgan vaqtda qaytarib olishingiz mumkin — pastda qarang.</p>
 
         <h3>Qurilmangizda nima saqlanadi</h3>
-        <p>Sayt cookie-fayllardan foydalanmaydi. Qulaylik uchun brauzer xotirasida (localStorage) til, savat, keyingi buyurtma uchun ism, telefon va manzil, oxirgi buyurtmalaringiz ro‘yxati saqlanadi. Bu ma’lumotlar qurilmangizdan chiqmaydi; brauzerda sayt ma’lumotlarini tozalab, ularni o‘chirishingiz mumkin.</p>
+        <p>Cookie-fayllarni faqat Yandex Metrika qo‘yadi (_ym_* va xizmat cookie-fayllari, 1 yilgacha) — tashriflar statistikasi uchun. Ularni brauzer sozlamalarida taqiqlashingiz mumkin, menyu va buyurtma baribir ishlaydi.</p>
+        <p>Qulaylik uchun brauzer xotirasida (localStorage) til, savat, keyingi buyurtma uchun ism, telefon va manzil, oxirgi buyurtmalaringiz ro‘yxati saqlanadi. Bu ma’lumotlar qurilmangizdan chiqmaydi; brauzerda sayt ma’lumotlarini tozalab, ularni o‘chirishingiz mumkin.</p>
 
         <h3>Ma’lumotlarni kim ko‘radi</h3>
         <ul>
           <li><b>Kafe xodimlari:</b> buyurtmalar kafening ishchi Telegram chatiga keladi; mijozlar bazasi (Excel va Google Jadvaldagi yopiq varaq) faqat kafe uchun ochiq; kuryer yetkazish uchun manzil va telefonni ko‘radi.</li>
           <li><b>Sayt ishlaydigan xizmatlar</b> (bizning topshirig‘imiz bilan qayta ishlaydi): Cloudflare — sayt va buyurtmalar bazasi, Telegram — bildirishnomalar va bot, Google — mijozlar bazasi bilan yopiq jadval.</li>
+          <li><b>Yandex</b> — Yandex Metrika orqali tashriflar statistikasi (ism, telefon va manzilsiz); Yandex bu ma’lumotlarni o‘z maxfiylik siyosati bo‘yicha ham qayta ishlaydi.</li>
           <li><b>Davlat organlari</b> — faqat qonuniy talab bo‘yicha.</li>
         </ul>
         <p>Ma’lumotlarni sotmaymiz va reklama uchun bermaymiz. Bu xizmatlarning serverlari O‘zbekistondan tashqarida bo‘lishi mumkin. Xaritadagi sharh havolalari (Google, Yandex) va Telegram — o‘z maxfiylik siyosatiga ega alohida xizmatlar.</p>
@@ -95,6 +99,7 @@
           <li>Baholarga izohlar — <b>90 kun</b>.</li>
           <li>Mijozlar bazasi — oxirgi buyurtma yoki botga oxirgi xabardan <b>3 yil</b>.</li>
           <li>Brauzer xatolari hisobotlari — <b>7 kun</b>; tashriflar hisoblagichlari (shaxssiz) — 400 kungacha.</li>
+          <li>Yandex Metrika statistikasi — Yandex qoidalari bo‘yicha; brauzerdagi Metrika cookie-fayllari — 1 yilgacha.</li>
           <li>Kafening ishchi Telegram chatidagi buyurtma xabarlari chat tarixida qoladi.</li>
         </ul>
 
@@ -128,7 +133,8 @@
           <li><b>Оценки и комментарии:</b> чтобы становиться лучше; при низкой оценке администратор может с вами связаться.</li>
           <li><b>База клиентов:</b> имя, телефон, Telegram и история заказов — чтобы узнавать постоянных гостей и предлагать акции и скидки.</li>
           <li><b>Защита от злоупотреблений:</b> IP-адрес только в виде необратимого хеша — чтобы останавливать поток ложных заказов с одного номера или адреса.</li>
-          <li><b>Технические данные:</b> анонимная статистика посещений (Cloudflare Web Analytics, без cookie), отчёты об ошибках в браузере (текст ошибки, страница и тип устройства — без личных данных) и счётчики «посмотрели меню / положили в корзину / оформили заказ» — без привязки к человеку.</li>
+          <li><b>Статистика посещений (Яндекс Метрика):</b> какие страницы открыты, откуда вы пришли, тип устройства и браузера, примерный город по IP, действия «положили в корзину / начали оформление / оформили заказ» и сумма заказа — чтобы улучшать сайт. Вебвизор (запись действий на странице) не используется; имя, телефон, адрес и данные Telegram в Метрику не передаются.</li>
+          <li><b>Технические данные:</b> отчёты об ошибках в браузере (текст ошибки, страница и тип устройства — без личных данных) и счётчики «посмотрели меню / положили в корзину / оформили заказ» — без привязки к человеку.</li>
         </ul>
         <p>Биометрические и паспортные данные, номера банковских карт мы не собираем.</p>
 
@@ -136,12 +142,14 @@
         <p>Оформляя заказ или начиная диалог с ботом, вы даёте согласие на обработку данных по этой политике; кроме того, данные нужны, чтобы выполнить ваш заказ. Согласие можно отозвать в любой момент — см. ниже.</p>
 
         <h3>Что хранится на вашем устройстве</h3>
-        <p>Сайт не использует cookie. Для удобства в памяти браузера (localStorage) хранятся язык, корзина, имя, телефон и адрес для следующего заказа и список ваших последних заказов. Эти данные не покидают ваше устройство; удалить их можно, очистив данные сайта в браузере.</p>
+        <p>Cookie ставит только Яндекс Метрика (_ym_* и служебные, до 1 года) — для статистики посещений. Их можно запретить в настройках браузера: меню и заказ всё равно работают.</p>
+        <p>Для удобства в памяти браузера (localStorage) хранятся язык, корзина, имя, телефон и адрес для следующего заказа и список ваших последних заказов. Эти данные не покидают ваше устройство; удалить их можно, очистив данные сайта в браузере.</p>
 
         <h3>Кто видит данные</h3>
         <ul>
           <li><b>Сотрудники кафе:</b> заказы приходят в рабочий чат кафе в Telegram; база клиентов (Excel и закрытая вкладка Google Таблицы) доступна только кафе; курьер видит адрес и телефон для доставки.</li>
           <li><b>Сервисы, на которых работает сайт</b> (обрабатывают данные по нашему поручению): Cloudflare — сайт и база заказов, Telegram — уведомления и бот, Google — закрытая таблица с базой клиентов.</li>
+          <li><b>Яндекс</b> — статистика посещений через Яндекс Метрику (без имени, телефона и адреса); Яндекс обрабатывает эти данные также по своей политике конфиденциальности.</li>
           <li><b>Государственные органы</b> — только по законному запросу.</li>
         </ul>
         <p>Мы не продаём данные и не передаём их для рекламы. Серверы этих сервисов могут находиться за пределами Узбекистана. Ссылки на отзывы на картах (Google, Яндекс) и сам Telegram — отдельные сервисы со своими политиками конфиденциальности.</p>
@@ -152,6 +160,7 @@
           <li>Комментарии к оценкам — <b>90 дней</b>.</li>
           <li>База клиентов — <b>3 года</b> с последнего заказа или сообщения боту.</li>
           <li>Отчёты об ошибках в браузере — <b>7 дней</b>; счётчики посещений (без личных данных) — до 400 дней.</li>
+          <li>Статистика Яндекс Метрики — по правилам Яндекса; cookie Метрики в браузере — до 1 года.</li>
           <li>Сообщения о заказах в рабочем чате кафе в Telegram остаются в истории чата.</li>
         </ul>
 

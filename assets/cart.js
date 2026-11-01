@@ -590,7 +590,10 @@
       cart = { lines: [], type: cart.type };
       save(CART_KEY, cart);
       haptic('success');
-      location.href = `/order?t=${encodeURIComponent(data.token)}${tg() ? '&tg=1' : ''}`;
+      // Цель «order» в Метрике — только сумма, без данных покупателя
+      const go = () => { location.href = `/order?t=${encodeURIComponent(data.token)}${tg() ? '&tg=1' : ''}`; };
+      if (window.buddyGoal) window.buddyGoal('order', { order_price: data.total, currency: 'UZS' }, go);
+      else go();
       return;
     }
     const code = data && data.error;

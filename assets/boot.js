@@ -37,11 +37,40 @@
     report(r && r.message ? (r.name ? r.name + ': ' : '') + r.message : r, location.href, 0);
   });
 
+  // Яндекс Метрика (счётчик 113975722, без Вебвизора): посещения, источники и цели cart / checkout / order.
+  // Не на /order — в адресе токен заказа. В Mini App в #hash лежат данные Telegram (initData): скрипт Telegram
+  // сохраняет их в sessionStorage, после него убираем их из адреса и только тогда грузим счётчик
+  var YM = 113975722;
+  var counted = !/^\/order/.test(location.pathname);
+  function metrika() {
+    if (/tgWebApp/.test(location.hash)) history.replaceState(history.state, '', location.pathname + location.search);
+    var m = document.createElement('script');
+    m.async = true;
+    m.src = 'https://mc.yandex.ru/metrika/tag.js?id=' + YM;
+    document.head.appendChild(m);
+  }
+  if (counted) {
+    window.ym = function () { (window.ym.a = window.ym.a || []).push(arguments); };
+    window.ym.l = Date.now();
+    window.ym(YM, 'init', { ssr: true, clickmap: true, accurateTrackBounce: true, trackLinks: true, url: location.href.split('#')[0] });
+  }
+  // Цель Метрики; done — после отправки (или через секунду, если счётчик заблокирован), чтобы успеть до перехода
+  window.buddyGoal = function (name, params, done) {
+    var called = false;
+    var fin = function () { if (!called) { called = true; if (done) done(); } };
+    if (!window.ym) { fin(); return; }
+    try { window.ym(YM, 'reachGoal', name, params || {}, fin); } catch (e) { fin(); return; }
+    setTimeout(fin, 1000);
+  };
+
   // Сайт открыт как Telegram Mini App — подключаем скрипт Telegram (обычным посетителям он не нужен)
   if (inTg) {
     var s = document.createElement('script');
     s.src = 'https://telegram.org/js/telegram-web-app.js?59';
-    s.onload = function () { document.dispatchEvent(new Event('tg-ready')); };
+    s.onload = function () {
+      document.dispatchEvent(new Event('tg-ready'));
+      if (counted) metrika();
+    };
     document.head.appendChild(s);
-  }
+  } else if (counted) metrika();
 })();

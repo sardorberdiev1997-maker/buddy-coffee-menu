@@ -119,6 +119,7 @@
       sessionStorage.setItem('buddy-ev:' + e, '1');
     } catch (err) { /* приватный режим — считаем как есть */ }
     try { if (navigator.sendBeacon) navigator.sendBeacon('/api/ev', JSON.stringify({ e })); } catch (err) { /* без сети — не важно */ }
+    if (e !== 'view' && window.buddyGoal) window.buddyGoal(e); // просмотр Метрика считает сама
   }
 
   function apply(tables) {
