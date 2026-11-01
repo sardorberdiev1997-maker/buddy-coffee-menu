@@ -44,7 +44,7 @@ self.addEventListener('fetch', (e) => {
   const req = e.request;
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
-  // Google Таблица и прочие внешние запросы — напрямую, их кэширует app.js
+  // Внешние запросы (Telegram, Метрика) — напрямую
   if (url.origin !== self.location.origin) return;
   // Заказы и статусы — всегда из сети, никогда из кэша
   if (url.pathname.startsWith('/api/')) return;

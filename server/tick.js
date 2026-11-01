@@ -90,8 +90,9 @@ export async function tick(env, now = Date.now()) {
     await env.DB.prepare('UPDATE orders SET phone_hash = NULL WHERE phone_hash IS NOT NULL AND created_at < ?').bind(now - KEEP_CUSTOMER).run();
     await cleanClientErrors(env, now);
     await env.DB.prepare("DELETE FROM kv WHERE k >= 'ev:' AND k < ?").bind(`ev:${dayKey(now - 400 * DAY)}`).run(); // воронка — больше года не нужна
+    await env.DB.prepare("DELETE FROM kv WHERE k IN ('sheet_key', 'menu_cache')").run(); // остались от Google Таблицы (удалена 01.11.2026)
   }
-  // Прогрев меню: в первый запуск после выкладки документ создаётся из Google Таблицы (server/content.js)
+  // Прогрев меню (server/content.js)
   await loadModel(env).catch((e) => console.warn('tick: menu', e.message));
   return done;
 }

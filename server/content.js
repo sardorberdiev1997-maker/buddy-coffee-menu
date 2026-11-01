@@ -1,6 +1,7 @@
 // Контент сайта в D1: меню, разделы, настройки, расписание и акции. Правит владелец в панели (/admin, server/admin.js).
 // Сайт, бот, сборка и резервная копия получают его в прежнем формате таблиц (assets/render.js → buildModel):
-// GET /api/menu → { generated, version, tables }. При первом запуске документ создаётся из Google Таблицы.
+// GET /api/menu → { generated, version, tables }. До панели меню жило в Google Таблице: 01.11.2026 перенесено сюда,
+// таблица удалена; если база когда-нибудь окажется пустой — документ создаётся из data/menu.json.
 //
 // Документ (одна строка таблицы content, version растёт с каждой правкой — оптимистичная блокировка):
 //   cats:     [{ id, uz, ru, icon, pairs, rev }]                       — порядок = порядок на сайте
@@ -34,7 +35,7 @@ function rowsToObjects(rows) {
     .map((r) => Object.fromEntries(keys.map((k, i) => [k, String(r[i] == null ? '' : r[i]).trim()])));
 }
 
-/* ---------- таблицы → документ (переезд из Google Таблицы) ---------- */
+/* ---------- таблицы → документ (переезд; восстановление из data/menu.json) ---------- */
 
 export function docFromTables(tables, now = Date.now()) {
   const keys = R.buildModel(tables).items.map((it) => it.key); // ключи блюд как сейчас — корзины и стоп-лист не сломаются
@@ -127,31 +128,15 @@ export function tablesFromDoc(doc, now = Date.now()) {
 
 /* ---------- хранение ---------- */
 
-async function fetchCSV(key) {
-  const res = await fetch(R.sheetCsvUrl(CFG, key), { signal: AbortSignal.timeout(8000), redirect: 'follow' });
-  if (!res.ok) throw new Error('sheet HTTP ' + res.status);
-  return R.parseCSV(await res.text());
-}
-
-export async function tablesFromSheet() {
-  const [menu, categories, settings] = await Promise.all(['menu', 'categories', 'settings'].map(fetchCSV));
-  const tables = { menu, categories, settings };
-  if (!R.validTables(tables)) throw new Error('unexpected sheet structure');
-  return tables;
-}
-
 async function tablesFromAssets(env) {
   const res = await env.ASSETS.fetch(new Request(new URL('/data/menu.json', SITE)));
   const data = await res.json();
   return { menu: data[CFG.tabs.menu], categories: data[CFG.tabs.categories], settings: data[CFG.tabs.settings] };
 }
 
-// Первый запуск: документ из Google Таблицы (как было до панели), без неё — из data/menu.json
+// Пустая база (новая установка): документ из запасной копии data/menu.json
 async function importDoc(env) {
-  let tables;
-  if (!env.NO_SHEET) tables = await tablesFromSheet().catch((e) => { console.warn('content: sheet unavailable:', e.message); return null; });
-  if (!tables) tables = await tablesFromAssets(env);
-  const doc = docFromTables(tables);
+  const doc = docFromTables(await tablesFromAssets(env));
   await env.DB.prepare('INSERT OR IGNORE INTO content (id, doc, version, updated_at, updated_by) VALUES (1, ?, 1, ?, ?)')
     .bind(JSON.stringify(doc), Date.now(), 'import').run();
 }

@@ -222,10 +222,4 @@ export async function customersXlsx(env, L, now = Date.now()) {
   };
 }
 
-// Для вкладки «Клиенты» в Google Таблице (=IMPORTDATA): те же строки в CSV
-export async function customersCsv(env, L, now = Date.now()) {
-  const { rows } = await buildRows(env, L, now);
-  const cell = (v) => (v == null ? '' : /[",\n\r]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v));
-  return rows.map((r) => r.map(cell).join(',')).join('\r\n') + '\r\n';
-}
 

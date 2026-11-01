@@ -111,8 +111,8 @@ function serveStatic(pathname) {
 const worker = (await import(pathToFileURL(path.join(DIST, '_worker.js')).href + '?t=' + Date.now())).default;
 const pending = new Set();
 const ctx = { waitUntil: (p) => { pending.add(p); p.finally(() => pending.delete(p)); } };
-// Меню при первом запуске — из data/menu.json, без Google Таблицы (DEV_SHEET=1 — из таблицы)
-const env = { DB, BOT_TOKEN, NO_SHEET: !process.env.DEV_SHEET, ASSETS: { fetch: async (req) => serveStatic(new URL(req.url || req).pathname) } };
+// Меню при первом запуске — из data/menu.json (server/content.js)
+const env = { DB, BOT_TOKEN, ASSETS: { fetch: async (req) => serveStatic(new URL(req.url || req).pathname) } };
 const secret = createHmac('sha256', BOT_TOKEN).update('buddy-coffee-webhook').digest('hex').slice(0, 48);
 
 async function toRequest(req, body) {

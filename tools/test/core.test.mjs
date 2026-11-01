@@ -147,7 +147,7 @@ test('сроки хранения: имя и адрес в заказе — 90 �
 test('тексты ошибок для логов и диагностики — без секретов', () => {
   assert.equal(redact('fetch https://api.telegram.org/bot123456789:AAHdqTcvCH1vGWJxfSeofSAs0K5PALDsaw/sendMessage failed'),
     'fetch https://api.telegram.org/bot<token>/sendMessage failed');
-  assert.equal(redact('GET /api/sheet/customers.csv?key=abc123&x=1'), 'GET /api/sheet/customers.csv?key=<…>&x=1');
+  assert.equal(redact('GET /api/tg/info?key=abc123&x=1'), 'GET /api/tg/info?key=<…>&x=1');
   assert.equal(redact('/order?t=tok_en-1 /api/tg/info?key=K'), '/order?t=<…> /api/tg/info?key=<…>');
   assert.equal(redact(null), '');
 });
@@ -157,7 +157,7 @@ test('тексты ошибок для логов и диагностики — 
 const backup = JSON.parse(readFileSync(new URL('../../data/menu.json', import.meta.url), 'utf8'));
 const sheetTables = { menu: backup['Меню'], categories: backup['Категории'], settings: backup['Настройки'] };
 const contentEnv = () => ({
-  DB: memoryD1(), BOT_TOKEN: 'x:y', NO_SHEET: true,
+  DB: memoryD1(), BOT_TOKEN: 'x:y',
   ASSETS: { fetch: async () => new Response(JSON.stringify(backup)) }
 });
 

@@ -474,21 +474,6 @@ test('рассылка: ответ /broadcast → аудитория → под�
   assert.match((await tgCalls(t0)).find((c) => /Рассылка №/.test(c.body.text || '')).body.text, /Всем подписчикам: <b>1<\/b>/);
 });
 
-test('вкладка «Клиенты»: /sheet выдаёт формулу, CSV только с верным ключом', async () => {
-  const t0 = Date.now();
-  await groupMsg('/sheet');
-  const msg = (await tgCalls(t0)).find((c) => /IMPORTDATA/.test(c.body.text || ''));
-  assert.ok(msg);
-  const url = msg.body.text.match(/https:\/\/buddycoffee\.uz\/(api\/sheet\/customers\.csv\?key=[\w-]+)/)[1];
-  const ok = await fetch(`${BASE}/${url}`);
-  assert.equal(ok.status, 200);
-  const csv = await ok.text();
-  assert.match(csv.split('\r\n')[0], /^№,Имя,Телефон/);
-  assert.match(csv, /\+998 90 123 45 67/);
-  assert.equal((await fetch(`${BASE}/api/sheet/customers.csv?key=wrong`)).status, 403);
-  assert.equal((await fetch(`${BASE}/api/sheet/customers.csv`)).status, 403);
-});
-
 test('короткие ссылки QR с постеров ведут на отзывы из «Настроек»', async () => {
   for (const [key, host] of [['google', 'google.'], ['yandex', 'yandex.'], ['2gis', '2gis.']]) {
     const r = await fetch(`${BASE}/r/${key}`, { redirect: 'manual' });

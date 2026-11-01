@@ -6,7 +6,7 @@
   const TABS = CONFIG.tabs || { menu: 'Меню', categories: 'Категории', settings: 'Настройки' };
   const CACHE_KEY = 'buddy-menu:data:v2';
   const LANG_KEY = 'buddy-menu:lang';
-  const FALLBACK_AFTER = 2000; // мс ожидания таблицы, после которых показываем запасную копию (если меню нет в HTML)
+  const FALLBACK_AFTER = 2000; // мс ожидания сервера, после которых показываем запасную копию (если меню нет в HTML)
   const STALE_AFTER = 24 * 3600 * 1000; // кэш старше суток помечаем датой
 
   const $ = (s, root = document) => root.querySelector(s);

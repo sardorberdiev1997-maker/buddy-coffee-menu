@@ -70,7 +70,7 @@ export async function createOrder(request, env, ctx) {
   }));
   if (!lines.length) return fail('bad_request');
 
-  // Цены — только из таблицы. Если не совпали с теми, что видел покупатель, перепроверяем свежие данные
+  // Цены — только из меню на сервере. Если не совпали с теми, что видел покупатель, перепроверяем свежие данные
   let p = OC.price(model, lines);
   const sameAsClient = () => !p.missing.length && p.total === +b.total &&
     p.lines.every((l, i) => !b.items[i] || +b.items[i].price === l.price);

@@ -130,25 +130,6 @@
 
   /* ---------- data ---------- */
 
-  function parseCSV(text) {
-    text = String(text).replace(/^﻿/, '');
-    const rows = [];
-    let row = [], field = '', quoted = false;
-    for (let i = 0; i < text.length; i++) {
-      const c = text[i];
-      if (quoted) {
-        if (c === '"') {
-          if (text[i + 1] === '"') { field += '"'; i++; } else quoted = false;
-        } else field += c;
-      } else if (c === '"') quoted = true;
-      else if (c === ',') { row.push(field); field = ''; }
-      else if (c === '\n') { row.push(field); rows.push(row); row = []; field = ''; }
-      else if (c !== '\r') field += c;
-    }
-    if (field !== '' || row.length) { row.push(field); rows.push(row); }
-    return rows;
-  }
-
   function normHeader(h) {
     const key = String(h || '').replace(/\(.*?\)/g, '').trim().toLowerCase().replace(/\s+/g, '_');
     return HEADER_ALIASES[key] || key;
@@ -223,12 +204,6 @@
     return !!tables && has(tables.menu, ['cat', 'uz', 'price']) && has(tables.categories, ['id']) && has(tables.settings, ['key']);
   }
 
-  // CSV вкладки: опубликованная ссылка (работает при закрытом доступе к таблице) или экспорт «всем по ссылке»
-  function sheetCsvUrl(cfg, key) {
-    const gid = encodeURIComponent((cfg.gids || {})[key] || '');
-    if (cfg.pub) return `https://docs.google.com/spreadsheets/d/e/${encodeURIComponent(cfg.pub)}/pub?gid=${gid}&single=true&output=csv`;
-    return `https://docs.google.com/spreadsheets/d/${encodeURIComponent(cfg.sheetId)}/export?format=csv&gid=${gid}`;
-  }
 
   /* ---------- images ---------- */
 
@@ -603,5 +578,5 @@
     });
   }
 
-  root.MenuRender = { SITE, UI, ALLERGENS, crashGuard, sheetCsvUrl, parseCSV, buildModel, validTables, imgSrc, isLocalImg, esc, fmt, norm, safeUrl, createView };
+  root.MenuRender = { SITE, UI, ALLERGENS, crashGuard, buildModel, validTables, imgSrc, isLocalImg, esc, fmt, norm, safeUrl, createView };
 })(typeof window !== 'undefined' ? window : globalThis);

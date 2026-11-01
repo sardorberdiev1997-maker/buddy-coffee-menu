@@ -126,13 +126,6 @@ async function onGroup(env, m) {
       reply_parameters: { message_id: m.message_id, allow_sending_without_reply: true }
     }, { field: 'document', bytes, name: `buddy-coffee-clients-${d}.xlsx`, type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
   }
-  if (name === 'sheet') {
-    // Формула для вкладки «Клиенты» в Google Таблице; /sheet new — новая ссылка, старая перестаёт работать
-    if (!(await admin())) return reply(X.adminOnly);
-    let key = await getKV(env, 'sheet_key');
-    if (!key || cmd[1] === 'new') { key = randomToken(24); await setKV(env, 'sheet_key', key); }
-    return reply(X.sheetHelp(`=IMPORTDATA("${SITE}api/sheet/customers.csv?key=${key}")`));
-  }
   if (name === 'diag') {
     // Диагностика бота с текстами ошибок (без ключа /api/tg/info показывает только флаги); /diag new — новая ссылка
     if (!(await admin())) return reply(X.adminOnly);
@@ -330,7 +323,6 @@ export async function setupBot(env, webhookSecretValue) {
         { command: 'stats', description: isRu ? 'Статистика продаж' : 'Savdo statistikasi' },
         { command: 'orders', description: isRu ? 'Заказы в работе' : 'Jarayondagi buyurtmalar' },
         { command: 'clients', description: isRu ? 'База клиентов (Excel)' : 'Mijozlar bazasi (Excel)' },
-        { command: 'sheet', description: isRu ? 'Клиенты в Google Таблице' : 'Mijozlar Google Jadvalda' },
         { command: 'broadcast', description: isRu ? 'Рассылка: ответьте на сообщение' : 'Xabarnoma: xabarga javob bering' },
         { command: 'stop', description: isRu ? 'Стоп-лист: нет в наличии' : 'Stop-ro‘yxat: tugagan taomlar' },
         { command: 'rush', description: isRu ? 'Час пик: увеличить сроки' : 'Qizg‘in vaqt: muddatni oshirish' },

@@ -6,7 +6,6 @@
 //   BOT_TOKEN  — секрет: токен бота от @BotFather (Settings → Variables and Secrets, тип Secret)
 import { adminRoute, servePhoto } from './admin.js';
 import { handleUpdate, setupBot } from './bot.js';
-import { customersCsv } from './customers.js';
 import { ensureSchema, getKV, setKV } from './db.js';
 import { getContent, tablesFromDoc } from './content.js';
 import { loadModel, OC, R, setting } from './menu.js';
@@ -137,15 +136,6 @@ async function route(request, env, ctx) {
       // Сторож бота (server/health.js) и последние ошибки в браузерах посетителей
       ...details
     }, 200, { 'x-robots-tag': 'noindex' });
-  }
-
-  // Вкладка «Клиенты» в Google Таблице: =IMPORTDATA("…/api/sheet/customers.csv?key=…"). Ключ выдаёт /sheet в группе кафе
-  if (path === '/api/sheet/customers.csv' && method === 'GET') {
-    const key = await getKV(env, 'sheet_key');
-    if (!key || !safeEqual(url.searchParams.get('key'), key)) return fail('forbidden', 403);
-    return new Response(await customersCsv(env, await groupLang(env)), {
-      headers: { 'content-type': 'text/csv; charset=utf-8', 'cache-control': 'no-store', 'x-robots-tag': 'noindex' }
-    });
   }
 
   if (path === '/api/tick') return json(await tick(env));

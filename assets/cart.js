@@ -600,7 +600,7 @@
     if (code === 'price_changed' || code === 'unavailable') {
       cid = '';
       step = 'cart';
-      await app().reload(); // свежие цены и наличие из таблицы
+      await app().reload(); // свежие цены и наличие с сервера
       prune();
       renderCart();
       failed('');
