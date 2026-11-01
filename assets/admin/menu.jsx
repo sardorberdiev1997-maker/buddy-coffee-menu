@@ -265,7 +265,8 @@ export function ItemScreen({ ctx, params }) {
       <Section>
         {/* Раскрывающийся блок по схеме WAI «disclosure»: кнопка с aria-expanded, скрытые поля не остаются в DOM.
             (Accordion из telegram-ui оставляет свёрнутые поля доступными с клавиатуры) */}
-        <ButtonCell before={<Ico e={more ? '▾' : '▸'} />} aria-expanded={more} aria-controls="item-more" onClick={() => setMore(!more)}>{t.details}</ButtonCell>
+        <ButtonCell before={<Ico e="🧾" />} after={<span className={more ? 'chev chev--open' : 'chev'} aria-hidden="true">›</span>}
+          aria-expanded={more} aria-controls="item-more" onClick={() => setMore(!more)}>{t.details}</ButtonCell>
         {more ? (
           <div id="item-more">
             <Field label={t.pairs}><Input value={f.pairs} onChange={(e) => set('pairs', e.target.value)} maxLength={200} placeholder="Kartoshka fri / Mojito" /></Field>

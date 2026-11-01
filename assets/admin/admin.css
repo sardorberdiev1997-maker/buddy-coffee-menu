@@ -86,3 +86,10 @@ body { overscroll-behavior-y: none; -webkit-tap-highlight-color: transparent; fo
 .row__over { position: relative; z-index: 2; }
 .chips > [role=tab]:focus-visible, .chips > [role=button]:focus-visible { outline: 2px solid var(--tg-theme-button-color, #2481cc); outline-offset: 2px; }
 main { display: contents; }
+
+/* Переключатели периодов и т. п.: у telegram-ui поля по 24px — на телефоне 360px «Сегодня» обрезалось до «Сег…» */
+.segs button { padding-left: 4px; padding-right: 4px; }
+/* Стрелка раскрывающегося блока «Подробнее» */
+.chev { display: inline-block; font-size: 22px; line-height: 1; color: var(--tg-theme-hint-color, #8e8e93); transition: transform .2s; }
+.chev--open { transform: rotate(90deg); }
+@media (prefers-reduced-motion: reduce) { .chev { transition: none; } }

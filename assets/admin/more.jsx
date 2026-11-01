@@ -254,7 +254,7 @@ export function PromoScreen({ ctx }) {
           ))}
         </Field>
         <Field label={t.bulkMode}>
-          <SegmentedControl>
+          <SegmentedControl className="segs">
             <SegmentedControl.Item selected={mode === 'percent'} onClick={() => { setMode('percent'); setPlan(null); }}>{t.percent}</SegmentedControl.Item>
             <SegmentedControl.Item selected={mode === 'amount'} onClick={() => { setMode('amount'); setPlan(null); }}>{t.amount}</SegmentedControl.Item>
           </SegmentedControl>
@@ -263,7 +263,7 @@ export function PromoScreen({ ctx }) {
           <Input inputMode="decimal" value={value} placeholder={mode === 'percent' ? '+10' : '+2000'} onChange={(e) => { setValue(e.target.value); setPlan(null); }} />
         </Field>
         <Field label={t.round}>
-          <SegmentedControl>
+          <SegmentedControl className="segs">
             {[100, 500, 1000].map((r) => <SegmentedControl.Item key={r} selected={round === r} onClick={() => { setRound(r); setPlan(null); }}>{fmt(r)}</SegmentedControl.Item>)}
           </SegmentedControl>
         </Field>
@@ -374,7 +374,7 @@ export function StatsScreen({ ctx }) {
   return (
     <List>
       <div className="pad">
-        <SegmentedControl>
+        <SegmentedControl className="segs">
           {Object.entries(t.periods).map(([k, label]) => <SegmentedControl.Item key={k} selected={period === k} onClick={() => setPeriod(k)}>{label}</SegmentedControl.Item>)}
         </SegmentedControl>
       </div>

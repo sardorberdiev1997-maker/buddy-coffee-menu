@@ -52,7 +52,7 @@ function Home({ ctx }) {
       </Section>
       <Section header={t.rush} footer={t.rushSub}>
         <div className="pad">
-          <SegmentedControl>
+          <SegmentedControl className="segs">
             {[0, 15, 30].map((a) => (
               <SegmentedControl.Item key={a} selected={rush === a} onClick={() => act('rush', { add: a })}>{a ? `+${a}` : t.rushOff}</SegmentedControl.Item>
             ))}
@@ -87,7 +87,7 @@ function LangSwitch({ ctx }) {
   return (
     <Section header={ctx.t.lang}>
       <div className="pad">
-        <SegmentedControl>
+        <SegmentedControl className="segs">
           {[['uz', 'O‘zbekcha'], ['ru', 'Русский']].map(([l, label]) => (
             <SegmentedControl.Item key={l} selected={ctx.lang === l} onClick={() => ctx.setLang(l)}>{label}</SegmentedControl.Item>
           ))}
@@ -108,7 +108,7 @@ function StaffHome({ ctx }) {
     <List>
       <Section header={t.rush} footer={t.rushSub}>
         <div className="pad">
-          <SegmentedControl>
+          <SegmentedControl className="segs">
             {[0, 15, 30].map((a) => (
               <SegmentedControl.Item key={a} selected={rush === a} onClick={() => act('rush', { add: a })}>{a ? `+${a}` : t.rushOff}</SegmentedControl.Item>
             ))}
