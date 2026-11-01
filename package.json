@@ -2,19 +2,20 @@
   "name": "buddy-coffee-menu",
   "private": true,
   "type": "module",
-  "description": "QR-меню и заказы Buddy Coffee: статический сайт, данные из Google Таблицы, заказы через Cloudflare Pages + D1 и Telegram-бот",
+  "description": "Онлайн-меню и заказы Buddy Coffee: сайт и панель владельца (Telegram Mini App) на Cloudflare Pages + D1, Telegram-бот",
   "scripts": {
     "build": "node tools/build.mjs",
+    "ci": "node tools/build.mjs && node --no-warnings --test tools/test/*.test.mjs",
     "dev": "node tools/build.mjs && node --no-warnings tools/dev-server.mjs",
     "test": "node --no-warnings --test tools/test/*.test.mjs"
   },
   "devDependencies": {
     "@telegram-apps/telegram-ui": "2.1.13",
-    "esbuild": "0.24.0",
+    "esbuild": "0.28.2",
     "react": "18.3.1",
     "react-dom": "18.3.1"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=22.13"
   }
 }
