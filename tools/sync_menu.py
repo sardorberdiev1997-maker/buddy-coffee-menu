@@ -1,7 +1,8 @@
-"""Копирует меню из Google Таблицы в data/menu.json (запасная копия для сайта).
+"""Копирует меню в data/menu.json (запасная копия для сайта и сборки).
 
+Источник — сервер сайта (/api/menu: меню из панели владельца), до первого запуска панели — Google Таблица.
 Запускается GitHub Action'ом по расписанию; вручную: python3 tools/sync_menu.py
-Если таблица недоступна или её структура сломана — файл не трогается.
+Если источник недоступен или структура сломана — файл не трогается.
 """
 import csv
 import io
@@ -20,6 +21,8 @@ PUB = (re.search(r"pub:\s*'([^']*)'", CONFIG) or [None, ''])[1]
 TABS = {'Меню': 'menu', 'Категории': 'categories', 'Настройки': 'settings'}
 REQUIRED = {'Меню': {'категория', 'название_uz', 'цена'}, 'Категории': {'id'}, 'Настройки': {'ключ'}}
 OUT = os.path.join(ROOT, 'data', 'menu.json')
+API = 'https://buddycoffee.uz/api/menu'
+API_TABS = {'Меню': 'menu', 'Категории': 'categories', 'Настройки': 'settings'}
 
 
 def fetch(tab):
@@ -41,6 +44,20 @@ def fetch(tab):
     return [[c.strip() for c in row] for row in rows]
 
 
+def from_api():
+    req = urllib.request.Request(API, headers={'User-Agent': 'buddy-menu sync'})
+    with urllib.request.urlopen(req, timeout=30) as r:
+        tables = json.load(r)['tables']
+    data = {}
+    for tab, key in API_TABS.items():
+        rows = [[str(c) for c in row] for row in tables[key] if any(str(c).strip() for c in row)]
+        head = {h.strip().lower() for h in rows[0]} if rows else set()
+        if len(rows) < 2 or not REQUIRED[tab] <= head:
+            raise ValueError(f'/api/menu: «{tab}» неожиданной структуры')
+        data[tab] = rows
+    return data
+
+
 def dump(data):
     # Одна строка таблицы — одна строка файла: удобно смотреть diff
     parts = []
@@ -51,14 +68,15 @@ def dump(data):
 
 
 def main():
-    if not SHEET_ID and not PUB:
-        print('нет ни sheetId, ни pub — синхронизировать нечего')
-        return
     try:
-        data = {tab: fetch(tab) for tab in TABS}
-    except Exception as e:  # сеть, доступ, структура — оставляем старую копию
-        print(f'Таблица недоступна, копия не обновлена: {e}', file=sys.stderr)
-        sys.exit(1)
+        data = from_api()
+    except Exception as e:  # сервер недоступен — пробуем таблицу (до запуска панели меню было там)
+        print(f'/api/menu недоступен: {e}', file=sys.stderr)
+        try:
+            data = {tab: fetch(tab) for tab in TABS}
+        except Exception as e2:  # сеть, доступ, структура — оставляем старую копию
+            print(f'Таблица недоступна, копия не обновлена: {e2}', file=sys.stderr)
+            sys.exit(1)
     new = dump(data)
     old = open(OUT, encoding='utf-8').read() if os.path.exists(OUT) else ''
     if new == old:

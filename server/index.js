@@ -4,9 +4,11 @@
 // Нужно в настройках проекта Pages:
 //   DB         — привязка базы D1 (Settings → Bindings → D1 database)
 //   BOT_TOKEN  — секрет: токен бота от @BotFather (Settings → Variables and Secrets, тип Secret)
+import { adminRoute, servePhoto } from './admin.js';
 import { handleUpdate, setupBot } from './bot.js';
 import { customersCsv } from './customers.js';
 import { ensureSchema, getKV, setKV } from './db.js';
+import { getContent, tablesFromDoc } from './content.js';
 import { loadModel, OC, R, setting } from './menu.js';
 import { accepting, cancelBySelf, createOrder, publicOrder } from './orders.js';
 import { checkWebhook, groupChat, groupLang, tg, webhookSecret } from './tg.js';
@@ -33,8 +35,21 @@ async function route(request, env, ctx) {
   const path = url.pathname.replace(/\/+$/, '');
   const method = request.method;
 
+  // Панель владельца (Telegram Mini App /admin): server/admin.js
+  if (path.startsWith('/api/admin/')) return adminRoute(request, env, path, method, sameOrigin);
+
+  // Фото блюд из панели: сайт, бот, рассылка
+  let ph = path.match(/^\/api\/photo\/([a-f0-9]{16})\/(sq|l)$/);
+  if (ph && method === 'GET') return servePhoto(env, ph[1], ph[2]);
+
+  // Меню для сайта, сборки и резервной копии: документ из панели владельца в формате таблиц (assets/render.js)
+  if (path === '/api/menu' && method === 'GET') {
+    const c = await getContent(env);
+    return json({ generated: c.updated_at, version: c.version, tables: tablesFromDoc(c.doc) }, 200, { 'cache-control': 'no-store' });
+  }
+
   if (path === '/api/state' && method === 'GET') {
-    const [model, stop, rush] = await Promise.all([loadModel(env, { ctx }), stopList(env), rushState(env)]);
+    const [model, stop, rush] = await Promise.all([loadModel(env), stopList(env), rushState(env)]);
     return json({ accepting: await accepting(env, model), stop: Object.keys(stop), rush: rush ? { add: rush.add, until: rush.until } : null }, 200, { 'cache-control': 'no-store' });
   }
 
@@ -113,11 +128,11 @@ async function route(request, env, ctx) {
       group: (await getKV(env, 'group')) ? 'bound' : 'not bound',
       setup_open: Date.now() - parseInt((await getKV(env, 'bind_open_at')) || '0', 10) < 30 * 60 * 1000, // открыто ли окно /bind
       last_tick: new Date(parseInt((await getKV(env, 'tick_at')) || '0', 10)).toISOString(),
-      // Автоматика: какие сводки ушли в группу и насколько свежее меню из таблицы в кэше сервера
+      // Автоматика: какие сводки ушли в группу; версия меню из панели и когда его последний раз меняли
       reports: (await env.DB.prepare("SELECT k, v FROM kv WHERE k LIKE 'report:%' ORDER BY CAST(v AS INTEGER) DESC LIMIT 6").all())
         .results.map((x) => `${x.k.slice(7)} → ${new Date(parseInt(x.v, 10)).toISOString()}`),
-      menu_cache_age_s: await env.DB.prepare("SELECT json_extract(v, '$.at') AS at FROM kv WHERE k = 'menu_cache'").first()
-        .then((x) => (x && x.at ? Math.round((Date.now() - x.at) / 1000) : null)),
+      menu_version: await env.DB.prepare('SELECT version, updated_at FROM content WHERE id = 1').first()
+        .then((x) => (x ? `${x.version} · ${new Date(x.updated_at).toISOString()}` : null)),
       rating_requests: await env.DB.prepare('SELECT COUNT(*) AS n FROM ratings WHERE asked_at > 0').first().then((x) => (x ? x.n : 0)),
       // Сторож бота (server/health.js) и последние ошибки в браузерах посетителей
       ...details
@@ -165,7 +180,7 @@ const POINT = {
 async function shortLink(env, ctx, key) {
   let target = '';
   try {
-    const model = await loadModel(env, { ctx });
+    const model = await loadModel(env);
     const cafe = OC.config(model).cafe;
     target = R.safeUrl(setting(model, SHORT[key], 'ru')) || (cafe ? POINT[key](cafe) : '');
   } catch (e) {
@@ -187,10 +202,17 @@ export default {
     if (short && Object.hasOwn(SHORT, short[1])) return shortLink(env, ctx, short[1]);
     if (!url.pathname.startsWith('/api/')) return env.ASSETS.fetch(request);
     if (!env.DB) return fail('server', 503, { detail: 'D1 binding DB is missing' });
+    // Фото из панели не меняются (новое фото — новый id): держим их в кэше Cloudflare, чтобы не читать D1
+    const cache = request.method === 'GET' && url.pathname.startsWith('/api/photo/') && typeof caches !== 'undefined' ? caches.default : null;
+    if (cache) {
+      const hit = await cache.match(request).catch(() => null);
+      if (hit) return hit;
+    }
     try {
       await ensureSchema(env);
       const res = await route(request, env, ctx);
       res.headers.set('x-content-type-options', 'nosniff');
+      if (cache && res.status === 200) ctx.waitUntil(cache.put(request, res.clone()).catch(() => {}));
       return res;
     } catch (e) {
       console.error('api', url.pathname, redact(e && e.stack ? e.stack : e));

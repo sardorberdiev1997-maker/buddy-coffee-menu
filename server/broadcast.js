@@ -13,7 +13,7 @@ const BATCH = 25;
 
 const cb = (text, data) => ({ text, callback_data: data });
 
-function promoKeyboard(lang) {
+export function promoKeyboard(lang) {
   const X = C[lang === 'ru' ? 'ru' : 'uz'];
   return { inline_keyboard: [[{ text: X.menuBtn, web_app: { url: `${SITE}?tg=1&lang=${lang === 'ru' ? 'ru' : 'uz'}` } }], [cb(X.unsub, 'unsub')]] };
 }

@@ -2,6 +2,7 @@
 // Поднимает tools/dev-server.mjs с пустой базой и заглушкой Telegram и проходит весь путь заказа.
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
+import { createHmac } from 'node:crypto';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -60,9 +61,8 @@ before(async () => {
     cwd: ROOT, env: { ...process.env, DEV_DB: path.join(tmp, 'db.sqlite'), BOT_TOKEN: '' }, stdio: ['ignore', 'pipe', 'inherit']
   });
   await new Promise((resolve) => server.stdout.once('data', resolve));
-  // Та же модель меню, что увидит сервер (живая таблица)
-  const get = async (key) => R.parseCSV(await (await fetch(R.sheetCsvUrl(globalThis.MENU_CONFIG, key))).text());
-  model = R.buildModel({ menu: await get('menu'), categories: await get('categories'), settings: await get('settings') });
+  // Та же модель меню, что у сервера (документ из панели владельца, при первом запуске — из data/menu.json)
+  model = R.buildModel((await api('/api/menu')).body.tables);
 });
 
 after(() => {
@@ -526,4 +526,250 @@ test('/forget: данные клиента удаляются по его про
   // Страница политики собрана: значения из «Настроек» подставлены
   const page = await (await fetch(BASE + '/privacy')).text();
   assert.ok(!/\{\{\w+\}\}/.test(page) && /href="tel:\+998/.test(page));
+});
+
+/* ---------- панель владельца (/admin, server/admin.js) ---------- */
+
+const OWNER = { id: 501, first_name: 'Suxrob', language_code: 'ru' };
+const WORKER = { id: 502, first_name: 'Kassir', is_bot: false };
+const STRANGER = { id: 503, first_name: 'Begona', is_bot: false };
+// initData, подписанная токеном бота заглушки (как Telegram подписывает Mini App)
+function initData(user) {
+  const p = new URLSearchParams({ auth_date: String(Math.floor(Date.now() / 1000)), query_id: 'q1', user: JSON.stringify(user) });
+  const check = [...p.entries()].sort(([x], [y]) => (x < y ? -1 : 1)).map(([k, v]) => `${k}=${v}`).join('\n');
+  const secret = createHmac('sha256', 'WebAppData').update('123456:dev-token').digest();
+  p.set('hash', createHmac('sha256', secret).update(check).digest('hex'));
+  return p.toString();
+}
+const adm = (p, user, body) => api(p, {
+  method: body === undefined ? 'GET' : 'POST',
+  headers: { authorization: 'tma ' + initData(user) },
+  ...(body === undefined ? {} : { body: JSON.stringify(body) })
+});
+const member = (id, status) => fetch(BASE + '/__tg/member', { method: 'POST', body: JSON.stringify({ user_id: id, status }) });
+const siteModel = async () => R.buildModel((await api('/api/menu')).body.tables);
+
+test('панель: вход только по подписи Telegram; посторонним — нет; /admin в боте', async () => {
+  await member(STRANGER.id, 'member');
+  await member(WORKER.id, 'member');
+  assert.equal((await api('/api/admin/state')).status, 401, 'без подписи');
+  const forged = initData(OWNER).replace(/hash=\w+/, 'hash=' + '0'.repeat(64));
+  assert.equal((await api('/api/admin/state', { headers: { authorization: 'tma ' + forged } })).status, 401, 'поддельная подпись');
+  assert.equal((await adm('/api/admin/state', STRANGER)).status, 403, 'не администратор группы');
+  const st = await adm('/api/admin/state', OWNER);
+  assert.equal(st.status, 200);
+  assert.equal(st.body.me.role, 'owner');
+  assert.ok(st.body.doc.items.length > 10 && st.body.doc.items[0].variants.length);
+  let t0 = await mark();
+  await privateMsg('/admin', OWNER);
+  assert.ok((await tgCalls(t0)).some((c) => c.body.chat_id === OWNER.id && JSON.stringify(c.body.reply_markup || {}).includes('admin?tg=1')), 'кнопка панели');
+  t0 = await mark();
+  await privateMsg('/admin', STRANGER);
+  assert.ok(!(await tgCalls(t0)).some((c) => JSON.stringify(c.body.reply_markup || {}).includes('admin?tg=1')), 'постороннему — без кнопки');
+});
+
+test('панель: сотрудник по приглашению — только стоп-лист и час пик, владелец его убирает', async () => {
+  const inv = await adm('/api/admin/staff/invite', OWNER, {});
+  const token = inv.body.link.match(/start=staff_(\w+)/)[1];
+  let t0 = await mark();
+  await privateMsg('/start staff_' + token, WORKER);
+  const calls = await tgCalls(t0);
+  assert.ok(calls.some((c) => c.body.chat_id === WORKER.id && JSON.stringify(c.body.reply_markup || {}).includes('admin?tg=1')), 'сотруднику — кнопка панели');
+  assert.ok(calls.some((c) => String(c.body.chat_id) === String(GROUP) && /👤/.test(c.body.text || '')), 'группе сообщили о новом сотруднике');
+  t0 = await mark();
+  await privateMsg('/start staff_' + token, STRANGER);
+  assert.ok(!(await tgCalls(t0)).some((c) => JSON.stringify(c.body.reply_markup || {}).includes('admin?tg=1')), 'ссылка одноразовая');
+
+  const st = await adm('/api/admin/state', WORKER);
+  assert.equal(st.body.me.role, 'staff');
+  assert.equal(st.body.doc.items[0].variants, undefined, 'цен сотрудник не видит');
+  const key = st.body.doc.items[0].key;
+  const on = await adm('/api/admin/stop', WORKER, { key, on: true });
+  assert.ok(on.body.live.stop[key]);
+  assert.ok((await api('/api/state')).body.stop.includes(key), 'сайт видит «нет сегодня»');
+  await adm('/api/admin/stop', WORKER, { key, on: false });
+  assert.equal((await adm('/api/admin/rush', WORKER, { add: 15 })).body.live.rush.add, 15);
+  await adm('/api/admin/rush', WORKER, { add: 0 });
+  assert.equal((await adm('/api/admin/item', WORKER, { uz: 'X' })).status, 403, 'меню сотруднику не править');
+  assert.equal((await adm('/api/admin/settings', WORKER, { values: {} })).status, 403);
+
+  const list = await adm('/api/admin/staff', OWNER);
+  assert.ok(list.body.staff.some((x) => x.id === WORKER.id) && list.body.owners.length);
+  await adm('/api/admin/staff/remove', OWNER, { id: WORKER.id });
+  assert.equal((await adm('/api/admin/state', WORKER)).status, 403, 'убранный сотрудник больше не входит');
+});
+
+test('панель: раздел «Пицца» и блюдо с двумя размерами — на сайте и в заказе; проверки; отмена', async () => {
+  const cat = await adm('/api/admin/cat', OWNER, { uz: 'Pitsa', ru: 'Пицца', icon: '🍕' });
+  assert.equal(cat.status, 200, JSON.stringify(cat.body));
+  const pizza = cat.body.doc.cats.find((c) => c.ru === 'Пицца');
+  assert.equal(pizza.id, 'pitsa');
+  const bad = (b) => adm('/api/admin/item', OWNER, b).then((r) => r.status);
+  assert.equal(await bad({ cat: pizza.id, ru: 'Без цены', variants: [{ price: 'abc' }] }), 400);
+  assert.equal(await bad({ cat: 'nope', ru: 'Без раздела', variants: [{ price: 1000 }] }), 400);
+  assert.equal(await bad({ cat: pizza.id, variants: [{ price: 1000 }] }), 400, 'без названия');
+  assert.equal(await bad({ cat: pizza.id, ru: 'Два размера', variants: [{ price: 1000 }, { price: 2000 }] }), 400, 'размеры без подписей');
+
+  const it = await adm('/api/admin/item', OWNER, {
+    cat: pizza.id, uz: 'Margarita', ru: 'Маргарита', badge: 'новинка', desc_ru: 'Томаты, моцарелла, базилик',
+    variants: [{ size_uz: '25 sm', size_ru: '25 см', price: '55 000', weight: '450 g' }, { size_uz: '30 sm', size_ru: '30 см', price: 75000, old: 80000, weight: '650 g' }]
+  });
+  assert.equal(it.status, 200, JSON.stringify(it.body));
+  const item = it.body.doc.items.find((x) => x.ru === 'Маргарита');
+  assert.equal(item.key, 'pitsa-margarita');
+  let m = (await siteModel()).items.find((x) => x.key === item.key);
+  assert.deepEqual(m.prices, [55000, 75000]);
+  assert.equal(m.old[1], 80000);
+  assert.equal(m.badge, 'new');
+  assert.ok((await siteModel()).cats.some((c) => c.id === 'pitsa'), 'раздел на сайте');
+
+  // Заказать новое блюдо можно сразу
+  const order = await api('/api/orders', { method: 'POST', body: JSON.stringify(orderBody({ items: [{ key: item.key, size: 1, qty: 1, note: '', price: 75000 }], total: 75000 })) });
+  assert.equal(order.status, 201, JSON.stringify(order.body));
+
+  // Переименование ключ не меняет; устаревшая версия формы — 409
+  const ren = await adm('/api/admin/item', OWNER, { ...item, ru: 'Пицца Маргарита' });
+  assert.equal(ren.status, 200);
+  assert.equal(ren.body.doc.items.find((x) => x.key === item.key).ru, 'Пицца Маргарита');
+  assert.equal((await adm('/api/admin/item', OWNER, { ...item, ru: 'Старая форма' })).status, 409);
+
+  // Отмена переименования из журнала
+  const h = await adm('/api/admin/history', OWNER);
+  const renamed = h.body.items.find((x) => x.kind === 'item' && x.title === 'Пицца Маргарита');
+  const undo = await adm('/api/admin/undo', OWNER, { id: renamed.id });
+  assert.equal(undo.status, 200);
+  assert.equal(undo.body.doc.items.find((x) => x.key === item.key).ru, 'Маргарита');
+
+  // «Нет надолго» и обратно
+  const cur = undo.body.doc.items.find((x) => x.key === item.key);
+  await adm('/api/admin/item/avail', OWNER, { key: item.key, avail: false });
+  assert.equal((await siteModel()).items.find((x) => x.key === item.key).avail, false);
+  await adm('/api/admin/item/avail', OWNER, { key: item.key, avail: true });
+
+  // Порядок разделов: «Пицца» первой
+  const ids = undo.body.doc.cats.map((c) => c.id);
+  const ord = await adm('/api/admin/order', OWNER, { kind: 'cats', keys: ['pitsa', ...ids.filter((x) => x !== 'pitsa')] });
+  assert.equal(ord.body.doc.cats[0].id, 'pitsa');
+  assert.equal((await siteModel()).cats[0].id, 'pitsa');
+
+  // Раздел с блюдами не удалить; после удаления блюда — можно
+  assert.equal((await adm('/api/admin/cat/delete', OWNER, { id: 'pitsa' })).status, 409);
+  const fresh = (await adm('/api/admin/state', OWNER)).body.doc.items.find((x) => x.key === item.key);
+  assert.equal((await adm('/api/admin/item/delete', OWNER, { key: item.key, rev: fresh.rev })).status, 200);
+  assert.equal((await adm('/api/admin/cat/delete', OWNER, { id: 'pitsa' })).status, 200);
+  assert.ok(!(await siteModel()).items.some((x) => x.key === item.key));
+  assert.ok(cur);
+});
+
+test('панель: информация о кафе, описание бота, приём заказов, «Сегодня закрыты», особые часы', async () => {
+  const badPhone = await adm('/api/admin/settings', OWNER, { values: { 'телефон': 'позвоните', 'wifi_пароль': 'x' } });
+  assert.equal(badPhone.status, 400);
+  assert.equal(badPhone.body.error, 'setting:телефон');
+  assert.equal((await adm('/api/admin/settings', OWNER, { values: { instagram: 'javascript:alert(1)' } })).status, 400, 'только https-ссылки');
+  let t0 = await mark();
+  const ok = await adm('/api/admin/settings', OWNER, { values: {
+    'часы_работы': { uz: '08:00–23:00', ru: '08:00–23:00' }, 'wifi_пароль': 'coffee2027', 'координаты': '39.0537, 66.8488',
+    'описание_бота': { uz: 'Buddy Coffee: menyu va yetkazib berish', ru: 'Buddy Coffee: меню и доставка' }
+  } });
+  assert.equal(ok.status, 200, JSON.stringify(ok.body));
+  let s = (await siteModel()).settings;
+  assert.equal(s['wifi_пароль'].ru, 'coffee2027');
+  assert.equal(s['координаты'].uz, '39.053700, 66.848800');
+  assert.ok((await tgCalls(t0)).some((c) => c.method === 'setMyShortDescription' && /меню и доставка/.test(c.body.short_description || '')), 'описание бота обновлено в Telegram');
+
+  // Пауза приёма заказов
+  await adm('/api/admin/paused', OWNER, { on: true });
+  assert.equal((await api('/api/state')).body.accepting, false);
+  await adm('/api/admin/paused', OWNER, { on: false });
+  assert.equal((await api('/api/state')).body.accepting, true);
+
+  // «Сегодня закрыты» — заказать нельзя, на сайте объявление; потом открываемся
+  const closed = await adm('/api/admin/closed', OWNER, { on: true });
+  assert.equal(closed.body.live.closed, true);
+  assert.equal((await api('/api/state')).body.accepting, false);
+  assert.match((await siteModel()).settings['объявление'].ru, /закрыты/);
+  const r = await api('/api/orders', { method: 'POST', body: JSON.stringify(orderBody()) });
+  assert.equal(r.status, 503);
+  await adm('/api/admin/closed', OWNER, { on: false });
+  assert.equal((await api('/api/state')).body.accepting, true);
+
+  // Особые часы на сегодня и объявление до даты
+  const today = new Date(Date.now() + 5 * 3600000).toISOString().slice(0, 10);
+  const sch = await adm('/api/admin/schedule', OWNER, { noticeUntil: today, special: [{ date: today, uz: '10:00–18:00', ru: '10:00–18:00' }] });
+  assert.equal(sch.status, 200, JSON.stringify(sch.body));
+  assert.equal((await siteModel()).settings['часы_работы'].ru, 'Сегодня: 10:00–18:00');
+  assert.equal((await adm('/api/admin/schedule', OWNER, { noticeUntil: '2020-01-01' })).status, 400, 'дата в прошлом');
+  await adm('/api/admin/schedule', OWNER, { noticeUntil: '', special: [] });
+  assert.equal((await siteModel()).settings['часы_работы'].ru, '08:00–23:00');
+});
+
+test('панель: «Блюдо дня», массовое изменение цен с предпросмотром и отменой одной кнопкой', async () => {
+  const st = (await adm('/api/admin/state', OWNER)).body;
+  const cat = st.doc.cats.find((c) => st.doc.items.filter((x) => x.cat === c.id).length >= 2);
+  const items = st.doc.items.filter((x) => x.cat === cat.id);
+  const day = await adm('/api/admin/promo', OWNER, { day: items[1].key });
+  assert.equal(day.status, 200);
+  let m = await siteModel();
+  assert.equal(m.items.find((x) => x.key === items[1].key).badge, 'day');
+  assert.equal(m.items.filter((x) => x.cat === cat.id)[0].key, items[1].key, 'первым в разделе');
+  await adm('/api/admin/promo', OWNER, { day: null });
+
+  const preview = await adm('/api/admin/bulk', OWNER, { cats: [cat.id], mode: 'percent', value: 10, round: 1000 });
+  assert.equal(preview.status, 200);
+  assert.equal(preview.body.items.length, items.length);
+  const p0 = preview.body.items[0];
+  assert.equal(p0.after[0], Math.round(p0.before[0] * 1.1 / 1000) * 1000);
+  assert.deepEqual((await siteModel()).items.find((x) => x.key === p0.key).prices, p0.before, 'предпросмотр ничего не меняет');
+  const applied = await adm('/api/admin/bulk', OWNER, { cats: [cat.id], mode: 'percent', value: 10, round: 1000, apply: true });
+  assert.equal(applied.status, 200);
+  assert.deepEqual((await siteModel()).items.find((x) => x.key === p0.key).prices, p0.after);
+  const undone = await adm('/api/admin/undo', OWNER, { id: applied.body.change });
+  assert.equal(undone.status, 200);
+  assert.deepEqual((await siteModel()).items.find((x) => x.key === p0.key).prices, p0.before, 'одна отмена возвращает все цены');
+});
+
+test('панель: фото — загрузка, проверка формата, отдача с кэшем на год', async () => {
+  const jpeg = (n) => new Blob([new Uint8Array([0xff, 0xd8, 0xff, 0xe0, ...new Array(n).fill(7)])], { type: 'image/jpeg' });
+  const send = (sq, l) => {
+    const fd = new FormData();
+    fd.append('sq', sq, 'sq.jpg');
+    fd.append('l', l, 'l.jpg');
+    return fetch(BASE + '/api/admin/photo', { method: 'POST', headers: { authorization: 'tma ' + initData(OWNER) }, body: fd }).then(async (r) => ({ status: r.status, body: await r.json() }));
+  };
+  assert.equal((await send(new Blob(['<svg/>'], { type: 'image/svg+xml' }), jpeg(10))).status, 400, 'только JPEG/WebP');
+  const up = await send(jpeg(100), jpeg(200));
+  assert.equal(up.status, 200);
+  assert.match(up.body.img, /^up_[a-f0-9]{16}$/);
+  const res = await fetch(`${BASE}/api/photo/${up.body.img.slice(3)}/l`);
+  assert.equal(res.status, 200);
+  assert.equal(res.headers.get('content-type'), 'image/jpeg');
+  assert.match(res.headers.get('cache-control'), /immutable/);
+  assert.equal((await res.arrayBuffer()).byteLength, 204);
+
+  const st = (await adm('/api/admin/state', OWNER)).body;
+  const it = st.doc.items[0];
+  const saved = await adm('/api/admin/item', OWNER, { ...it, img: up.body.img });
+  assert.equal(saved.status, 200);
+  const html = R.createView(await siteModel(), 'uz').menuHTML();
+  assert.ok(html.includes(`/api/photo/${up.body.img.slice(3)}/sq`), 'на сайте — фото из панели');
+  await adm('/api/admin/undo', OWNER, { id: saved.body.change });
+});
+
+test('панель: рассылка — пробное себе, затем подписчикам; статистика', async () => {
+  let t0 = await mark();
+  const draft = await adm('/api/admin/broadcast/test', OWNER, { text: 'Скидка 20% на пиццу <только сегодня>!' });
+  assert.equal(draft.status, 200, JSON.stringify(draft.body));
+  const test0 = (await tgCalls(t0)).find((c) => c.method === 'sendMessage' && c.body.chat_id === OWNER.id);
+  assert.ok(test0 && test0.body.text.includes('&lt;только сегодня&gt;'), 'пробное — автору, текст экранирован');
+  assert.ok(draft.body.counts.all >= 1);
+  t0 = await mark();
+  const sent = await adm('/api/admin/broadcast/send', OWNER, { id: draft.body.id, audience: 'all' });
+  assert.equal(sent.status, 200, JSON.stringify(sent.body));
+  const copies = (await tgCalls(t0)).filter((c) => c.method === 'copyMessage' && c.body.from_chat_id === OWNER.id);
+  assert.ok(copies.length >= 1, 'подписчикам — копия пробного сообщения');
+  assert.equal((await adm('/api/admin/broadcast/send', OWNER, { id: draft.body.id, audience: 'all' })).status, 409, 'дважды не отправить');
+
+  const stats = await adm('/api/admin/stats?period=month', OWNER);
+  assert.equal(stats.status, 200);
+  assert.ok(stats.body.n >= 1 && 'revenue' in stats.body && 'prev' in stats.body && stats.body.funnel);
 });

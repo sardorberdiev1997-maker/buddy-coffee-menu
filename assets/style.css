@@ -587,6 +587,10 @@ a.pill--ghost:active { background: rgb(0 0 0 / .3); }
 .badge--spicy { background: #C2410C; }
 .badge--new { background: #15803D; }
 .badge--recommend { background: #1B1612; color: var(--yellow); }
+.badge--day { background: var(--yellow); color: var(--on-yellow); }
+/* Старая цена до скидки (панель владельца: «Акции») */
+.price__old { font-size: .82em; font-weight: 600; text-decoration: line-through; text-decoration-thickness: 1.5px; }
+.variant .price__old { display: block; }
 .item__media .badge,
 .pop .badge { position: absolute; top: -6px; left: -6px; z-index: 2; box-shadow: 0 2px 6px rgb(0 0 0 / .2); pointer-events: none; }
 

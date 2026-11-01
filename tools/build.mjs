@@ -31,7 +31,15 @@ vm.runInContext(read('assets/render.js'), sandbox);
 const R = sandbox.MenuRender;
 const TABS = sandbox.MENU_CONFIG.tabs;
 
-// Данные: сначала свежие из Google Таблицы, при сбое — запасная копия data/menu.json
+// Данные: меню с сервера (панель владельца, server/content.js), до первого запуска панели — из Google Таблицы,
+// при сбое — запасная копия data/menu.json
+async function fromApi() {
+  const res = await fetch(new URL('api/menu', R.SITE), { signal: AbortSignal.timeout(15000) });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const d = await res.json();
+  if (!R.validTables(d.tables)) throw new Error('неожиданная структура меню');
+  return d.tables;
+}
 async function fromSheet() {
   const { sheetId, pub, gids } = sandbox.MENU_CONFIG;
   if ((!sheetId && !pub) || !gids) throw new Error('нет sheetId/gids');
@@ -45,14 +53,21 @@ async function fromSheet() {
   return t;
 }
 let tables;
-try {
-  tables = await fromSheet();
-  console.log('Данные: Google Таблица');
-} catch (e) {
+const sources = process.env.MENU_SOURCE === 'file' ? [] : [['сервер /api/menu', fromApi], ['Google Таблица', fromSheet]];
+for (const [name, load] of sources) {
+  try {
+    tables = await load();
+    console.log(`Данные: ${name}`);
+    break;
+  } catch (e) {
+    console.log(`Данные: ${name} недоступен (${e.message})`);
+  }
+}
+if (!tables) {
   const data = JSON.parse(read('data/menu.json'));
   tables = { menu: data[TABS.menu], categories: data[TABS.categories], settings: data[TABS.settings] };
   if (!R.validTables(tables)) throw new Error('data/menu.json: неожиданная структура');
-  console.log(`Данные: data/menu.json (таблица недоступна: ${e.message})`);
+  console.log('Данные: data/menu.json');
 }
 const model = R.buildModel(tables);
 const view = R.createView(model, 'uz');

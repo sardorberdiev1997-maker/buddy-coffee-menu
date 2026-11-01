@@ -1,4 +1,4 @@
-name: Sync menu backup from Google Sheet
+name: Sync menu backup
 
 on:
   # Не на ровных минутах: у GitHub в начале часа пиковая нагрузка и запуски теряются
@@ -21,7 +21,7 @@ jobs:
       # Закреплено по SHA коммита, а не по тегу: тег можно тихо перевесить на чужой код (атаки 2025–2026 на Actions).
       # Обновлять вручную: SHA тега — gh api repos/actions/checkout/git/ref/tags/<версия>
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: Fetch sheet into data/menu.json
+      - name: Fetch menu into data/menu.json
         run: python3 tools/sync_menu.py
       - name: Commit if changed
         run: |
@@ -29,5 +29,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add data/menu.json
-          git commit -m "Sync menu backup from Google Sheet"
+          git commit -m "Sync menu backup"
           git push

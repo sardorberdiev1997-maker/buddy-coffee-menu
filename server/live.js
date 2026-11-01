@@ -39,6 +39,15 @@ export const withStop = (model, stop) => (Object.keys(stop).length
   ? { ...model, items: model.items.map((it) => (stop[it.key] ? { ...it, avail: false } : it)) }
   : model);
 
+// Из панели владельца: явно «нет сегодня» / «снова есть»
+export async function setStop(env, key, on, by, now = Date.now()) {
+  const all = await stopList(env, now);
+  if (on) all[key] = { until: nextMorning(now), by };
+  else delete all[key];
+  await setKV(env, 'stoplist', JSON.stringify(all));
+  return all;
+}
+
 export async function toggleStop(env, key, by, now = Date.now()) {
   const all = await stopList(env, now);
   if (all[key]) delete all[key];

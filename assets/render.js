@@ -14,7 +14,7 @@
       contacts: 'Biz bilan bog‘lanish', address: 'Manzil', hours: 'Ish vaqti', phone: 'Telefon',
       delivery: 'Yetkazib berish', payment: 'To‘lov', wifi: 'Wi‑Fi', password: 'parol',
       copy: 'Nusxa olish', copied: 'Nusxalandi', call: 'Qo‘ng‘iroq qilish', map: 'Xaritada',
-      pricesNote: 'Barcha narxlar so‘mda.',
+      pricesNote: 'Barcha narxlar so‘mda.', was: 'oldin',
       privacy: 'Tashriflar statistikasi — Yandex Metrika (cookie-fayllar bilan, ism, telefon va manzilsiz). Ism va telefon kafening mijozlar bazasida buyurtmalar, aksiya va chegirmalar uchun 3 yil saqlanadi; manzil va izoh 90 kundan keyin o‘chiriladi. Xabarnomadan botda chiqish mumkin, ma’lumotlarni o‘chirish — kafega qo‘ng‘iroq orqali.',
       privacyLink: 'Maxfiylik siyosati',
       error: 'Menyuni yuklab bo‘lmadi. Internetni tekshirib, qayta urinib ko‘ring.',
@@ -38,7 +38,7 @@
       contacts: 'Контакты', address: 'Адрес', hours: 'Часы работы', phone: 'Телефон',
       delivery: 'Доставка', payment: 'Оплата', wifi: 'Wi‑Fi', password: 'пароль',
       copy: 'Копировать', copied: 'Скопировано', call: 'Позвонить', map: 'На карте',
-      pricesNote: 'Все цены указаны в сумах.',
+      pricesNote: 'Все цены указаны в сумах.', was: 'было',
       privacy: 'Статистика посещений — Яндекс Метрика (с cookie, без имени, телефона и адреса). Имя и телефон хранятся в базе клиентов кафе 3 года — для заказов, акций и скидок; адрес и комментарий удаляются через 90 дней. От рассылки можно отписаться в боте, удалить данные — по звонку в кафе.',
       privacyLink: 'Политика конфиденциальности',
       error: 'Не удалось загрузить меню. Проверьте интернет и попробуйте ещё раз.',
@@ -60,19 +60,21 @@
     hit: { uz: 'Hit', ru: 'Хит' },
     new: { uz: 'Yangi', ru: 'Новинка' },
     spicy: { uz: 'Achchiq', ru: 'Острое' },
-    recommend: { uz: 'Tavsiya', ru: 'Советуем' }
+    recommend: { uz: 'Tavsiya', ru: 'Советуем' },
+    day: { uz: 'Kun taomi', ru: 'Блюдо дня' }
   };
   const BADGE_ALIASES = {
     'хит': 'hit', 'hit': 'hit',
     'новинка': 'new', 'новое': 'new', 'yangi': 'new', 'new': 'new',
     'острое': 'spicy', 'острый': 'spicy', 'achchiq': 'spicy', 'spicy': 'spicy',
-    'советуем': 'recommend', 'рекомендуем': 'recommend', 'tavsiya': 'recommend', 'recommend': 'recommend'
+    'советуем': 'recommend', 'рекомендуем': 'recommend', 'tavsiya': 'recommend', 'recommend': 'recommend',
+    'блюдо дня': 'day', 'kun taomi': 'day', 'day': 'day'
   };
 
   // Колонки таблицы → внутренние ключи
   const HEADER_ALIASES = {
     'категория': 'cat', 'название_uz': 'uz', 'название_ru': 'ru', 'описание_uz': 'desc_uz', 'описание_ru': 'desc_ru',
-    'цена': 'price', 'размеры_uz': 'sizes_uz', 'размеры_ru': 'sizes_ru', 'фото': 'img', 'метка': 'badge',
+    'цена': 'price', 'старая_цена': 'old', 'размеры_uz': 'sizes_uz', 'размеры_ru': 'sizes_ru', 'фото': 'img', 'метка': 'badge',
     'в_наличии': 'avail', 'с_этим_берут': 'pairs', 'вес': 'weight', 'выход': 'weight', 'объём': 'weight', 'объем': 'weight',
     'ккал': 'kcal', 'калории': 'kcal', 'белки': 'protein', 'жиры': 'fat', 'углеводы': 'carbs', 'аллергены': 'allergens',
     'иконка': 'icon', 'ключ': 'key', 'значение_uz': 'uz', 'значение_ru': 'ru'
@@ -184,6 +186,8 @@
         desc_uz: r.desc_uz || r.desc_ru || '',
         desc_ru: r.desc_ru || r.desc_uz || '',
         prices: toPrices(r.price),
+        // Старая цена (зачёркнута рядом с новой) — по позиции размера, 0 — без скидки
+        old: String(r.old || '').split('/').map((x) => parseInt(x.replace(/\D/g, ''), 10) || 0),
         sizes_uz: splitList(r.sizes_uz),
         sizes_ru: splitList(r.sizes_ru),
         weight: r.weight || '',
@@ -195,10 +199,12 @@
         avail: !NOT_AVAILABLE.test(r.avail || '')
       }));
 
-    // Ключ для корзины: не зависит от порядка строк в таблице
+    // Ключ для корзины и стоп-листа: колонка «ключ» (панель владельца хранит его при переименовании),
+    // без неё — из раздела и названия. Не зависит от порядка строк
     const seen = {};
-    items.forEach((it) => {
-      const base = slug(it.cat + '-' + it.uz);
+    const rows = toObjects(tables.menu).filter((r) => r.uz || r.ru);
+    items.forEach((it, i) => {
+      const base = slug(rows[i].key || it.cat + '-' + it.uz);
       seen[base] = (seen[base] || 0) + 1;
       it.key = seen[base] > 1 ? `${base}-${seen[base]}` : base;
     });
@@ -226,12 +232,16 @@
 
   /* ---------- images ---------- */
 
-  const isLocalImg = (v) => /^[\w-]+$/.test(v);
+  // Фото, загруженное из панели владельца: up_<id>, хранится на сервере (server/admin.js)
+  const UPLOADED = /^up_([A-Za-z0-9]{8,32})$/;
+  const isLocalImg = (v) => /^[\w-]+$/.test(v) && !UPLOADED.test(v);
 
-  // Имя файла из папки img, прямая ссылка или ссылка на файл Google Диска с доступом по ссылке
+  // Имя файла из папки img, фото из панели, прямая ссылка или ссылка на файл Google Диска с доступом по ссылке
   function imgSrc(it, size) {
     const v = it.img;
     if (!v) return '';
+    const up = v.match(UPLOADED);
+    if (up) return `/api/photo/${up[1]}/${size === 'l' ? 'l' : 'sq'}`;
     const drive = v.match(/drive\.google\.com\/(?:file\/d\/|open\?id=|uc\?(?:export=\w+&)?id=)([\w-]+)/);
     if (drive) return `https://lh3.googleusercontent.com/d/${drive[1]}=w${size === 'l' ? 960 : 360}`;
     if (/^https?:\/\//i.test(v)) return safeUrl(v);
@@ -344,9 +354,13 @@
       </section>`;
     }
 
+    // Старая цена до скидки: зачёркнута, для экранных дикторов — «было»
+    const oldHTML = (it, i) => (it.old && it.old[i] > it.prices[i]
+      ? `<s class="price__old"><span class="sr-only">${esc(t('was'))} </span>${fmt(it.old[i])}</s> ` : '');
+
     function pricesHTML(it) {
       if (!it.avail) return `<span class="price price--out">${esc(t('out'))}</span>`;
-      if (it.prices.length === 1) return `<span class="price">${fmt(it.prices[0])} <small>${esc(t('currency'))}</small></span>`;
+      if (it.prices.length === 1) return `<span class="price">${oldHTML(it, 0)}${fmt(it.prices[0])} <small>${esc(t('currency'))}</small></span>`;
       return '';
     }
 
@@ -357,7 +371,7 @@
       const w = weightsOf(it);
       const ws = w.length === it.prices.length ? w : [];
       return `<div class="variants">${it.prices.map((p, i) =>
-        `<span class="variant">${sizes[i] ? `<small>${esc(sizes[i])}</small>` : ''}<b>${fmt(p)}<span class="sr-only"> ${esc(t('currency'))}</span></b>${ws[i] ? `<small class="variant__w">${esc(ws[i])}</small>` : ''}</span>`).join('')}</div>`;
+        `<span class="variant">${sizes[i] ? `<small>${esc(sizes[i])}</small>` : ''}${oldHTML(it, i)}<b>${fmt(p)}<span class="sr-only"> ${esc(t('currency'))}</span></b>${ws[i] ? `<small class="variant__w">${esc(ws[i])}</small>` : ''}</span>`).join('')}</div>`;
     }
 
     const OC = root.OrderCore;

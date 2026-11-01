@@ -91,7 +91,7 @@ export async function tick(env, now = Date.now()) {
     await cleanClientErrors(env, now);
     await env.DB.prepare("DELETE FROM kv WHERE k >= 'ev:' AND k < ?").bind(`ev:${dayKey(now - 400 * DAY)}`).run(); // воронка — больше года не нужна
   }
-  // Держим кэш меню в D1 свежим — покупателям не приходится ждать Google Таблицу
-  await loadModel(env, { fresh: true }).catch((e) => console.warn('tick: menu', e.message));
+  // Прогрев меню: в первый запуск после выкладки документ создаётся из Google Таблицы (server/content.js)
+  await loadModel(env).catch((e) => console.warn('tick: menu', e.message));
   return done;
 }

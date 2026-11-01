@@ -61,20 +61,11 @@
     }
   }
 
-  // export?format=csv отдаёт значения как в ячейках; gviz угадывает типы колонок и может обнулить «чужие» ячейки
-  async function loadSheet() {
-    if (!CONFIG.sheetId && !CONFIG.pub) throw new Error('sheetId is empty');
-    const base = `https://docs.google.com/spreadsheets/d/${encodeURIComponent(CONFIG.sheetId)}`;
-    const gids = CONFIG.gids || {};
-    const url = (key) => (gids[key]
-      ? R.sheetCsvUrl(CONFIG, key)
-      : `${base}/gviz/tq?tqx=out:csv&headers=1&sheet=${encodeURIComponent(TABS[key])}`);
-    const [menu, categories, settings] = await Promise.all(
-      ['menu', 'categories', 'settings'].map((k) => fetchText(url(k), 12000).then(R.parseCSV))
-    );
-    const tables = { menu, categories, settings };
-    if (!R.validTables(tables)) throw new Error('Unexpected sheet structure');
-    return tables;
+  // Свежее меню с сервера: документ из панели владельца в формате таблиц (server/content.js)
+  async function loadMenu() {
+    const d = JSON.parse(await fetchText('/api/menu', 12000));
+    if (!d || !R.validTables(d.tables)) throw new Error('Unexpected menu structure');
+    return d.tables;
   }
 
   async function loadFallback() {
@@ -567,13 +558,13 @@
     }
     document.documentElement.classList.remove('is-booting');
 
-    // 2. Свежие данные из Google Таблицы
-    const sheet = loadSheet().catch((e) => {
-      if (CONFIG.sheetId) console.warn('[menu] Google Sheet:', e.message);
+    // 2. Свежие данные с сервера
+    const sheet = loadMenu().catch((e) => {
+      console.warn('[menu] /api/menu:', e.message);
       return null;
     });
 
-    // Меню нет ни в HTML, ни в кэше: ждём таблицу недолго, потом показываем запасную копию
+    // Меню нет ни в HTML, ни в кэше: ждём сервер недолго, потом показываем запасную копию
     if (!model) {
       const first = await Promise.race([sheet, delay(FALLBACK_AFTER).then(() => 'slow')]);
       if (first && first !== 'slow') apply(first);
@@ -611,8 +602,8 @@
     setLang,
     setStop,
     track,
-    // После «цены обновились» — перечитать таблицу сразу
-    reload: () => loadSheet().then((tables) => { if (tables) apply(tables); }).catch(() => {})
+    // После «цены обновились» — перечитать меню сразу
+    reload: () => loadMenu().then((tables) => { if (tables) apply(tables); }).catch(() => {})
   };
 
   init();

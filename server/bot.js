@@ -1,5 +1,7 @@
 // Вебхук Telegram: команды и кнопки в группе кафе, личные сообщения покупателей.
+import { acceptInvite, botDescription, panelRole } from './admin.js';
 import { onBroadcastButton, setSubscribed, startDraft } from './broadcast.js';
+import { getContent } from './content.js';
 import { customersXlsx, forgetCustomer, touchBotUser } from './customers.js';
 import { getKV, orderById, orderByToken, parseOrder, setKV } from './db.js';
 import { cafeInfo, loadModel, OC } from './menu.js';
@@ -93,6 +95,10 @@ async function onGroup(env, m) {
   if (name === 'rush') {
     const v = rushView(await rushState(env), L);
     return reply(v.text, { reply_markup: v.reply_markup });
+  }
+  // Панель управления открывается в личке с ботом (web_app-кнопки в группах Telegram не разрешает)
+  if (name === 'admin') {
+    return reply(X.adminHint, { reply_markup: { inline_keyboard: [[{ text: X.adminOpen, url: `https://t.me/${BOT}?start=admin` }]] } });
   }
   if (name === 'pause' || name === 'resume') {
     if (!(await admin())) return reply(X.adminOnly);
@@ -260,6 +266,20 @@ async function onPrivate(env, m) {
     return send(env, m.chat.id, cmd[0] === 'subscribe' ? X.subbed : X.unsubbed);
   }
 
+  // Панель управления (server/admin.js): /admin или /start admin; сотрудник — по приглашению /start staff_<токен>
+  const panel = { inline_keyboard: [[{ text: X.panelBtn, web_app: { url: `${SITE}admin?tg=1&lang=${L}` } }]] };
+  if (cmd && cmd[0] === 'start' && /^staff_/.test(cmd[1])) {
+    const inv = await acceptInvite(env, cmd[1].slice(6), m.from);
+    if (!inv) return send(env, m.chat.id, X.inviteBad);
+    const group = await groupChat(env);
+    if (group) await send(env, group, T[await groupLang(env)].staffJoined(inv.name, inv.by));
+    return send(env, m.chat.id, X.staffWelcome(inv.by), { reply_markup: panel });
+  }
+  if (cmd && (cmd[0] === 'admin' || (cmd[0] === 'start' && cmd[1] === 'admin'))) {
+    const role = await panelRole(env, m.from.id);
+    if (!role) return send(env, m.chat.id, X.panelNo, { reply_markup: menu });
+    return send(env, m.chat.id, X.panelHello(role === 'owner'), { reply_markup: panel });
+  }
   if (cmd && cmd[0] === 'start' && /^o_[\w-]{10,40}$/.test(cmd[1])) {
     const o = await orderByToken(env, cmd[1].slice(2));
     if (!o) return send(env, m.chat.id, X.notFound, { reply_markup: menu });
@@ -289,6 +309,8 @@ export async function setupBot(env, webhookSecretValue) {
     url: `${SITE}api/tg`, secret_token: webhookSecretValue,
     allowed_updates: ['message', 'callback_query', 'my_chat_member'], max_connections: 20
   });
+  // Описание бота меняется в панели; без меню (сбой базы) — стандартное, настройку бота это не останавливает
+  const { doc } = await getContent(env).catch(() => ({ doc: {} }));
   for (const lang of ['ru', 'uz', '']) {
     const L = lang || 'uz';
     const isRu = L === 'ru';
@@ -316,11 +338,12 @@ export async function setupBot(env, webhookSecretValue) {
         { command: 'resume', description: isRu ? 'Снова принимать заказы' : 'Buyurtmani qayta yoqish' },
         { command: 'lang', description: isRu ? 'Язык бота: рус/узб' : 'Bot tili: o‘zb/rus' },
         { command: 'forget', description: isRu ? 'Удалить данные клиента по просьбе' : 'Mijoz so‘rovi bilan ma’lumotini o‘chirish' },
+        { command: 'admin', description: isRu ? 'Панель управления: меню, цены, акции' : 'Boshqaruv paneli: menyu, narxlar, aksiyalar' },
         { command: 'help', description: isRu ? 'Все команды' : 'Barcha buyruqlar' }
       ]
     });
     await call(`desc_${L}${lang ? '' : '_default'}`, 'setMyShortDescription', {
-      ...base, short_description: isRu ? 'Buddy Coffee, Шахрисабз: меню и заказ с доставкой. Круглосуточно.' : 'Buddy Coffee, Shahrisabz: menyu va yetkazib berish. Kecha-kunduz.'
+      ...base, short_description: botDescription(doc, L).slice(0, 120) // меняется в панели: «Информация» → «Описание бота»
     });
   }
   await call('menu_button', 'setChatMenuButton', { menu_button: { type: 'web_app', text: 'Menyu', web_app: { url: `${SITE}?tg=1` } } });

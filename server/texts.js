@@ -52,11 +52,14 @@ export const T = {
     langSet: 'Язык бота в группе: русский',
     noActive: 'Сейчас заказов в работе нет 👌',
     activeTitle: (n) => `📋 Заказы в работе: ${n}`,
-    help: 'Команды бота:\n/stats — статистика продаж\n/orders — заказы в работе\n/clients — база клиентов (Excel)\n/broadcast — рассылка акций: ответьте этой командой на сообщение\n/stop — стоп-лист: закончилось блюдо — убрать с сайта\n/rush — час пик: увеличить сроки\n/pause — остановить онлайн-заказы\n/resume — снова принимать заказы\n/lang — язык бота (рус/узб)\n/bind, /unbind — подключить или отключить группу\n/forget +998… — удалить данные клиента по его просьбе\n/diag — диагностика бота (для техподдержки)',
+    help: 'Команды бота:\n/stats — статистика продаж\n/orders — заказы в работе\n/clients — база клиентов (Excel)\n/broadcast — рассылка акций: ответьте этой командой на сообщение\n/stop — стоп-лист: закончилось блюдо — убрать с сайта\n/rush — час пик: увеличить сроки\n/pause — остановить онлайн-заказы\n/resume — снова принимать заказы\n/lang — язык бота (рус/узб)\n/bind, /unbind — подключить или отключить группу\n/forget +998… — удалить данные клиента по его просьбе\n/admin — панель управления (меню, цены, акции)\n/diag — диагностика бота (для техподдержки)',
     clientsCaption: (n, d) => `📇 База клиентов на ${d}: ${n}.\nЛист «Итоги» — сводка и сегменты. Файл с личными данными — не пересылайте его за пределы группы.`,
     clientsEmpty: 'В базе пока нет клиентов.',
     sheetHelp: (f) => `📇 <b>Клиенты в Google Таблице</b>\nВставьте эту формулу в ячейку A1 вкладки «Клиенты» (нажмите на формулу — она скопируется):\n\n<code>${h(f)}</code>\n\nТаблица обновляется сама примерно раз в час. Ссылка секретная — вкладку не публикуйте. Новая ссылка (старая перестанет работать): /sheet new`,
     diagHelp: (u) => `🩺 <b>Диагностика бота</b>\nСсылка с текстами ошибок — для техподдержки, никому больше не пересылайте:\n${h(u)}\n\nНовая ссылка (старая перестанет работать): /diag new`,
+    adminHint: '⚙️ <b>Панель управления</b> — меню, цены, фото, часы работы, акции, рассылка и статистика с телефона. Откройте её в личном чате с ботом:',
+    adminOpen: 'Открыть панель',
+    staffJoined: (name, by) => `👤 ${h(name)} теперь сотрудник: может отмечать «нет в наличии» и час пик в панели. Пригласил(а): ${h(by)}.`,
     forgetHelp: '🗑 <b>Удаление данных клиента</b> — по его просьбе.\nНапишите номер телефона: <code>/forget +998 90 123 45 67</code>\nили Telegram подписчика бота: <code>/forget @username</code>\n\nУдалятся карточка в базе клиентов, имя, телефон, адрес и комментарии в выполненных заказах. Суммы и блюда останутся без имени — для статистики.',
     forgotten: (r) => (r.customer || r.orders
       ? `🗑 Готово: ${r.customer ? 'карточка клиента удалена' : 'в базе клиентов карточки не было'}, обезличено заказов: ${r.orders}.\nВкладка «Клиенты» в таблице обновится сама в течение часа; старые Excel-файлы из /clients удалите из чата вручную.`
@@ -130,11 +133,14 @@ export const T = {
     langSet: 'Guruhdagi bot tili: o‘zbekcha',
     noActive: 'Hozir jarayondagi buyurtmalar yo‘q 👌',
     activeTitle: (n) => `📋 Jarayondagi buyurtmalar: ${n}`,
-    help: 'Bot buyruqlari:\n/stats — savdo statistikasi\n/orders — jarayondagi buyurtmalar\n/clients — mijozlar bazasi (Excel)\n/broadcast — aksiya xabarnomasi: xabarga shu buyruq bilan javob bering\n/stop — stop-ro‘yxat: tugagan taomni saytdan olib tashlash\n/rush — qizg‘in vaqt: muddatlarni oshirish\n/pause — onlayn buyurtmani to‘xtatish\n/resume — buyurtmani qayta yoqish\n/lang — bot tili (o‘zb/rus)\n/bind, /unbind — guruhni ulash yoki uzish\n/forget +998… — mijoz so‘rovi bilan uning ma’lumotlarini o‘chirish\n/diag — bot diagnostikasi (texnik yordam uchun)',
+    help: 'Bot buyruqlari:\n/stats — savdo statistikasi\n/orders — jarayondagi buyurtmalar\n/clients — mijozlar bazasi (Excel)\n/broadcast — aksiya xabarnomasi: xabarga shu buyruq bilan javob bering\n/stop — stop-ro‘yxat: tugagan taomni saytdan olib tashlash\n/rush — qizg‘in vaqt: muddatlarni oshirish\n/pause — onlayn buyurtmani to‘xtatish\n/resume — buyurtmani qayta yoqish\n/lang — bot tili (o‘zb/rus)\n/bind, /unbind — guruhni ulash yoki uzish\n/forget +998… — mijoz so‘rovi bilan uning ma’lumotlarini o‘chirish\n/admin — boshqaruv paneli (menyu, narxlar, aksiyalar)\n/diag — bot diagnostikasi (texnik yordam uchun)',
     clientsCaption: (n, d) => `📇 ${d} holatiga mijozlar bazasi: ${n}.\n«Yakun» varag‘ida — umumiy ko‘rsatkichlar va segmentlar. Faylda shaxsiy ma’lumotlar bor — guruhdan tashqariga yubormang.`,
     clientsEmpty: 'Bazada hali mijozlar yo‘q.',
     sheetHelp: (f) => `📇 <b>Mijozlar Google Jadvalda</b>\nUshbu formulani «Клиенты» varag‘ining A1 katagiga qo‘ying (formulani bosing — nusxalanadi):\n\n<code>${h(f)}</code>\n\nJadval taxminan soatiga bir marta o‘zi yangilanadi. Havola maxfiy — varaqni e’lon qilmang. Yangi havola (eskisi ishlamay qoladi): /sheet new`,
     diagHelp: (u) => `🩺 <b>Bot diagnostikasi</b>\nXatolar matni bilan havola — texnik yordam uchun, boshqa hech kimga yubormang:\n${h(u)}\n\nYangi havola (eskisi ishlamay qoladi): /diag new`,
+    adminHint: '⚙️ <b>Boshqaruv paneli</b> — menyu, narxlar, rasmlar, ish vaqti, aksiyalar, xabarnoma va statistika telefondan. Uni bot bilan shaxsiy chatda oching:',
+    adminOpen: 'Panelni ochish',
+    staffJoined: (name, by) => `👤 ${h(name)} endi xodim: panelda «mavjud emas» va qizg‘in vaqtni belgilay oladi. Taklif qildi: ${h(by)}.`,
     forgetHelp: '🗑 <b>Mijoz ma’lumotlarini o‘chirish</b> — uning so‘rovi bo‘yicha.\nTelefon raqamini yozing: <code>/forget +998 90 123 45 67</code>\nyoki bot obunachisining Telegrami: <code>/forget @username</code>\n\nMijozlar bazasidagi kartochka, bajarilgan buyurtmalardagi ism, telefon, manzil va izohlar o‘chiriladi. Summalar va taomlar statistika uchun ismsiz qoladi.',
     forgotten: (r) => (r.customer || r.orders
       ? `🗑 Tayyor: ${r.customer ? 'mijoz kartochkasi o‘chirildi' : 'mijozlar bazasida kartochka yo‘q edi'}, anonimlashtirilgan buyurtmalar: ${r.orders}.\nJadvaldagi «Клиенты» varag‘i bir soat ichida o‘zi yangilanadi; /clients orqali olingan eski Excel fayllarni chatdan qo‘lda o‘chiring.`
@@ -196,6 +202,13 @@ export const C = {
     unsub: '🔕 Отписаться от акций',
     unsubbed: 'Вы отписались от акций и новостей. Статусы ваших заказов будут приходить как раньше.\nВернуться: /subscribe',
     subbed: 'Готово! Вы снова будете получать акции и скидки Buddy Coffee 🎉\nОтписаться: /stop',
+    panelBtn: '⚙️ Панель управления',
+    panelHello: (owner) => (owner
+      ? '⚙️ <b>Панель управления Buddy Coffee</b>\nМеню, цены, фото, информация о кафе, заказы, акции, рассылка и статистика. Изменения видны на сайте и в боте через минуту.'
+      : '⚙️ <b>Панель сотрудника Buddy Coffee</b>\nОтмечайте «нет в наличии» и включайте час пик.'),
+    panelNo: 'Панель управления доступна владельцам кафе (администраторам группы заказов) и сотрудникам по приглашению.',
+    staffWelcome: (by) => `👋 Вы добавлены как сотрудник Buddy Coffee (пригласил(а) ${h(by)}). Панель — по кнопке ниже.`,
+    inviteBad: 'Ссылка-приглашение недействительна или устарела. Попросите владельца прислать новую.',
     privacy: (u) => `🔒 Как Buddy Coffee обращается с вашими данными: что храним, зачем, сколько и как удалить —\n${u}`
   },
   uz: {
@@ -220,6 +233,13 @@ export const C = {
     unsub: '🔕 Aksiyalardan obunani bekor qilish',
     unsubbed: 'Aksiya va yangiliklardan obunani bekor qildingiz. Buyurtma holatlari avvalgidek keladi.\nQaytish: /subscribe',
     subbed: 'Tayyor! Buddy Coffee aksiya va chegirmalari yana keladi 🎉\nObunani bekor qilish: /stop',
+    panelBtn: '⚙️ Boshqaruv paneli',
+    panelHello: (owner) => (owner
+      ? '⚙️ <b>Buddy Coffee boshqaruv paneli</b>\nMenyu, narxlar, rasmlar, kafe haqida ma’lumot, buyurtmalar, aksiyalar, xabarnoma va statistika. O‘zgarishlar sayt va botda bir daqiqada ko‘rinadi.'
+      : '⚙️ <b>Buddy Coffee xodim paneli</b>\n«Mavjud emas»ni belgilang va qizg‘in vaqtni yoqing.'),
+    panelNo: 'Boshqaruv paneli kafe egalari (buyurtmalar guruhi administratorlari) va taklif qilingan xodimlar uchun.',
+    staffWelcome: (by) => `👋 Siz Buddy Coffee xodimi sifatida qo‘shildingiz (taklif qildi: ${h(by)}). Panel — quyidagi tugmada.`,
+    inviteBad: 'Taklif havolasi yaroqsiz yoki eskirgan. Egasidan yangisini so‘rang.',
     privacy: (u) => `🔒 Buddy Coffee ma’lumotlaringiz bilan qanday ishlaydi: nimani, nima uchun, qancha saqlaymiz va qanday o‘chirish mumkin —\n${u}`
   }
 };

@@ -88,6 +88,44 @@ export const SCHEMA = [
     sent INTEGER NOT NULL DEFAULT 0,
     failed INTEGER NOT NULL DEFAULT 0,
     cursor INTEGER NOT NULL DEFAULT 0
+  )`,
+  // Контент сайта для панели владельца (server/content.js): один документ, version — для записи без потери чужих правок
+  `CREATE TABLE IF NOT EXISTS content (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    doc TEXT NOT NULL,
+    version INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    updated_by TEXT
+  )`,
+  // Журнал правок из панели: патчи «до/после» — по ним работает отмена
+  `CREATE TABLE IF NOT EXISTS changes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    at INTEGER NOT NULL,
+    by_id INTEGER,
+    by_name TEXT,
+    kind TEXT NOT NULL,
+    ref TEXT,
+    title TEXT,
+    patches TEXT NOT NULL,
+    undone_at INTEGER,
+    undone_by TEXT
+  )`,
+  // Фото блюд, загруженные из панели (сжаты в браузере): квадрат для карточки и 4:3 для шторки
+  `CREATE TABLE IF NOT EXISTS photos (
+    id TEXT PRIMARY KEY,
+    created_at INTEGER NOT NULL,
+    by_id INTEGER,
+    type TEXT NOT NULL,
+    sq BLOB NOT NULL,
+    l BLOB NOT NULL
+  )`,
+  // Сотрудники с ограниченными правами (стоп-лист и час пик). Владельцы — администраторы группы заказов
+  `CREATE TABLE IF NOT EXISTS staff (
+    tg_id INTEGER PRIMARY KEY,
+    name TEXT,
+    username TEXT,
+    added_by TEXT,
+    added_at INTEGER NOT NULL
   )`
 ];
 

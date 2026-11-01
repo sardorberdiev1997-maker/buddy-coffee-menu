@@ -75,7 +75,7 @@ export async function createOrder(request, env, ctx) {
   const sameAsClient = () => !p.missing.length && p.total === +b.total &&
     p.lines.every((l, i) => !b.items[i] || +b.items[i].price === l.price);
   if (!sameAsClient()) {
-    model = withStop(await loadModel(env, { fresh: true }), stop);
+    model = withStop(await loadModel(env), stop);
     p = OC.price(model, lines);
   }
   if (p.missing.length) {

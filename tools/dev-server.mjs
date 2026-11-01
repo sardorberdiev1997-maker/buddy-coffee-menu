@@ -45,6 +45,7 @@ const DB = {
 const tgLog = [];
 let msgId = 1000;
 let hook = { url: '', pending_update_count: 0 }; // getWebhookInfo заглушки; тест сторожа меняет через /__tg/hook
+const members = {}; // статус в группе для getChatMember (по умолчанию creator); тесты панели меняют через /__tg/member
 const realFetch = globalThis.fetch;
 globalThis.fetch = async (input, init) => {
   const url = typeof input === 'string' ? input : input.url;
@@ -57,9 +58,10 @@ globalThis.fetch = async (input, init) => {
     } else if (init && init.body) body = JSON.parse(init.body);
     tgLog.push({ method, body, at: Date.now() });
     let result = true;
-    if (method === 'sendMessage' || method === 'sendLocation' || method === 'editMessageText' || method === 'copyMessage' || method === 'sendDocument') {
+    if (method === 'sendMessage' || method === 'sendLocation' || method === 'editMessageText' || method === 'copyMessage' || method === 'sendDocument' || method === 'sendPhoto') {
       result = { message_id: body.message_id || ++msgId, chat: { id: body.chat_id }, date: Math.floor(Date.now() / 1000), text: body.text };
-    } else if (method === 'getChatMember') result = { status: 'creator', user: { id: body.user_id } };
+    } else if (method === 'getChatMember') result = { status: members[body.user_id] || 'creator', user: { id: body.user_id } };
+    else if (method === 'getChatAdministrators') result = [{ status: 'creator', user: { id: 1, is_bot: false, first_name: 'Owner' } }];
     else if (method === 'getMe') result = { id: 1, is_bot: true, username: 'buddy_coffee_uz_bot' };
     else if (method === 'setWebhook') hook = { url: body.url, pending_update_count: 0 };
     else if (method === 'getWebhookInfo') result = hook;
@@ -109,7 +111,8 @@ function serveStatic(pathname) {
 const worker = (await import(pathToFileURL(path.join(DIST, '_worker.js')).href + '?t=' + Date.now())).default;
 const pending = new Set();
 const ctx = { waitUntil: (p) => { pending.add(p); p.finally(() => pending.delete(p)); } };
-const env = { DB, BOT_TOKEN, ASSETS: { fetch: async (req) => serveStatic(new URL(req.url || req).pathname) } };
+// Меню при первом запуске — из data/menu.json, без Google Таблицы (DEV_SHEET=1 — из таблицы)
+const env = { DB, BOT_TOKEN, NO_SHEET: !process.env.DEV_SHEET, ASSETS: { fetch: async (req) => serveStatic(new URL(req.url || req).pathname) } };
 const secret = createHmac('sha256', BOT_TOKEN).update('buddy-coffee-webhook').digest('hex').slice(0, 48);
 
 async function toRequest(req, body) {
@@ -133,6 +136,10 @@ createServer(async (req, res) => {
       out = Response.json(tgLog.filter((x) => x.at >= since));
     } else if (url.pathname === '/__tg/hook' && req.method === 'POST') {
       hook = JSON.parse(body.toString() || '{}');
+      out = Response.json({ ok: true });
+    } else if (url.pathname === '/__tg/member' && req.method === 'POST') {
+      const { user_id: id, status } = JSON.parse(body.toString() || '{}');
+      members[id] = status;
       out = Response.json({ ok: true });
     } else if (url.pathname === '/__sql' && req.method === 'POST') {
       const { sql, args = [] } = JSON.parse(body.toString() || '{}');

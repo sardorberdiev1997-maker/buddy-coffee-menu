@@ -4,8 +4,11 @@ import { createHmac } from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
 import { test } from 'node:test';
 
+import { readFileSync } from 'node:fs';
+
+import { applyPatches, change, Conflict, docFromTables, getContent, history, tablesFromDoc, undoChange } from '../../server/content.js';
 import { ensureSchema, SCHEMA } from '../../server/db.js';
-import { OC } from '../../server/menu.js';
+import { loadModel, OC, R } from '../../server/menu.js';
 import { reportText } from '../../server/stats.js';
 import { tick } from '../../server/tick.js';
 import { verifyInitData } from '../../server/tg.js';
@@ -147,4 +150,92 @@ test('тексты ошибок для логов и диагностики — 
   assert.equal(redact('GET /api/sheet/customers.csv?key=abc123&x=1'), 'GET /api/sheet/customers.csv?key=<…>&x=1');
   assert.equal(redact('/order?t=tok_en-1 /api/tg/info?key=K'), '/order?t=<…> /api/tg/info?key=<…>');
   assert.equal(redact(null), '');
+});
+
+/* ---------- панель владельца: контент в D1 ---------- */
+
+const backup = JSON.parse(readFileSync(new URL('../../data/menu.json', import.meta.url), 'utf8'));
+const sheetTables = { menu: backup['Меню'], categories: backup['Категории'], settings: backup['Настройки'] };
+const contentEnv = () => ({
+  DB: memoryD1(), BOT_TOKEN: 'x:y', NO_SHEET: true,
+  ASSETS: { fetch: async () => new Response(JSON.stringify(backup)) }
+});
+
+test('панель: переезд меню из таблицы без потерь — сайт видит то же самое', () => {
+  const before = R.buildModel(sheetTables);
+  const doc = docFromTables(sheetTables);
+  const after = R.buildModel(tablesFromDoc(doc, Date.UTC(2026, 10, 1)));
+  assert.deepEqual(after, before);
+  assert.ok(doc.items.length > 10 && doc.cats.length > 3 && doc.settings['телефон']);
+});
+
+test('панель: правка, журнал, отмена и защита от затирания чужой правки', async () => {
+  const env = contentEnv();
+  await env.DB.batch(SCHEMA.map((q) => env.DB.prepare(q))); // ensureSchema помнит первую базу процесса
+  const c0 = await getContent(env);
+  assert.equal(c0.version, 1, 'документ создан из data/menu.json');
+  const first = c0.doc.items[0];
+  const by = { id: 1, name: 'Сухроб' };
+  const editPrice = (price, rev) => change(env, by, (doc) => {
+    const it = doc.items.find((x) => x.key === first.key);
+    if (it.rev !== rev) throw new Conflict();
+    const after = { ...it, variants: it.variants.map((v, i) => (i ? v : { ...v, price })), rev: Date.now() };
+    return { kind: 'item', title: it.ru, patches: [{ path: 'items', key: it.key, before: it, after }] };
+  });
+  const r1 = await editPrice(99000, first.rev);
+  assert.equal(r1.version, 2);
+  assert.equal((await loadModel(env)).items.find((x) => x.key === first.key).prices[0], 99000, 'сайт видит новую цену');
+  await assert.rejects(editPrice(1000, first.rev), (e) => e.code === 'conflict', 'правка по устаревшей версии блюда — 409');
+  // Отмена возвращает цену; повторная — нельзя
+  await undoChange(env, by, r1.id);
+  assert.equal((await getContent(env)).doc.items[0].variants[0].price, first.variants[0].price);
+  await assert.rejects(undoChange(env, by, r1.id), (e) => e.code === 'already');
+  const h = await history(env);
+  assert.equal(h.length, 2);
+  assert.ok(h[1].undone_at && h[0].kind === 'undo');
+  // Отменить старую правку, если после неё то же блюдо меняли, нельзя
+  const cur = (await getContent(env)).doc.items[0];
+  const r2 = await editPrice(50000, cur.rev);
+  const cur2 = (await getContent(env)).doc.items[0];
+  await editPrice(60000, cur2.rev);
+  await assert.rejects(undoChange(env, by, r2.id), (e) => e.code === 'changed_later');
+});
+
+test('панель: удалённое блюдо возвращается на своё место', () => {
+  const doc = docFromTables(sheetTables);
+  const it = doc.items[3];
+  const patches = [{ path: 'items', key: it.key, pos: 3, before: it, after: null }];
+  applyPatches(doc, patches);
+  assert.ok(!doc.items.some((x) => x.key === it.key));
+  applyPatches(doc, patches, 'before');
+  assert.equal(doc.items[3].key, it.key);
+});
+
+test('панель: расписание, «Сегодня закрыты», «Блюдо дня» и старая цена', () => {
+  const doc = docFromTables(sheetTables);
+  const noon = Date.UTC(2026, 11, 31, 7); // 31.12.2026 12:00 Ташкент
+  const settings = (t) => R.buildModel(tablesFromDoc(doc, t)).settings;
+  doc.settings['объявление'] = { uz: 'Aksiya', ru: 'Акция' };
+  doc.schedule.noticeUntil = '2026-12-30';
+  assert.equal(settings(noon)['объявление'].ru, '', 'объявление с истёкшей датой не показывается');
+  doc.schedule.noticeUntil = '2026-12-31';
+  assert.equal(settings(noon)['объявление'].ru, 'Акция');
+  doc.schedule.special = [{ date: '2026-12-31', uz: '10:00–18:00', ru: '10:00–18:00', closed: false }];
+  assert.equal(settings(noon)['часы_работы'].ru, 'Сегодня: 10:00–18:00', 'особые часы на дату');
+  doc.schedule.closedUntil = noon + 3600000;
+  const closed = R.buildModel(tablesFromDoc(doc, noon));
+  assert.equal(OC.config(closed).enabled, false, 'закрыты — заказать нельзя');
+  assert.match(closed.settings['объявление'].ru, /закрыты/);
+  assert.notEqual(OC.config(R.buildModel(tablesFromDoc(doc, noon + 2 * 3600000))).enabled, false, 'потом снова можно');
+
+  const target = doc.items.find((x, i) => i > 0 && x.cat === doc.items[0].cat) || doc.items[1];
+  doc.promo.day = { key: target.key, date: '2026-12-31' };
+  target.variants[0].old = target.variants[0].price + 5000;
+  const m = R.buildModel(tablesFromDoc(doc, noon));
+  const day = m.items.find((x) => x.key === target.key);
+  assert.equal(day.badge, 'day');
+  assert.equal(m.items.filter((x) => x.cat === day.cat)[0].key, day.key, 'блюдо дня — первым в разделе');
+  const html = R.createView(m, 'ru').menuHTML();
+  assert.match(html, /class="price__old"/, 'старая цена зачёркнута');
+  assert.equal(R.buildModel(tablesFromDoc(doc, noon + 86400000)).items.find((x) => x.key === target.key).badge, target.badge && R.buildModel(sheetTables).items.find((x) => x.key === target.key).badge, 'на следующий день — обычная метка');
 });
