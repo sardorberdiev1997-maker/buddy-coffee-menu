@@ -73,7 +73,11 @@ export function useMainButton({ text, onClick, visible = true, active = true, pr
     if (!native) return;
     const mb = WA.MainButton;
     if (!visible || !text) { mb.hide(); return; }
-    mb.setParams({ text, is_active: active && !progress, is_visible: true });
+    // Неактивная — серая: некоторые клиенты (Telegram для macOS) сами её не приглушают
+    const tp = WA.themeParams || {};
+    mb.setParams(active
+      ? { text, is_active: !progress, is_visible: true, color: tp.button_color || '#2481cc', text_color: tp.button_text_color || '#ffffff' }
+      : { text, is_active: false, is_visible: true, color: tp.secondary_bg_color || '#e7e8ec', text_color: tp.hint_color || '#8e8e93' });
     if (progress) mb.showProgress(false);
     else mb.hideProgress();
   }, [text, visible, active, progress]);
