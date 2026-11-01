@@ -119,6 +119,13 @@ export const SCHEMA = [
     sq BLOB NOT NULL,
     l BLOB NOT NULL
   )`,
+  // Заметки кафе о клиенте (раздел «Клиенты» в панели): предпочтения в заказе. Удаляются вместе с клиентом
+  `CREATE TABLE IF NOT EXISTS customer_notes (
+    customer_id INTEGER PRIMARY KEY,
+    note TEXT NOT NULL,
+    updated_at INTEGER NOT NULL,
+    updated_by TEXT
+  )`,
   // Сотрудники с ограниченными правами (стоп-лист и час пик). Владельцы — администраторы группы заказов
   `CREATE TABLE IF NOT EXISTS staff (
     tg_id INTEGER PRIMARY KEY,

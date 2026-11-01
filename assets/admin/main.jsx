@@ -8,13 +8,15 @@ import { createRoot } from 'react-dom/client';
 import './admin.css';
 import { TEXTS } from './i18n.js';
 import { api, confirmBox, errorText, haptic, inTelegram, native, nameOf, WA } from './lib.js';
+import { ClientCard, ClientsScreen } from './clients.jsx';
 import { CatForm, CatsScreen, ItemScreen, MenuScreen } from './menu.jsx';
 import { BroadcastScreen, HistoryScreen, InfoScreen, PromoScreen, ScheduleScreen, StaffScreen, StatsScreen } from './more.jsx';
 import { Ico, tap } from './ui.jsx';
 
 const SCREENS = {
   menu: MenuScreen, item: ItemScreen, cats: CatsScreen, cat: CatForm, info: InfoScreen, schedule: ScheduleScreen,
-  promo: PromoScreen, broadcast: BroadcastScreen, stats: StatsScreen, staff: StaffScreen, history: HistoryScreen
+  promo: PromoScreen, broadcast: BroadcastScreen, stats: StatsScreen, staff: StaffScreen, history: HistoryScreen,
+  clients: ClientsScreen, client: ClientCard
 };
 
 const LANG_KEY = 'buddy-admin:lang';
@@ -63,6 +65,7 @@ function Home({ ctx }) {
         <Cell before={<Ico e="🏷" />} {...tap(() => ctx.push('promo'))}>{t.promo}</Cell>
       </Section>
       <Section header={t.more}>
+        <Cell before={<Ico e="👤" />} {...tap(() => ctx.push('clients'))}>{t.clients}</Cell>
         <Cell before={<Ico e="📊" />} {...tap(() => ctx.push('stats'))}>{t.stats}</Cell>
         <Cell before={<Ico e="📣" />} {...tap(() => ctx.push('broadcast'))}>{t.broadcast}</Cell>
         <Cell before={<Ico e="👥" />} {...tap(() => ctx.push('staff'))}>{t.staff}</Cell>

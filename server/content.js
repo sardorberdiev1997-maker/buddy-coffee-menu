@@ -236,6 +236,7 @@ export async function undoChange(env, by, id) {
   if (!row) throw new Conflict('not_found', 404);
   if (row.undone_at) throw new Conflict('already');
   const patches = JSON.parse(row.patches);
+  if (!patches.length) throw new Conflict('not_undoable'); // выгрузка, удаление данных клиента — только запись в журнале
   const res = await change(env, by, (doc) => {
     if (!patches.every((p) => same(current(doc, p), p.after))) throw new Conflict('changed_later');
     return {
@@ -248,7 +249,7 @@ export async function undoChange(env, by, id) {
 }
 
 export async function history(env, limit = 50) {
-  return (await env.DB.prepare('SELECT id, at, by_name, kind, ref, title, undone_at, undone_by FROM changes ORDER BY id DESC LIMIT ?').bind(limit).all()).results;
+  return (await env.DB.prepare("SELECT id, at, by_name, kind, ref, title, undone_at, undone_by, patches != '[]' AS undoable FROM changes ORDER BY id DESC LIMIT ?").bind(limit).all()).results;
 }
 
 // Для тестов и /api/tg/info: сбросить кэш изолята

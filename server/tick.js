@@ -87,6 +87,7 @@ export async function tick(env, now = Date.now()) {
     // База клиентов — 3 года с последнего заказа или сообщения боту (срок для маркетинговых баз, как у CNIL);
     // тогда же из старых заказов уходит и хеш телефона — дальше только обезличенная статистика. Сроки — на /privacy
     await env.DB.prepare('DELETE FROM customers WHERE last_seen < ?').bind(now - KEEP_CUSTOMER).run();
+    await env.DB.prepare('DELETE FROM customer_notes WHERE customer_id NOT IN (SELECT id FROM customers)').run();
     await env.DB.prepare('UPDATE orders SET phone_hash = NULL WHERE phone_hash IS NOT NULL AND created_at < ?').bind(now - KEEP_CUSTOMER).run();
     await cleanClientErrors(env, now);
     await env.DB.prepare("DELETE FROM kv WHERE k >= 'ev:' AND k < ?").bind(`ev:${dayKey(now - 400 * DAY)}`).run(); // воронка — больше года не нужна

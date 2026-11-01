@@ -79,19 +79,33 @@ export async function forgetCustomer(env, who) {
   const c = byTg
     ? await env.DB.prepare('SELECT id, phone_hash, tg_chat FROM customers WHERE lower(tg_username) = lower(?)').bind(who.slice(1)).first()
     : await env.DB.prepare('SELECT id, phone_hash, tg_chat FROM customers WHERE phone_hash = ?').bind(ph).first();
-  const phoneHash = byTg ? c && c.phone_hash : ph;
+  return wipe(env, c, byTg ? c && c.phone_hash : ph);
+}
+
+// Из панели владельца: по карточке клиента
+export async function forgetCustomerById(env, id) {
+  const c = await env.DB.prepare('SELECT id, phone_hash, tg_chat FROM customers WHERE id = ?').bind(id).first();
+  return c ? wipe(env, c, c.phone_hash) : null;
+}
+
+async function wipe(env, c, phoneHash) {
   const conds = [];
   const args = [];
   if (phoneHash) { conds.push('phone_hash = ?'); args.push(phoneHash); }
   if (c && c.tg_chat) { conds.push('tg_chat = ?', 'tg_user = ?'); args.push(c.tg_chat, c.tg_chat); }
-  if (!conds.length) return { customer: false, orders: 0, active: 0 };
+  if (!conds.length) {
+    if (c) await env.DB.batch([env.DB.prepare('DELETE FROM customers WHERE id = ?').bind(c.id), env.DB.prepare('DELETE FROM customer_notes WHERE customer_id = ?').bind(c.id)]);
+    return { customer: !!c, orders: 0, active: 0 };
+  }
   const mine = `(${conds.join(' OR ')})`;
   const active = await env.DB.prepare(`SELECT COUNT(*) AS n FROM orders WHERE ${mine} AND status NOT IN ('delivered', 'picked', 'canceled')`).bind(...args).first();
   await env.DB.prepare(`UPDATE ratings SET comment = NULL WHERE order_id IN (SELECT id FROM orders WHERE ${mine} AND status IN ('delivered', 'picked', 'canceled'))`).bind(...args).run();
   const r = await env.DB.prepare(`UPDATE orders SET name = NULL, phone = NULL, phone_hash = NULL, address = NULL, lat = NULL, lng = NULL, acc = NULL,
       comment = NULL, ip_hash = NULL, tg_user = NULL, tg_chat = NULL, tg_msg = NULL, anonymized = 1
       WHERE ${mine} AND status IN ('delivered', 'picked', 'canceled')`).bind(...args).run();
-  if (c) await env.DB.prepare('DELETE FROM customers WHERE id = ?').bind(c.id).run();
+  if (c) {
+    await env.DB.batch([env.DB.prepare('DELETE FROM customers WHERE id = ?').bind(c.id), env.DB.prepare('DELETE FROM customer_notes WHERE customer_id = ?').bind(c.id)]);
+  }
   return { customer: !!c, orders: (r.meta && r.meta.changes) || 0, active: (active && active.n) || 0 };
 }
 
@@ -153,9 +167,9 @@ function segment(c, now) {
   return 'new';
 }
 
-async function buildRows(env, L, now) {
-  const X = H[L] || H.ru;
-  const [main, dishes] = await env.DB.batch([
+// Показатели всех клиентов: заказы, сумма, первая и последняя покупка, любимое блюдо (одним проходом по заказам)
+async function metrics(env) {
+  const [main, dishes, notes] = await env.DB.batch([
     env.DB.prepare(`SELECT c.*,
         SUM(CASE WHEN o.${DONE} THEN 1 ELSE 0 END) AS done,
         SUM(CASE WHEN o.${DONE} THEN o.total ELSE 0 END) AS spent,
@@ -166,21 +180,31 @@ async function buildRows(env, L, now) {
       FROM customers c LEFT JOIN orders o ON c.phone_hash IS NOT NULL AND o.phone_hash = c.phone_hash
       GROUP BY c.id ORDER BY c.id`),
     env.DB.prepare(`SELECT o.phone_hash AS ph, json_extract(j.value, '$.uz') AS dish, SUM(json_extract(j.value, '$.qty')) AS qty
-      FROM orders o, json_each(o.items) AS j WHERE o.${DONE} AND o.phone_hash IS NOT NULL GROUP BY ph, dish`)
+      FROM orders o, json_each(o.items) AS j WHERE o.${DONE} AND o.phone_hash IS NOT NULL GROUP BY ph, dish`),
+    env.DB.prepare('SELECT customer_id FROM customer_notes')
   ]);
   const fav = {};
   dishes.results.forEach((d) => { if (!fav[d.ph] || d.qty > fav[d.ph].qty) fav[d.ph] = d; });
+  const noted = new Set(notes.results.map((n) => n.customer_id));
+  return main.results.map((c) => ({ ...c, fav: (fav[c.phone_hash] && fav[c.phone_hash].dish) || '', noted: noted.has(c.id) }));
+}
+
+const subsOf = (c) => (!c.tg_chat ? 'none' : c.blocked ? 'blocked' : c.subscribed ? 'on' : 'off');
+
+async function buildRows(env, L, now) {
+  const X = H[L] || H.ru;
+  const all = await metrics(env);
 
   const date = (ms) => (ms ? ddmm(ms, true) : '');
   const rows = [X.cols];
   const segCount = {};
   let buyers = 0, reachable = 0, spentAll = 0, doneAll = 0, repeat = 0;
-  for (const c of main.results) {
+  for (const c of all) {
     const seg = segment(c, now);
     segCount[seg] = (segCount[seg] || 0) + 1;
     if (c.done) { buyers++; spentAll += c.spent; doneAll += c.done; }
     if (c.done >= 2) repeat++;
-    const subs = !c.tg_chat ? 'none' : c.blocked ? 'blocked' : c.subscribed ? 'on' : 'off';
+    const subs = subsOf(c);
     if (subs === 'on') reachable++;
     rows.push([
       c.id,
@@ -198,17 +222,17 @@ async function buildRows(env, L, now) {
       c.done ? Math.round(c.spent / c.done) : 0,
       c.canceled || 0,
       c.done ? `${c.deliveries} / ${c.done - c.deliveries}` : '',
-      (fav[c.phone_hash] && fav[c.phone_hash].dish) || '',
+      c.fav,
       X.seg[seg],
       X.subs[subs]
     ]);
   }
-  const values = [main.results.length, buyers, reachable, spentAll, doneAll ? Math.round(spentAll / doneAll) : 0, repeat];
+  const values = [all.length, buyers, reachable, spentAll, doneAll ? Math.round(spentAll / doneAll) : 0, repeat];
   const summary = X.sumRows.map((r, i) => (i === 0 ? r : [r[0], values[i - 1]]));
   summary.push([], [X.segTitle, X.segCount]);
   ['vip', 'regular', 'new', 'sleep', 'lost', 'none'].forEach((k) => summary.push([X.seg[k], segCount[k] || 0]));
   summary.push([], [X.note]);
-  return { X, rows, summary, count: main.results.length };
+  return { X, rows, summary, count: all.length };
 }
 
 export async function customersXlsx(env, L, now = Date.now()) {
@@ -223,3 +247,88 @@ export async function customersXlsx(env, L, now = Date.now()) {
 }
 
 
+
+/* ---------- раздел «Клиенты» в панели владельца (server/admin.js) ---------- */
+
+const PAGE = 50;
+const digits = (v) => String(v || '').replace(/\D/g, '');
+
+// Список с поиском, сегментом и сортировкой — как в CRM кассовых систем. Клиентов у кафе сотни, не миллионы:
+// считаем в памяти по одному проходу metrics()
+export async function clientList(env, { q = '', seg = 'all', sort = 'last', offset = 0 } = {}, now = Date.now()) {
+  const all = (await metrics(env)).map((c) => ({ ...c, seg: segment(c, now), subs: subsOf(c) }));
+  const segCount = { all: all.length, subs: 0 };
+  let buyers = 0, repeat = 0, fresh = 0;
+  for (const c of all) {
+    segCount[c.seg] = (segCount[c.seg] || 0) + 1;
+    if (c.subs === 'on') segCount.subs++;
+    if (c.done) buyers++;
+    if (c.done >= 2) repeat++;
+    if (c.created_at >= now - 30 * DAY) fresh++;
+  }
+  const text = String(q).trim().toLowerCase().replace(/^@/, '');
+  const qd = digits(q);
+  let list = all.filter((c) => (seg === 'all' ? true : seg === 'subs' ? c.subs === 'on' : c.seg === seg));
+  if (text) {
+    list = list.filter((c) => (c.name || '').toLowerCase().includes(text) || (c.tg_username || '').toLowerCase().includes(text) ||
+      (qd.length >= 3 && digits(c.phone).includes(qd)));
+  }
+  const by = {
+    last: (a, b) => (b.last_at || 0) - (a.last_at || 0) || b.last_seen - a.last_seen,
+    spent: (a, b) => (b.spent || 0) - (a.spent || 0),
+    orders: (a, b) => (b.done || 0) - (a.done || 0) || (b.spent || 0) - (a.spent || 0),
+    new: (a, b) => b.created_at - a.created_at,
+    name: (a, b) => (a.name || '').localeCompare(b.name || '')
+  };
+  list.sort(by[sort] || by.last);
+  const start = Math.max(0, parseInt(offset, 10) || 0);
+  return {
+    total: list.length,
+    summary: { all: all.length, buyers, repeat, fresh, reachable: segCount.subs },
+    segCount,
+    items: list.slice(start, start + PAGE).map((c) => ({
+      id: c.id, name: c.name || '', phone: c.phone ? OC.fmtPhone(c.phone) : '', username: c.tg_username || '',
+      seg: c.seg, subs: c.subs, done: c.done || 0, spent: c.spent || 0, last_at: c.last_at || null, noted: c.noted
+    }))
+  };
+}
+
+export async function clientCard(env, id, now = Date.now()) {
+  const c = (await metrics(env)).find((x) => x.id === id);
+  if (!c) return null;
+  const conds = [];
+  const args = [];
+  if (c.phone_hash) { conds.push('phone_hash = ?'); args.push(c.phone_hash); }
+  if (c.tg_chat) { conds.push('tg_chat = ?', 'tg_user = ?'); args.push(c.tg_chat, c.tg_chat); }
+  const orders = conds.length ? (await env.DB.prepare(`SELECT o.id, o.created_at, o.status, o.type, o.total, o.items, r.stars, r.comment AS review
+      FROM orders o LEFT JOIN ratings r ON r.order_id = o.id WHERE ${conds.join(' OR ')} ORDER BY o.id DESC LIMIT 30`).bind(...args).all()).results : [];
+  const note = await env.DB.prepare('SELECT note, updated_at, updated_by FROM customer_notes WHERE customer_id = ?').bind(id).first();
+  const rated = orders.filter((o) => o.stars);
+  return {
+    id: c.id, name: c.name || '', phone: c.phone ? OC.fmtPhone(c.phone) : '', tel: c.phone ? '+' + digits(c.phone) : '',
+    username: c.tg_username || '', lang: c.lang || 'uz', source: c.source || '', created_at: c.created_at, last_seen: c.last_seen,
+    seg: segment(c, now), subs: subsOf(c), done: c.done || 0, spent: c.spent || 0, canceled: c.canceled || 0,
+    deliveries: c.deliveries || 0, first_at: c.first_at || null, last_at: c.last_at || null, fav: c.fav,
+    avg: c.done ? Math.round(c.spent / c.done) : 0,
+    every: c.done >= 2 ? Math.round((c.last_at - c.first_at) / DAY / (c.done - 1)) : null, // раз в N дней
+    rating: rated.length ? { avg: rated.reduce((s, o) => s + o.stars, 0) / rated.length, n: rated.length } : null,
+    note: note ? note.note : '', note_at: note ? note.updated_at : null, note_by: note ? note.updated_by : '',
+    orders: orders.map((o) => ({
+      id: o.id, at: o.created_at, status: o.status, icon: (OC.STATUS[o.status] || {}).icon || '', label: { uz: (OC.STATUS[o.status] || {}).uz || o.status, ru: (OC.STATUS[o.status] || {}).ru || o.status },
+      type: o.type, total: o.total, stars: o.stars || null, review: o.review || '',
+      items: JSON.parse(o.items || '[]').map((l) => `${l.uz || l.ru || ''}${l.qty > 1 ? ' ×' + l.qty : ''}`).join(', ')
+    }))
+  };
+}
+
+export async function setClientNote(env, id, note, by) {
+  const exists = await env.DB.prepare('SELECT 1 AS x FROM customers WHERE id = ?').bind(id).first();
+  if (!exists) return false;
+  if (!note) await env.DB.prepare('DELETE FROM customer_notes WHERE customer_id = ?').bind(id).run();
+  else {
+    await env.DB.prepare(`INSERT INTO customer_notes (customer_id, note, updated_at, updated_by) VALUES (?, ?, ?, ?)
+      ON CONFLICT(customer_id) DO UPDATE SET note = excluded.note, updated_at = excluded.updated_at, updated_by = excluded.updated_by`)
+      .bind(id, note, Date.now(), by).run();
+  }
+  return true;
+}

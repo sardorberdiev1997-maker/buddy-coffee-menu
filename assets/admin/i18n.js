@@ -60,10 +60,34 @@ export const TEXTS = {
     staffHint: 'Xodim faqat «bugun yo‘q» va qizg‘in vaqtni belgilaydi — narx va matnlarni ko‘rmaydi.', invite: 'Xodimni taklif qilish',
     inviteReady: 'Taklif havolasi tayyor — xodimga yuboring. Bir martalik, 48 soat amal qiladi.', share: 'Telegram’da yuborish', copy: 'Nusxalash', copied: 'Nusxalandi',
     removeStaff: (n) => `${n} xodimlar ro‘yxatidan olib tashlansinmi?`, noStaff: 'Hozircha xodim yo‘q',
+    clients: 'Mijozlar',
+    crm: {
+      title: 'Mijozlar bazasi', kAll: 'jami', kBuyers: 'xarid qilgan', kRepeat: 'qayta xarid', kFresh: '30 kunda yangi',
+      search: 'Ism, telefon yoki @username', segments: 'Segmentlar', sort: 'Tartiblash',
+      seg: { all: 'Hammasi', vip: 'VIP', regular: 'Doimiy', new: 'Yangi', sleep: 'Uxlab qolgan', lost: 'Ketgan', none: 'Xaridsiz', subs: 'Bot obunachilari' },
+      sorts: { last: 'Oxirgi buyurtma bo‘yicha', spent: 'Summa bo‘yicha', orders: 'Buyurtmalar soni bo‘yicha', new: 'Yangi qo‘shilganlar', name: 'Ism bo‘yicha' },
+      segHint: 'VIP — 10+ buyurtma yoki 1 000 000+ so‘m; Doimiy — 3+; Yangi — 1–2; Uxlab qolgan — 30–90 kun buyurtmasiz; Ketgan — 90+ kun.',
+      found: (n) => `Topildi: ${n}`, more: (n) => `Yana ko‘rsatish (${n})`, empty: 'Mijozlar topilmadi', emptySearch: 'Boshqa so‘z yoki raqam bilan qidiring.',
+      line: (n, sum) => `${n} ta buyurtma · ${sum}`, lastShort: (d) => `oxirgisi ${d}`, mln: 'mln', botOnly: 'faqat bot obunachisi', noName: 'Ismsiz',
+      export: 'Excel yuklab olish', exported: (n) => `Excel (${n} mijoz) bot bilan chatingizga yuborildi`,
+      contacts: 'Aloqa', call: 'Qo‘ng‘iroq', copyPhone: 'Raqamni nusxalash', write: 'Yozish', subs: 'Aksiyalar xabarnomasi', lang: 'Til', source: 'Qayerdan keldi',
+      subsOn: 'Obuna — xabarnomalar keladi', subsOff: 'Obunadan chiqqan', subsBlocked: 'Botni bloklagan', subsNone: 'Telegram yo‘q — faqat telefon orqali',
+      src: { site: 'Sayt', tg: 'Mini App', bot: 'Bot' }, since: (d) => `bazada ${d} dan`,
+      metrics: 'Ko‘rsatkichlar', mOrders: 'buyurtma', mSpent: (c) => `jami, ${c}`, mAvg: 'o‘rtacha chek', mEvery: 'har necha kunda', every: (d) => (d < 1 ? '<1 kun' : `${d} kun`),
+      first: 'Birinchi buyurtma', last: 'Oxirgi buyurtma', daysAgo: (d) => (d === 0 ? 'bugun' : `${d} kun oldin`), fav: 'Sevimli taom',
+      delPick: 'Yetkazib berish / olib ketish', canceled: 'Bekor qilingan', rating: 'Baho',
+      note: 'Kafe izohi', notePh: 'Masalan: piyozsiz, achchiq yoqtiradi, eshik kodi 25', noteHint: 'Faqat egalar ko‘radi. Sog‘liq yoki pul haqida yozmang.',
+      noteBy: (by, at) => `O‘zgartirdi: ${by} · ${at}`, saveNote: 'Izohni saqlash', noteSaved: 'Izoh saqlandi',
+      history: 'Buyurtmalar tarixi (oxirgi 30)', noOrders: 'Hali buyurtma yo‘q', delivery: 'yetkazib berish', pickup: 'olib ketish',
+      forget: 'Mijoz ma’lumotlarini o‘chirish', forgetHint: 'Faqat mijozning o‘zi so‘rasa. Kartochka, ism, telefon, manzil va izohlar o‘chiriladi; summalar statistikada ismsiz qoladi. Qaytarib bo‘lmaydi.',
+      forgetConfirm: 'Mijoz ma’lumotlari butunlay o‘chirilsinmi? Buni qaytarib bo‘lmaydi.',
+      forgotten: (n, active) => `O‘chirildi. Anonimlashtirilgan buyurtmalar: ${n}${active ? `. Faol buyurtmalar: ${active} — yetkazilgach yana o‘chiring` : ''}`
+    },
     histEmpty: 'Hozircha o‘zgarish yo‘q', undoConfirm: 'Bu o‘zgarish bekor qilinsinmi?',
     kinds: {
       item: 'Taom', item_delete: 'O‘chirildi', item_avail: 'Mavjudlik', order_items: 'Taomlar tartibi', order_cats: 'Bo‘limlar tartibi', cat: 'Bo‘lim', cat_delete: 'Bo‘lim o‘chirildi',
-      settings: 'Kafe haqida', schedule: 'Jadval', closed: 'Bugun yopiq', opened: 'Yana ochiq', promo_day: 'Kun taomi', bulk: 'Narxlar', undo: 'Bekor qilindi'
+      settings: 'Kafe haqida', schedule: 'Jadval', closed: 'Bugun yopiq', opened: 'Yana ochiq', promo_day: 'Kun taomi', bulk: 'Narxlar', undo: 'Bekor qilindi',
+      client_export: 'Mijozlar bazasi yuklab olindi', client_forget: 'Mijoz ma’lumotlari o‘chirildi'
     },
     staffHome: 'Bugun nima yo‘q', staffHomeSub: 'Kalitni o‘chiring — taom saytda ertalab 06:00 gacha «mavjud emas» bo‘ladi',
     errors: {
@@ -72,7 +96,7 @@ export const TEXTS = {
       already: 'Allaqachon bajarilgan.', url: 'Havola https:// bilan boshlanishi kerak.', price: 'Narxni raqam bilan yozing.', name: 'Nomini yozing.', size: 'Har bir o‘lchamga nom bering.',
       cat: 'Bo‘limni tanlang.', date: 'Sana o‘tib ketgan.', bad_image: 'Rasm formati to‘g‘ri kelmadi.', too_big: 'Fayl juda katta.', test_failed: 'Sinov xabarini yuborib bo‘lmadi — bot bilan chatni oching va «Start» bosing.',
       empty: 'Matn yozing yoki rasm qo‘shing.', too_long: 'Matn juda uzun.', unauthorized: 'Sessiya eskirdi — panelni botdan qayta oching.', forbidden: 'Bunga ruxsat yo‘q.',
-      busy: 'Server band, qayta urinib ko‘ring.', network: 'Internet yo‘q yoki server javob bermadi.', value: 'Qiymatni tekshiring.', other: 'Xatolik yuz berdi, qayta urinib ko‘ring.'
+      not_undoable: 'Bu amalni bekor qilib bo‘lmaydi.', busy: 'Server band, qayta urinib ko‘ring.', network: 'Internet yo‘q yoki server javob bermadi.', value: 'Qiymatni tekshiring.', other: 'Xatolik yuz berdi, qayta urinib ko‘ring.'
     }
   },
   ru: {
@@ -135,10 +159,34 @@ export const TEXTS = {
     staffHint: 'Сотрудник может только отмечать «нет сегодня» и час пик — цены и тексты он не видит.', invite: 'Пригласить сотрудника',
     inviteReady: 'Ссылка-приглашение готова — отправьте сотруднику. Одноразовая, действует 48 часов.', share: 'Отправить в Telegram', copy: 'Скопировать', copied: 'Скопировано',
     removeStaff: (n) => `Убрать ${n} из сотрудников?`, noStaff: 'Сотрудников пока нет',
+    clients: 'Клиенты',
+    crm: {
+      title: 'База клиентов', kAll: 'всего', kBuyers: 'покупали', kRepeat: 'повторно', kFresh: 'новых за 30 дней',
+      search: 'Имя, телефон или @username', segments: 'Сегменты', sort: 'Сортировка',
+      seg: { all: 'Все', vip: 'VIP', regular: 'Постоянные', new: 'Новые', sleep: 'Уснувшие', lost: 'Ушедшие', none: 'Без покупок', subs: 'Подписчики бота' },
+      sorts: { last: 'По последнему заказу', spent: 'По сумме покупок', orders: 'По числу заказов', new: 'Новые в базе', name: 'По имени' },
+      segHint: 'VIP — 10+ заказов или 1 000 000+ сум; Постоянные — 3+; Новые — 1–2; Уснувшие — 30–90 дней без заказа; Ушедшие — 90+ дней.',
+      found: (n) => `Найдено: ${n}`, more: (n) => `Показать ещё (${n})`, empty: 'Клиенты не найдены', emptySearch: 'Попробуйте другое слово или номер.',
+      line: (n, sum) => `${n} зак. · ${sum}`, lastShort: (d) => `последний ${d}`, mln: 'млн', botOnly: 'только подписчик бота', noName: 'Без имени',
+      export: 'Скачать Excel', exported: (n) => `Excel (${n} клиентов) отправлен вам в чат с ботом`,
+      contacts: 'Контакты', call: 'Позвонить', copyPhone: 'Скопировать номер', write: 'Написать', subs: 'Рассылка акций', lang: 'Язык', source: 'Откуда пришёл',
+      subsOn: 'Подписан — рассылки приходят', subsOff: 'Отписался', subsBlocked: 'Заблокировал бота', subsNone: 'Нет Telegram — только телефон',
+      src: { site: 'Сайт', tg: 'Mini App', bot: 'Бот' }, since: (d) => `в базе с ${d}`,
+      metrics: 'Показатели', mOrders: 'заказов', mSpent: (c) => `всего, ${c}`, mAvg: 'средний чек', mEvery: 'заказывает раз в', every: (d) => (d < 1 ? '<1 дн.' : `${d} дн.`),
+      first: 'Первый заказ', last: 'Последний заказ', daysAgo: (d) => (d === 0 ? 'сегодня' : `${d} дн. назад`), fav: 'Любимое блюдо',
+      delPick: 'Доставка / самовывоз', canceled: 'Отменено', rating: 'Оценка',
+      note: 'Заметка кафе', notePh: 'Например: без лука, любит острое, код подъезда 25', noteHint: 'Видят только владельцы. Не пишите о здоровье и деньгах.',
+      noteBy: (by, at) => `Изменил(а): ${by} · ${at}`, saveNote: 'Сохранить заметку', noteSaved: 'Заметка сохранена',
+      history: 'История заказов (последние 30)', noOrders: 'Заказов пока нет', delivery: 'доставка', pickup: 'самовывоз',
+      forget: 'Удалить данные клиента', forgetHint: 'Только по просьбе самого клиента. Удаляются карточка, имя, телефон, адрес и комментарии; суммы остаются в статистике без имени. Отменить нельзя.',
+      forgetConfirm: 'Удалить данные клиента насовсем? Вернуть будет нельзя.',
+      forgotten: (n, active) => `Удалено. Обезличено заказов: ${n}${active ? `. Активных заказов: ${active} — удалите ещё раз после доставки` : ''}`
+    },
     histEmpty: 'Изменений пока нет', undoConfirm: 'Отменить это изменение?',
     kinds: {
       item: 'Блюдо', item_delete: 'Удалено', item_avail: 'Наличие', order_items: 'Порядок блюд', order_cats: 'Порядок разделов', cat: 'Раздел', cat_delete: 'Раздел удалён',
-      settings: 'Информация', schedule: 'Расписание', closed: 'Сегодня закрыты', opened: 'Снова открыты', promo_day: 'Блюдо дня', bulk: 'Цены', undo: 'Отмена'
+      settings: 'Информация', schedule: 'Расписание', closed: 'Сегодня закрыты', opened: 'Снова открыты', promo_day: 'Блюдо дня', bulk: 'Цены', undo: 'Отмена',
+      client_export: 'Выгружена база клиентов', client_forget: 'Удалены данные клиента'
     },
     staffHome: 'Чего нет сегодня', staffHomeSub: 'Выключите — блюдо будет «нет в наличии» на сайте до 06:00 утра',
     errors: {
@@ -147,7 +195,7 @@ export const TEXTS = {
       already: 'Уже сделано.', url: 'Ссылка должна начинаться с https://', price: 'Цену — числом.', name: 'Напишите название.', size: 'Подпишите каждый размер.',
       cat: 'Выберите раздел.', date: 'Дата уже прошла.', bad_image: 'Формат фото не подошёл.', too_big: 'Файл слишком большой.', test_failed: 'Не удалось отправить пробное — откройте чат с ботом и нажмите «Старт».',
       empty: 'Напишите текст или добавьте фото.', too_long: 'Слишком длинный текст.', unauthorized: 'Сессия устарела — откройте панель заново из бота.', forbidden: 'Нет прав на это действие.',
-      busy: 'Сервер занят, попробуйте ещё раз.', network: 'Нет интернета или сервер не ответил.', value: 'Проверьте значение.', other: 'Что-то пошло не так, попробуйте ещё раз.'
+      not_undoable: 'Это действие не отменяется.', busy: 'Сервер занят, попробуйте ещё раз.', network: 'Нет интернета или сервер не ответил.', value: 'Проверьте значение.', other: 'Что-то пошло не так, попробуйте ещё раз.'
     }
   }
 };

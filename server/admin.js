@@ -4,13 +4,14 @@
 // только «нет в наличии» и час пик. Правки контента идут через change() (server/content.js): журнал и отмена.
 import { promoKeyboard, sendBatch } from './broadcast.js';
 import { change, Conflict, getContent, history, scheduleNow, undoChange } from './content.js';
-import { audienceCounts } from './customers.js';
+import { audienceCounts, clientCard, clientList, customersXlsx, forgetCustomerById, setClientNote } from './customers.js';
 import { getKV, setKV } from './db.js';
 import { nextMorning, rushState, setRush, setStop, stopList } from './live.js';
 import { R } from './menu.js';
 import { collect } from './stats.js';
-import { groupChat, tg, verifyInitData } from './tg.js';
-import { DAY, dayKey, fail, h, HOUR, json, periodStart, prevPeriod, randomToken, SITE } from './util.js';
+import { T } from './texts.js';
+import { groupChat, tg, tgUpload, verifyInitData } from './tg.js';
+import { DAY, dayKey, ddmm, fail, h, HOUR, json, periodStart, prevPeriod, randomToken, SITE } from './util.js';
 
 const BOT = (globalThis.MENU_CONFIG && globalThis.MENU_CONFIG.bot) || '';
 const INVITE_FOR = 48 * HOUR;
@@ -440,6 +441,40 @@ export async function adminRoute(request, env, path, method, sameOrigin) {
       return json(await broadcasts(env));
     }
 
+    // --- клиенты (CRM): только владельцы; личные данные не уходят в журнал ---
+    if (action === 'clients' && method === 'GET') {
+      const p = new URL(request.url).searchParams;
+      return json(await clientList(env, { q: str(p.get('q'), 60), seg: str(p.get('seg'), 10) || 'all', sort: str(p.get('sort'), 10) || 'last', offset: p.get('offset') }));
+    }
+    if (action === 'client' && method === 'GET') {
+      const card = await clientCard(env, int(new URL(request.url).searchParams.get('id'), 1, 1e12));
+      return card ? json(card) : fail('gone', 404);
+    }
+    if (action === 'client/note' && method === 'POST') {
+      const b = await body(request);
+      const note = String(b.note == null ? '' : b.note).replace(/[\u0000-\u0009\u000b-\u001f\u007f]+/g, ' ').trim().slice(0, 500);
+      if (!(await setClientNote(env, int(b.id, 1, 1e12), note, me.name))) throw new Conflict('gone', 404);
+      return json(await clientCard(env, int(b.id, 1, 1e12)));
+    }
+    if (action === 'client/forget' && method === 'POST') {
+      const b = await body(request);
+      const id = int(b.id, 1, 1e12);
+      const r = await forgetCustomerById(env, id);
+      if (!r) throw new Conflict('gone', 404);
+      await audit(env, by, 'client_forget', `№${id}`);
+      return json(r);
+    }
+    if (action === 'clients/export' && method === 'POST') {
+      const { count, bytes } = await customersXlsx(env, me.lang);
+      if (!count) throw new Conflict('empty', 409);
+      const d = ddmm(Date.now(), true);
+      const r = await tgUpload(env, 'sendDocument', { chat_id: me.id, caption: T[me.lang].clientsCaption(count, d) },
+        { field: 'document', bytes, name: `buddy-coffee-clients-${d}.xlsx`, type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      if (!r.ok) throw new Conflict('test_failed', 502);
+      await audit(env, by, 'client_export', String(count));
+      return json({ count });
+    }
+
     // --- статистика ---
     if (action === 'stats' && method === 'GET') {
       const period = new URL(request.url).searchParams.get('period') || 'today';
@@ -451,6 +486,10 @@ export async function adminRoute(request, env, path, method, sameOrigin) {
   }
   return fail('not_found', 404);
 }
+
+// Запись в журнал действий без отмены (выгрузка базы клиентов, удаление по просьбе): кто и когда
+const audit = (env, by, kind, title) => env.DB.prepare("INSERT INTO changes (at, by_id, by_name, kind, title, patches) VALUES (?, ?, ?, ?, ?, '[]')")
+  .bind(Date.now(), by.id, by.name, kind, title).run();
 
 /* ---------- фото ---------- */
 

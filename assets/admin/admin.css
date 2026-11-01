@@ -54,3 +54,18 @@ body { overscroll-behavior-y: none; -webkit-tap-highlight-color: transparent; fo
 /* Вне Telegram: своя нижняя кнопка и «назад» */
 .bottom { padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); background: var(--tg-theme-bg-color, #fff); }
 .backbar { padding: 6px 8px; }
+
+/* Клиенты: показатели плиткой и метка сегмента */
+.kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; padding: 4px 16px 12px; }
+.kpi { display: flex; flex-direction: column; gap: 2px; padding: 10px 8px; border-radius: 12px; background: var(--tg-theme-secondary-bg-color, #efeff4); text-align: center; min-width: 0; }
+.kpi b { font-size: 16px; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kpi span { font-size: 11px; line-height: 1.2; color: var(--tg-theme-hint-color, #8e8e93); }
+.seg { display: inline-block; padding: 3px 8px; border-radius: 8px; font-size: 12px; font-weight: 600; white-space: nowrap; background: var(--tg-theme-secondary-bg-color, #efeff4); color: var(--tg-theme-text-color, #000); }
+.seg--vip { background: #FFC93C; color: #1B1612; }
+.seg--regular { background: #D9F2E3; color: #14532D; }
+.seg--new { background: #DCEBFF; color: #0C447C; }
+.seg--sleep { background: #FDECC8; color: #633806; }
+.seg--lost { background: #FCE1E1; color: #791F1F; }
+.kpis--2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.kpis--2 .kpi b { font-size: 20px; }
+@media (max-width: 360px) { .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

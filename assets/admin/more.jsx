@@ -460,7 +460,7 @@ export function HistoryScreen({ ctx }) {
       <Section header={t.history}>
         {items.map((h) => (
           <Cell key={h.id} multiline subtitle={`${h.by_name || ''} · ${when(h.at, lang)}${h.undone_at ? ` · ${t.undone}` : ''}`}
-            after={!h.undone_at && h.kind !== 'undo' ? <Button size="s" mode="plain" onClick={() => undo(h)}>{t.undo}</Button> : undefined}>
+            after={!h.undone_at && h.undoable && h.kind !== 'undo' ? <Button size="s" mode="plain" onClick={() => undo(h)}>{t.undo}</Button> : undefined}>
             {`${t.kinds[h.kind] || h.kind}${h.title ? ': ' + (h.kind === 'settings' ? h.title.split(', ').map((k) => t.fields[k] || k).join(', ') : h.title) : ''}`}
           </Cell>
         ))}

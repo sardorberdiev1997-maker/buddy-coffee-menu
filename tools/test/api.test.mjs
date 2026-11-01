@@ -762,3 +762,60 @@ test('панель: рассылка — пробное себе, затем п�
   assert.equal(stats.status, 200);
   assert.ok(stats.body.n >= 1 && 'revenue' in stats.body && 'prev' in stats.body && stats.body.funnel);
 });
+
+test('панель: «Клиенты» — поиск, сегменты, карточка с историей, заметка, выгрузка и удаление по просьбе', async () => {
+  const sql = async (q, ...args) => (await (await fetch(BASE + '/__sql', { method: 'POST', body: JSON.stringify({ sql: q, args }) })).json()).rows;
+  // Клиент с заказом: имя и телефон уникальны для теста
+  const r = await api('/api/orders', { method: 'POST', body: JSON.stringify(orderBody({ name: 'Нодира CRM', phone: '93 777 11 22' })) });
+  assert.equal(r.status, 201, JSON.stringify(r.body));
+
+  // Сотрудникам и посторонним база клиентов недоступна
+  await member(STRANGER.id, 'member');
+  assert.equal((await adm('/api/admin/clients', STRANGER)).status, 403);
+
+  const list = await adm('/api/admin/clients', OWNER);
+  assert.equal(list.status, 200);
+  assert.ok(list.body.summary.all >= 1 && list.body.segCount.all === list.body.summary.all);
+  const byPhone = await adm('/api/admin/clients?q=' + encodeURIComponent('777 11'), OWNER);
+  assert.equal(byPhone.body.items.length, 1, 'поиск по части номера');
+  const c = byPhone.body.items[0];
+  assert.equal(c.name, 'Нодира CRM');
+  assert.equal((await adm('/api/admin/clients?q=' + encodeURIComponent('нодира'), OWNER)).body.items[0].id, c.id, 'поиск по имени без учёта регистра');
+  assert.equal((await adm('/api/admin/clients?seg=vip', OWNER)).body.items.some((x) => x.id === c.id), false, 'сегменты фильтруют');
+
+  const card = await adm('/api/admin/client?id=' + c.id, OWNER);
+  assert.equal(card.status, 200);
+  assert.equal(card.body.phone.replace(/\D/g, ''), '998937771122');
+  assert.equal(card.body.tel, '+998937771122');
+  assert.ok(card.body.orders.length >= 1 && card.body.orders[0].label.ru, 'история заказов со статусом');
+
+  // Заметка: сохраняется, видна значком в списке, очищается
+  const noted = await adm('/api/admin/client/note', OWNER, { id: c.id, note: 'Без лука, код подъезда 25' });
+  assert.equal(noted.body.note, 'Без лука, код подъезда 25');
+  assert.equal(noted.body.note_by, 'Suxrob');
+  assert.equal((await adm('/api/admin/clients?q=' + encodeURIComponent('нодира'), OWNER)).body.items[0].noted, true);
+  await adm('/api/admin/client/note', OWNER, { id: c.id, note: '' });
+  assert.equal((await adm('/api/admin/client?id=' + c.id, OWNER)).body.note, '');
+
+  // Выгрузка: Excel — в личку владельцу, запись в журнале без кнопки «Отменить»
+  let t0 = await mark();
+  const exp = await adm('/api/admin/clients/export', OWNER, {});
+  assert.equal(exp.status, 200, JSON.stringify(exp.body));
+  const doc = (await tgCalls(t0)).find((x) => x.method === 'sendDocument');
+  assert.ok(doc && String(doc.body.chat_id) === String(OWNER.id) && /\.xlsx$/.test(doc.body.document.name));
+  let h = (await adm('/api/admin/history', OWNER)).body.items;
+  const expRow = h.find((x) => x.kind === 'client_export');
+  assert.ok(expRow && !expRow.undoable);
+  assert.equal((await adm('/api/admin/undo', OWNER, { id: expRow.id })).status, 409, 'выгрузку не «отменить»');
+
+  // Удаление по просьбе клиента: карточки нет, заказ обезличен, имени нет и в журнале
+  await adm('/api/admin/client/note', OWNER, { id: c.id, note: 'временная' });
+  const del = await adm('/api/admin/client/forget', OWNER, { id: c.id });
+  assert.equal(del.status, 200);
+  assert.equal((await adm('/api/admin/client?id=' + c.id, OWNER)).status, 404);
+  assert.equal((await sql('SELECT COUNT(*) AS n FROM customer_notes WHERE customer_id = ?', c.id))[0].n, 0, 'заметка удалена вместе с клиентом');
+  h = (await adm('/api/admin/history', OWNER)).body.items;
+  const forgetRow = h.find((x) => x.kind === 'client_forget');
+  assert.ok(forgetRow && !/Нодира/.test(forgetRow.title), 'в журнале — номер карточки, без имени');
+  assert.equal((await adm('/api/admin/client/forget', OWNER, { id: c.id })).status, 404);
+});
