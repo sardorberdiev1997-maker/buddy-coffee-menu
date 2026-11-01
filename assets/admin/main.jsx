@@ -2,6 +2,7 @@
 // UI — @telegram-apps/telegram-ui (списки и ячейки как в настройках Telegram), кнопки — родные MainButton/BackButton.
 import { AppRoot, Button, Cell, Info, List, Placeholder, Section, SegmentedControl, Snackbar, Spinner, Switch } from '@telegram-apps/telegram-ui';
 import '@telegram-apps/telegram-ui/dist/styles.css';
+import 'leaflet/dist/leaflet.css';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 
@@ -44,9 +45,9 @@ function Home({ ctx }) {
     <List>
       <Section header={t.status}>
         <Cell Component="label" multiline
-          after={<Switch checked={!L.paused && !L.closed} disabled={L.closed} onChange={(e) => act('paused', { on: !e.target.checked })} />}
+          after={<Switch aria-label={t.acceptOrders} checked={!L.paused && !L.closed} disabled={L.closed} onChange={(e) => act('paused', { on: !e.target.checked })} />}
           subtitle={L.closed ? t.closedToday : L.paused ? t.pausedSub : t.acceptingSub}>{t.acceptOrders}</Cell>
-        <Cell Component="label" multiline after={<Switch checked={L.closed} onChange={(e) => act('closed', { on: e.target.checked })} />}
+        <Cell Component="label" multiline after={<Switch aria-label={t.closedToday} checked={L.closed} onChange={(e) => act('closed', { on: e.target.checked })} />}
           description={t.closedSub}>{t.closedToday}</Cell>
       </Section>
       <Section header={t.rush} footer={t.rushSub}>
@@ -120,7 +121,7 @@ function StaffHome({ ctx }) {
         return (
           <Section key={c.id} header={`${c.icon || ''} ${nameOf(c, lang)}`.trim()} footer={c === st.doc.cats[0] ? t.staffHomeSub : undefined}>
             {items.map((it) => (
-              <Cell key={it.key} Component="label" after={<Switch checked={!stop[it.key]} onChange={(e) => act('stop', { key: it.key, on: !e.target.checked })} />}
+              <Cell key={it.key} Component="label" after={<Switch aria-label={nameOf(it, lang)} checked={!stop[it.key]} onChange={(e) => act('stop', { key: it.key, on: !e.target.checked })} />}
                 description={stop[it.key] ? t.notToday : undefined}>{nameOf(it, lang)}</Cell>
             ))}
           </Section>
@@ -222,7 +223,7 @@ function App() {
   return (
     <AppRoot appearance={WA && WA.colorScheme === 'dark' ? 'dark' : 'light'} platform={WA && ['ios', 'macos'].includes(WA.platform) ? 'ios' : 'base'}>
       {!native && stack.length > 1 ? <div className="backbar"><Button mode="plain" size="s" onClick={() => pop()}>← {t.back}</Button></div> : null}
-      {body}
+      <main>{body}</main>
       {toast ? (
         <Snackbar key={toast.id} onClose={() => setToast(null)} duration={toast.undo ? 6000 : 3500}
           after={toast.undo ? <Snackbar.Button onClick={async () => {

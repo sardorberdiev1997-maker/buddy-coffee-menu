@@ -125,7 +125,8 @@ const sw = withVersions(read('sw.js'))
 write('sw.js', (await esbuild.transform(sw, { loader: 'js', minify: true, target: 'es2020', charset: 'utf8' })).code);
 
 // Остальное — как есть
-for (const p of ['404.html', 'offline.html', 'favicon.svg', 'manifest.webmanifest', 'robots.txt', 'sitemap.xml', 'data/menu.json', 'assets/fonts', 'img']) {
+for (const p of ['404.html', 'offline.html', 'favicon.svg', 'manifest.webmanifest', 'robots.txt', 'sitemap.xml', 'data/menu.json', 'data/photos', 'assets/fonts', 'img']) {
+  if (p === 'data/photos' && !existsSync(path.join(ROOT, p))) continue; // копия фото из панели (tools/sync_menu.py)
   cpSync(path.join(ROOT, p), path.join(DIST, p), { recursive: true });
 }
 // Сервер заказов: один файл для Cloudflare Pages (advanced mode)
@@ -147,13 +148,15 @@ await esbuild.build({
   entryPoints: { admin: path.join(ROOT, 'assets/admin/main.jsx') },
   outdir: path.join(DIST, 'assets'),
   bundle: true,
-  format: 'iife',
+  format: 'esm',
+  splitting: true, // карта (Leaflet) — отдельный файл, грузится только когда её открыли
+  chunkNames: 'admin-[hash]',
   target: 'es2020',
   minify: true,
   charset: 'utf8',
   jsx: 'automatic',
   define: { 'process.env.NODE_ENV': '"production"' },
-  loader: { '.svg': 'dataurl' },
+  loader: { '.svg': 'dataurl', '.png': 'dataurl' },
   legalComments: 'eof',
   logLevel: 'warning'
 });

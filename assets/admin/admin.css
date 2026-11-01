@@ -69,3 +69,20 @@ body { overscroll-behavior-y: none; -webkit-tap-highlight-color: transparent; fo
 .kpis--2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .kpis--2 .kpi b { font-size: 20px; }
 @media (max-width: 360px) { .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* Карта выбора точки кафе (Leaflet) */
+.map { height: 300px; margin: 8px 16px; border-radius: 12px; overflow: hidden; background: var(--tg-theme-secondary-bg-color, #efeff4); }
+.map--loading { display: grid; place-items: center; }
+.pin { background: none; border: 0; }
+.pin span { display: block; font-size: 30px; line-height: 1; filter: drop-shadow(0 2px 2px rgb(0 0 0 / .35)); }
+.leaflet-container { font: inherit; }
+
+/* Строка блюда: кнопка-название растянута на всю строку, переключатель — поверх (вложенные кнопки недоступны диктору) */
+.row { position: relative; }
+.row__open { all: unset; cursor: pointer; }
+.row__open::after { content: ''; position: absolute; inset: 0; z-index: 1; }
+.row__open:focus-visible::after { outline: 2px solid var(--tg-theme-button-color, #2481cc); outline-offset: -2px; }
+.row:active { background: var(--tgui--tertiary_bg_color, rgb(0 0 0 / .05)); }
+.row__over { position: relative; z-index: 2; }
+.chips > [role=tab]:focus-visible, .chips > [role=button]:focus-visible { outline: 2px solid var(--tg-theme-button-color, #2481cc); outline-offset: 2px; }
+main { display: contents; }

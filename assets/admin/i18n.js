@@ -41,7 +41,8 @@ export const TEXTS = {
       'примечание_к_фото': 'Rasmlar haqida izoh', 'описание_бота': 'Bot tavsifi (120 belgigacha)'
     },
     uzRu: (l) => (l === 'uz' ? 'o‘zbekcha' : 'ruscha'),
-    myLocation: 'Men kafedaman — joylashuvni olish', locFail: 'Joylashuvni olib bo‘lmadi. Telefon sozlamalarida ruxsat bering.', openMap: 'Xaritada tekshirish',
+    pickOnMap: 'Xaritada tanlash', mapHide: 'Xaritani yopish', mapHint: 'Xaritani bosing yoki 📍 ni suring. Nuqta boshqa maydonlar bilan birga saqlanadi.',
+    myLocation: 'Men kafedaman — joylashuvni olish', locFail: 'Joylashuvni olib bo‘lmadi. Telefon sozlamalarida ruxsat bering.', openMap: 'Yandex xaritasida tekshirish',
     errField: (f) => `«${f}» maydonini tekshiring`,
     noticeUntil: 'E’lon qachongacha', noticeUntilSub: 'Shu kundan keyin e’lon o‘zi yo‘qoladi. Bo‘sh — muddatsiz.', currentNotice: 'Hozirgi e’lon',
     special: 'Maxsus kunlar (bayramlar)', specialSub: 'Shu kuni saytda ish vaqti o‘rniga ko‘rsatiladi', addDay: 'Kun qo‘shish', date: 'Sana', hours: 'Ish vaqti', closedDay: 'Shu kuni yopiq',
@@ -140,7 +141,8 @@ export const TEXTS = {
       'примечание_к_фото': 'Примечание к фото', 'описание_бота': 'Описание бота (до 120 знаков)'
     },
     uzRu: (l) => (l === 'uz' ? 'по-узбекски' : 'по-русски'),
-    myLocation: 'Я в кафе — взять геопозицию', locFail: 'Не удалось получить геопозицию. Разрешите доступ в настройках телефона.', openMap: 'Проверить на карте',
+    pickOnMap: 'Выбрать на карте', mapHide: 'Скрыть карту', mapHint: 'Нажмите на карту или перетащите 📍. Точка сохранится вместе с остальными полями.',
+    myLocation: 'Я в кафе — взять геопозицию', locFail: 'Не удалось получить геопозицию. Разрешите доступ в настройках телефона.', openMap: 'Проверить в Яндекс Картах',
     errField: (f) => `Проверьте поле «${f}»`,
     noticeUntil: 'Объявление до', noticeUntilSub: 'После этой даты объявление пропадёт само. Пусто — бессрочно.', currentNotice: 'Сейчас объявление',
     special: 'Особые дни (праздники)', specialSub: 'В этот день на сайте вместо часов работы', addDay: 'Добавить день', date: 'Дата', hours: 'Часы работы', closedDay: 'В этот день закрыты',

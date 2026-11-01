@@ -1,5 +1,6 @@
 // Мелкие общие элементы экранов панели
 import { Button, FixedLayout } from '@telegram-apps/telegram-ui';
+import { Children, cloneElement, isValidElement, useId } from 'react';
 
 import { imgUrl } from './lib.js';
 
@@ -19,13 +20,23 @@ export const Bottom = ({ btn }) => (btn ? (
 ) : null);
 
 // Поле формы с подписью сверху (подписи telegram-ui на iOS не показываются) и подсказкой или ошибкой снизу
-export const Field = ({ label, hint, error, children }) => (
-  <div className="fld">
-    {label ? <div className="fld__l">{label}</div> : null}
-    {children}
-    {error ? <div className="fld__e" role="alert">{error}</div> : hint ? <div className="fld__h">{hint}</div> : null}
-  </div>
-);
+// Подпись, подсказка и ошибка связаны с полем (aria-labelledby / aria-describedby): поле telegram-ui лежит в своём <label> без текста
+export const Field = ({ label, hint, error, children }) => {
+  const id = useId();
+  const note = error || hint;
+  const wire = (c) => (isValidElement(c) && typeof c.type !== 'string' && !c.props['aria-label'] ? cloneElement(c, {
+    ...(label ? { 'aria-labelledby': id + 'l' } : {}),
+    ...(note ? { 'aria-describedby': id + 'n' } : {}),
+    ...(error ? { 'aria-invalid': true } : {})
+  }) : c);
+  return (
+    <div className="fld">
+      {label ? <div className="fld__l" id={id + 'l'}>{label}</div> : null}
+      {Children.map(children, wire)}
+      {error ? <div className="fld__e" id={id + 'n'} role="alert">{error}</div> : hint ? <div className="fld__h" id={id + 'n'}>{hint}</div> : null}
+    </div>
+  );
+};
 
 export const Thumb = ({ img, preview, size = 44, icon = '🍽' }) => {
   const src = preview || imgUrl(img);

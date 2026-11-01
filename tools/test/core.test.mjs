@@ -144,6 +144,35 @@ test('сроки хранения: имя и адрес в заказе — 90 �
   }
 });
 
+test('сроки хранения панели: журнал — год, фото без ссылок — 30 дней', async () => {
+  const env = { DB: memoryD1() };
+  await env.DB.batch(SCHEMA.map((q) => env.DB.prepare(q)));
+  const now = Date.now();
+  const id = (n) => String(n).padStart(16, 'a');
+  await env.DB.prepare('INSERT INTO content (id, doc, version, updated_at) VALUES (1, ?, 1, ?)')
+    .bind(JSON.stringify({ cats: [], items: [{ id: 'x', img: 'up_' + id(1) }] }), now).run();
+  const photo = (n, days) => env.DB.prepare("INSERT INTO photos (id, created_at, type, sq, l) VALUES (?, ?, 'image/webp', x'00', x'00')")
+    .bind(id(n), now - days * DAY).run();
+  const log = (days, patches) => env.DB.prepare("INSERT INTO changes (at, kind, patches) VALUES (?, 'item', ?)").bind(now - days * DAY, patches).run();
+  await photo(1, 400); // в меню
+  await photo(2, 400); // только в журнале за год — нужно для отмены
+  await photo(3, 400); // нигде
+  await photo(4, 5); // нигде, но свежее
+  await photo(5, 400); // только в журнале старше года
+  await log(10, JSON.stringify([{ before: { img: 'up_' + id(2) } }]));
+  await log(500, JSON.stringify([{ before: { img: 'up_' + id(5) } }]));
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = async () => new Response(JSON.stringify({ ok: true, result: {} }));
+  try {
+    const r = await tick(env, now);
+    assert.equal(r.photosRemoved, 2);
+    assert.deepEqual((await env.DB.prepare('SELECT id FROM photos ORDER BY id').all()).results.map((x) => x.id), [id(1), id(2), id(4)]);
+    assert.equal((await env.DB.prepare('SELECT COUNT(*) AS n FROM changes').first()).n, 1);
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+});
+
 test('тексты ошибок для логов и диагностики — без секретов', () => {
   assert.equal(redact('fetch https://api.telegram.org/bot123456789:AAHdqTcvCH1vGWJxfSeofSAs0K5PALDsaw/sendMessage failed'),
     'fetch https://api.telegram.org/bot<token>/sendMessage failed');

@@ -1,5 +1,5 @@
 // Экраны меню: список блюд, карточка блюда, разделы
-import { Accordion, ButtonCell, Cell, Chip, IconButton, Input, List, Section, Select, Switch, Textarea } from '@telegram-apps/telegram-ui';
+import { ButtonCell, Cell, Chip, IconButton, Input, List, Section, Select, Switch, Textarea } from '@telegram-apps/telegram-ui';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { api, confirmBox, fmt, haptic, imgUrl, nameOf, num, otherLang, todayKey, uploadPhoto, useMainButton } from './lib.js';
@@ -42,7 +42,7 @@ export function MenuScreen({ ctx }) {
       </div>
       <div className="chips" role="tablist">
         {[{ id: '', icon: '', uz: t.all, ru: t.all }, ...st.doc.cats].map((c) => (
-          <Chip key={c.id || 'all'} mode={cat === c.id ? 'elevated' : 'outline'} onClick={() => setCat(c.id)} role="tab" aria-selected={cat === c.id}>
+          <Chip key={c.id || 'all'} mode={cat === c.id ? 'elevated' : 'outline'} {...tap(() => setCat(c.id))} role="tab" aria-selected={cat === c.id}>
             {`${c.icon || ''} ${nameOf(c, lang)}`.trim()}
           </Chip>
         ))}
@@ -55,7 +55,7 @@ export function MenuScreen({ ctx }) {
             {items.map((it) => {
               const off = !!stop[it.key];
               return (
-                <Cell key={it.key} before={<Thumb img={it.img} icon={c.icon || '🍽'} />} {...(order ? {} : tap(() => ctx.push('item', { key: it.key })))}
+                <Cell key={it.key} className="row" before={<Thumb img={it.img} icon={c.icon || '🍽'} />}
                   subtitle={priceText(it, lt)} description={!it.avail ? t.notInMenu : off ? t.notToday : undefined}
                   after={order ? (
                     <span className="arrows">
@@ -63,10 +63,10 @@ export function MenuScreen({ ctx }) {
                       <IconButton size="s" mode="plain" aria-label="↓" onClick={() => { const k = moved(st.doc.items, it.key, 1); if (k) act('order', { kind: 'items', keys: k }); }}>↓</IconButton>
                     </span>
                   ) : (
-                    <span onClick={(e) => e.stopPropagation()}>
-                      <Switch aria-label={t.today} checked={it.avail && !off} disabled={!it.avail} onChange={(e) => act('stop', { key: it.key, on: !e.target.checked })} />
+                    <span className="row__over">
+                      <Switch aria-label={`${t.today}: ${nameOf(it, lang)}`} checked={it.avail && !off} disabled={!it.avail} onChange={(e) => act('stop', { key: it.key, on: !e.target.checked })} />
                     </span>
-                  )}>{nameOf(it, lang)}</Cell>
+                  )}>{order ? nameOf(it, lang) : <button type="button" className="row__open" onClick={() => ctx.push('item', { key: it.key })}>{nameOf(it, lang)}</button>}</Cell>
               );
             })}
           </Section>
@@ -230,7 +230,7 @@ export function ItemScreen({ ctx, params }) {
       <Section header={t.badge}>
         <div className="chips chips--wrap">
           {['', 'хит', 'новинка', 'острое', 'советуем'].map((b) => (
-            <Chip key={b || 'none'} mode={f.badge === b ? 'elevated' : 'outline'} onClick={() => set('badge', b)} aria-pressed={f.badge === b}>
+            <Chip key={b || 'none'} mode={f.badge === b ? 'elevated' : 'outline'} {...tap(() => set('badge', b))} aria-pressed={f.badge === b}>
               {b ? t.badges[b] : t.badgeNone}
             </Chip>
           ))}
@@ -247,33 +247,35 @@ export function ItemScreen({ ctx, params }) {
       </Section>
 
       <Section header={t.availability}>
-        <Cell Component="label" multiline description={t.inMenuSub} after={<Switch checked={f.avail} onChange={(e) => set('avail', e.target.checked)} />}>{t.inMenu}</Cell>
+        <Cell Component="label" multiline description={t.inMenuSub} after={<Switch aria-label={t.inMenu} checked={f.avail} onChange={(e) => set('avail', e.target.checked)} />}>{t.inMenu}</Cell>
         {orig ? (
           <Cell Component="label" multiline description={t.todaySub}
-            after={<Switch checked={!stop[orig.key]} onChange={(e) => act('stop', { key: orig.key, on: !e.target.checked })} />}>{t.today}</Cell>
+            after={<Switch aria-label={t.today} checked={!stop[orig.key]} onChange={(e) => act('stop', { key: orig.key, on: !e.target.checked })} />}>{t.today}</Cell>
         ) : null}
       </Section>
 
       {orig ? (
         <Section header={t.dayDish} footer={t.dayHint}>
-          <Cell Component="label" after={<Switch checked={isDay} onChange={(e) => act('promo', { day: e.target.checked ? orig.key : null })} />}>
+          <Cell Component="label" after={<Switch aria-label={isDay ? t.isDay : t.makeDay} checked={isDay} onChange={(e) => act('promo', { day: e.target.checked ? orig.key : null })} />}>
             {isDay ? t.isDay : t.makeDay}
           </Cell>
         </Section>
       ) : null}
 
       <Section>
-        <Accordion expanded={more} onChange={setMore}>
-          <Accordion.Summary>{t.details}</Accordion.Summary>
-          <Accordion.Content>
+        {/* Раскрывающийся блок по схеме WAI «disclosure»: кнопка с aria-expanded, скрытые поля не остаются в DOM.
+            (Accordion из telegram-ui оставляет свёрнутые поля доступными с клавиатуры) */}
+        <ButtonCell before={<Ico e={more ? '▾' : '▸'} />} aria-expanded={more} aria-controls="item-more" onClick={() => setMore(!more)}>{t.details}</ButtonCell>
+        {more ? (
+          <div id="item-more">
             <Field label={t.pairs}><Input value={f.pairs} onChange={(e) => set('pairs', e.target.value)} maxLength={200} placeholder="Kartoshka fri / Mojito" /></Field>
             <Field label={t.allergens}><Input value={f.allergens} onChange={(e) => set('allergens', e.target.value)} maxLength={200} placeholder="глютен, яйца" /></Field>
             <Field label={t.kcal} hint={many ? t.nutrHint : undefined}><Input value={f.kcal} onChange={(e) => set('kcal', e.target.value)} maxLength={40} /></Field>
             <Field label={t.protein}><Input value={f.protein} onChange={(e) => set('protein', e.target.value)} maxLength={40} /></Field>
             <Field label={t.fat}><Input value={f.fat} onChange={(e) => set('fat', e.target.value)} maxLength={40} /></Field>
             <Field label={t.carbs}><Input value={f.carbs} onChange={(e) => set('carbs', e.target.value)} maxLength={40} /></Field>
-          </Accordion.Content>
-        </Accordion>
+          </div>
+        ) : null}
       </Section>
 
       <Section header={t.preview}>

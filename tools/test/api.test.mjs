@@ -3,7 +3,7 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { createHmac } from 'node:crypto';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { after, before, test } from 'node:test';
@@ -742,6 +742,21 @@ test('панель: фото — загрузка, проверка формат
   const html = R.createView(await siteModel(), 'uz').menuHTML();
   assert.ok(html.includes(`/api/photo/${up.body.img.slice(3)}/sq`), 'на сайте — фото из панели');
   await adm('/api/admin/undo', OWNER, { id: saved.body.change });
+
+  // Фото нет в базе — сайт отдаёт его из резервной копии в сборке (data/photos), иначе 404
+  const lost = 'f'.repeat(16);
+  assert.equal((await fetch(`${BASE}/api/photo/${lost}/sq`)).status, 404);
+  const dir = path.join(ROOT, 'dist/data/photos');
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(path.join(dir, `${lost}-sq.webp`), Buffer.from('RIFF0000WEBPVP8 '));
+  try {
+    const back = await fetch(`${BASE}/api/photo/${lost}/sq`);
+    assert.equal(back.status, 200);
+    assert.equal(back.headers.get('content-type'), 'image/webp');
+    assert.equal((await back.arrayBuffer()).byteLength, 16);
+  } finally {
+    rmSync(path.join(dir, `${lost}-sq.webp`));
+  }
 });
 
 test('панель: рассылка — пробное себе, затем подписчикам; статистика', async () => {

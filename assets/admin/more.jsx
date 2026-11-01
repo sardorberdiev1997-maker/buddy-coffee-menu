@@ -1,6 +1,6 @@
 // Экраны: информация о кафе, расписание, акции и цены, рассылка, статистика, сотрудники, история
 import { Button, ButtonCell, Cell, Checkbox, Info, Input, List, Placeholder, Radio, Section, SegmentedControl, Select, Spinner, Switch, Textarea } from '@telegram-apps/telegram-ui';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 
 import { api, confirmBox, errorText, fmt, haptic, nameOf, native, num, otherLang, todayKey, uploadPhoto, useMainButton, WA, when } from './lib.js';
 import { Bottom, Field, Ico, Thumb } from './ui.jsx';
@@ -21,6 +21,8 @@ const MONO = new Set(['телефон', 'ссылка_на_карту', 'коо�
 const LONG = new Set(['объявление', 'адрес', 'продавец', 'примечание_к_фото', 'описание_бота']);
 const MAX = { 'объявление': 200, 'описание_бота': 120, 'адрес': 200, 'продавец': 200, 'примечание_к_фото': 200 };
 const NUMERIC = new Set(['мин_заказ']);
+// Карта (Leaflet) — отдельным файлом, только когда её открыли
+const MapPicker = lazy(() => import('./map.jsx'));
 
 function getLocation() {
   return new Promise((resolve, reject) => {
@@ -52,6 +54,7 @@ export function InfoScreen({ ctx }) {
   const [f, setF] = useState(start);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState({});
+  const [map, setMap] = useState(false);
   const changed = Object.keys(f).filter((k) => f[k].uz !== start[k].uz || f[k].ru !== start[k].ru);
   useEffect(() => { ctx.setDirty(changed.length > 0); }, [changed.length]);
   const set = (k, l, v) => {
@@ -109,9 +112,16 @@ export function InfoScreen({ ctx }) {
           )))}
           {g === 'contacts' ? (
             <>
+              <ButtonCell before={<Ico e="🗺" />} onClick={() => setMap(!map)}>{map ? t.mapHide : t.pickOnMap}</ButtonCell>
+              {map ? (
+                <Suspense fallback={<div className="map map--loading"><Spinner size="m" /></div>}>
+                  <MapPicker value={f['координаты'].uz} onChange={(v) => set('координаты', 'uz', v)} />
+                  <div className="hint">{t.mapHint}</div>
+                </Suspense>
+              ) : null}
               <ButtonCell before={<Ico e="📍" />} onClick={locate}>{t.myLocation}</ButtonCell>
               {coords.length ? (
-                <ButtonCell before={<Ico e="🗺" />} onClick={() => WA.openLink(`https://yandex.uz/maps/?pt=${coords[1]},${coords[0]}&z=17&l=map`)}>{t.openMap}</ButtonCell>
+                <ButtonCell before={<Ico e="🔎" />} onClick={() => WA.openLink(`https://yandex.uz/maps/?pt=${coords[1]},${coords[0]}&z=17&l=map`)}>{t.openMap}</ButtonCell>
               ) : null}
             </>
           ) : null}
@@ -162,18 +172,18 @@ export function ScheduleScreen({ ctx }) {
   return (
     <List>
       <Section>
-        <Cell Component="label" multiline description={t.closedSub} after={<Switch checked={st.live.closed} onChange={(e) => act('closed', { on: e.target.checked })} />}>{t.closedToday}</Cell>
+        <Cell Component="label" multiline description={t.closedSub} after={<Switch aria-label={t.closedToday} checked={st.live.closed} onChange={(e) => act('closed', { on: e.target.checked })} />}>{t.closedToday}</Cell>
       </Section>
       <Section header={t.noticeUntil} footer={t.noticeUntilSub}>
         <Cell multiline subtitle={notice[lang] || notice[otherLang(lang)] || '—'}>{t.currentNotice}</Cell>
-        <Field><Input type="date" min={today} value={f.noticeUntil} onChange={(e) => setF((p) => ({ ...p, noticeUntil: e.target.value }))} /></Field>
+        <Field><Input type="date" aria-label={t.noticeUntil} min={today} value={f.noticeUntil} onChange={(e) => setF((p) => ({ ...p, noticeUntil: e.target.value }))} /></Field>
       </Section>
       <Section header={t.special} footer={t.specialSub}>
         {f.special.map((s, i) => (
           <div key={i} className="day">
             <Field label={t.date}><Input type="date" min={today} value={s.date} onChange={(e) => setDay(i, 'date', e.target.value)} /></Field>
             {!s.closed ? <Field label={t.hours}><Input value={s.hours} maxLength={60} placeholder="10:00–18:00" onChange={(e) => setDay(i, 'hours', e.target.value)} /></Field> : null}
-            <Cell Component="label" after={<Switch checked={s.closed} onChange={(e) => setDay(i, 'closed', e.target.checked)} />}>{t.closedDay}</Cell>
+            <Cell Component="label" after={<Switch aria-label={`${t.closedDay} ${s.date || ''}`.trim()} checked={s.closed} onChange={(e) => setDay(i, 'closed', e.target.checked)} />}>{t.closedDay}</Cell>
             <ButtonCell mode="destructive" onClick={() => setF((p) => ({ ...p, special: p.special.filter((_, j) => j !== i) }))}>{t.delete}</ButtonCell>
           </div>
         ))}
@@ -238,7 +248,7 @@ export function PromoScreen({ ctx }) {
       <Section header={t.bulk}>
         <Field label={t.bulkCats}>
           {st.doc.cats.map((c) => (
-            <Cell key={c.id} Component="label" before={<Checkbox checked={cats.includes(c.id)} onChange={(e) => { setPlan(null); setCats((p) => (e.target.checked ? [...p, c.id] : p.filter((x) => x !== c.id))); }} />}>
+            <Cell key={c.id} Component="label" before={<Checkbox aria-label={nameOf(c, lang)} checked={cats.includes(c.id)} onChange={(e) => { setPlan(null); setCats((p) => (e.target.checked ? [...p, c.id] : p.filter((x) => x !== c.id))); }} />}>
               {`${c.icon || ''} ${nameOf(c, lang)}`.trim()}
             </Cell>
           ))}

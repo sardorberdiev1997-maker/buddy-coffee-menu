@@ -1,0 +1,35 @@
+name: Site check
+
+# Раз в полчаса проверяет сайт, приём заказов, бота, фоновые задачи и старый адрес (tools/check_site.py).
+# Если что-то сломано — запуск красный, и GitHub присылает письмо автору этого файла.
+on:
+  schedule:
+    - cron: '14,44 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write # только для «пульса» ниже
+
+concurrency:
+  group: site-check
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Check site, bot and background jobs
+        run: python3 tools/check_site.py
+      # В публичном репозитории GitHub выключает расписания после 60 дней без коммитов.
+      # Если меню давно не меняли (нет коммитов от sync-menu.yml) — пустой коммит раз в 45 дней держит проверки включёнными
+      - name: Keep scheduled workflows enabled
+        if: always()
+        run: |
+          last=$(git log -1 --format=%ct)
+          if [ $(( $(date +%s) - last )) -lt $(( 45 * 86400 )) ]; then echo "Recent activity"; exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit --allow-empty -m "Keep scheduled checks enabled"
+          git push

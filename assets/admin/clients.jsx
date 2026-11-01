@@ -63,7 +63,7 @@ export function ClientsScreen({ ctx }) {
       </div>
       <div className="chips" role="tablist" aria-label={T.segments}>
         {SEGS.map((k) => (
-          <Chip key={k} mode={seg === k ? 'elevated' : 'outline'} onClick={() => setSeg(k)} role="tab" aria-selected={seg === k}>
+          <Chip key={k} mode={seg === k ? 'elevated' : 'outline'} {...tap(() => setSeg(k))} role="tab" aria-selected={seg === k}>
             {`${T.seg[k]}${data ? ` · ${data.segCount[k] || 0}` : ''}`}
           </Chip>
         ))}
@@ -173,7 +173,7 @@ export function ClientCard({ ctx, params }) {
 
       <Section header={T.note} footer={c.note_at ? T.noteBy(c.note_by, when(c.note_at, lang)) : T.noteHint}>
         <Field>
-          <Textarea value={note} maxLength={500} rows={3} placeholder={T.notePh} onChange={(e) => setNote(e.target.value)} />
+          <Textarea aria-label={T.note} value={note} maxLength={500} rows={3} placeholder={T.notePh} onChange={(e) => setNote(e.target.value)} />
         </Field>
       </Section>
 

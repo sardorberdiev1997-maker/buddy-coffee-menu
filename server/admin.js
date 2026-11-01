@@ -519,10 +519,15 @@ async function savePhoto(request, env, me) {
 
 // GET /api/photo/<id>/<sq|l> — для сайта, бота и рассылки. id новый при каждой загрузке → кэш на год
 export async function servePhoto(env, id, size) {
+  const headers = (type) => ({ 'content-type': type, 'cache-control': 'public, max-age=31536000, immutable', 'x-content-type-options': 'nosniff' });
   const row = await env.DB.prepare(`SELECT type, ${size === 'l' ? 'l' : 'sq'} AS data FROM photos WHERE id = ?`).bind(id).first();
-  if (!row) return fail('not_found', 404);
-  const bytes = row.data instanceof Uint8Array ? row.data : new Uint8Array(row.data);
-  return new Response(bytes, { headers: { 'content-type': row.type, 'cache-control': 'public, max-age=31536000, immutable', 'x-content-type-options': 'nosniff' } });
+  if (row) return new Response(row.data instanceof Uint8Array ? row.data : new Uint8Array(row.data), { headers: headers(row.type) });
+  // В базе нет (потеряна или восстановлена из копии) — берём из резервной копии в сборке (tools/sync_menu.py → data/photos)
+  for (const [ext, type] of [['webp', 'image/webp'], ['jpg', 'image/jpeg']]) {
+    const r = env.ASSETS ? await env.ASSETS.fetch(new Request(`https://assets/data/photos/${id}-${size === 'l' ? 'l' : 'sq'}.${ext}`)) : null;
+    if (r && r.ok) return new Response(r.body, { headers: headers(type) });
+  }
+  return fail('not_found', 404);
 }
 
 /* ---------- сотрудники ---------- */

@@ -17,6 +17,8 @@ const REMIND = [3 * MIN, 10 * MIN]; // первое и второе напоми
 const REPORT_GRACE = 6 * HOUR; // сводку за период отправляем не позже 6 часов после его конца
 const KEEP_PERSONAL = 90 * DAY;
 const KEEP_CUSTOMER = 3 * 365 * DAY;
+const KEEP_CHANGES = 365 * DAY; // журнал правок панели (и отмена) — за год
+const KEEP_ORPHAN_PHOTO = 30 * DAY; // фото, которого нет ни в меню, ни в журнале, — ещё месяц на случай «верните как было»
 
 export async function tick(env, now = Date.now()) {
   // Захват атомарный: параллельные вызовы /api/tick не повторят напоминания и рассылки
@@ -92,6 +94,12 @@ export async function tick(env, now = Date.now()) {
     await cleanClientErrors(env, now);
     await env.DB.prepare("DELETE FROM kv WHERE k >= 'ev:' AND k < ?").bind(`ev:${dayKey(now - 400 * DAY)}`).run(); // воронка — больше года не нужна
     await env.DB.prepare("DELETE FROM kv WHERE k IN ('sheet_key', 'menu_cache')").run(); // остались от Google Таблицы (удалена 01.11.2026)
+    await env.DB.prepare('DELETE FROM changes WHERE at < ?').bind(now - KEEP_CHANGES).run();
+    // Фото удаляем, только если на него не ссылаются ни меню, ни оставшийся журнал (иначе отмена вернула бы пустое место)
+    const photos = await env.DB.prepare(`DELETE FROM photos WHERE created_at < ?
+        AND instr(COALESCE((SELECT doc FROM content WHERE id = 1), ''), 'up_' || photos.id) = 0
+        AND NOT EXISTS (SELECT 1 FROM changes WHERE instr(changes.patches, 'up_' || photos.id) > 0)`).bind(now - KEEP_ORPHAN_PHOTO).run();
+    done.photosRemoved = (photos.meta && photos.meta.changes) || 0;
   }
   // Прогрев меню (server/content.js)
   await loadModel(env).catch((e) => console.warn('tick: menu', e.message));
