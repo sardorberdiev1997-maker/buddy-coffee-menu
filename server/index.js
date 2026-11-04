@@ -119,6 +119,7 @@ async function route(request, env, ctx) {
       last_exception: exception,
       last_skip: await getKV(env, 'last_skip'),
       bot_problem: problem,
+      bot_last_problem: await getKV(env, 'wh_last'),
       client_errors: errors
     } : { has_exception: !!exception, has_bot_problem: !!problem, client_errors: errors.length };
     return json({

@@ -7,8 +7,9 @@ import { test } from 'node:test';
 import { readFileSync } from 'node:fs';
 
 import { applyPatches, change, Conflict, docFromTables, getContent, history, tablesFromDoc, undoChange } from '../../server/content.js';
-import { ensureSchema, SCHEMA } from '../../server/db.js';
+import { ensureSchema, getKV, SCHEMA, setKV } from '../../server/db.js';
 import { loadModel, OC, R } from '../../server/menu.js';
+import { watchBot } from '../../server/health.js';
 import { reportText } from '../../server/stats.js';
 import { tick } from '../../server/tick.js';
 import { verifyInitData } from '../../server/tg.js';
@@ -168,6 +169,21 @@ test('сроки хранения панели: журнал — год, фот�
     assert.equal(r.photosRemoved, 2);
     assert.deepEqual((await env.DB.prepare('SELECT id FROM photos ORDER BY id').all()).results.map((x) => x.id), [id(1), id(2), id(4)]);
     assert.equal((await env.DB.prepare('SELECT COUNT(*) AS n FROM changes').first()).n, 1);
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+});
+
+test('сторож бота: прошедшая проблема не считается текущей, но остаётся для разбора', async () => {
+  const env = { DB: memoryD1(), BOT_TOKEN: 'x:y' };
+  await env.DB.batch(SCHEMA.map((q) => env.DB.prepare(q)));
+  await setKV(env, 'wh_problem', '2026-11-03T06:00:00.000Z getWebhookInfo: timeout');
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = async () => new Response(JSON.stringify({ ok: true, result: { url: 'https://buddycoffee.uz/api/tg', pending_update_count: 0 } }));
+  try {
+    assert.equal(await watchBot(env, Date.now()), 'ok');
+    assert.equal(await getKV(env, 'wh_problem'), null);
+    assert.match(await getKV(env, 'wh_last'), /timeout/);
   } finally {
     globalThis.fetch = realFetch;
   }

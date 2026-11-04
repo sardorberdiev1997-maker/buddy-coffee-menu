@@ -1,6 +1,6 @@
 // Здоровье системы: сторож бота и ошибки браузеров посетителей. Всё видно на /api/tg/info.
 import { setupBot } from './bot.js';
-import { claimKV, setKV, throttle } from './db.js';
+import { claimKV, getKV, setKV, throttle } from './db.js';
 import { T } from './texts.js';
 import { groupChat, groupLang, tg, webhookSecret } from './tg.js';
 import { DAY, h, HOUR, MIN, redact, sha256, SITE } from './util.js';
@@ -20,7 +20,13 @@ export async function watchBot(env, now = Date.now()) {
   const w = r.result || {};
   const want = `${SITE}api/tg`;
   const stuck = (w.pending_update_count || 0) > 0 && w.last_error_date && now - w.last_error_date * 1000 < 15 * MIN;
-  if (w.url === want && !stuck) return 'ok';
+  if (w.url === want && !stuck) {
+    // Проблема прошла: has_bot_problem значит «сейчас», иначе разовый сбой навсегда красил проверку сайта (site-check.yml).
+    // Что случилось в последний раз — остаётся в wh_last
+    const was = await getKV(env, 'wh_problem');
+    if (was) { await setKV(env, 'wh_last', was); await setKV(env, 'wh_problem', null); }
+    return 'ok';
+  }
 
   let problem = w.url !== want ? `адрес вебхука «${w.url || 'пусто'}»` : `Telegram не может доставить сообщения: ${w.last_error_message || '?'}`;
   if (w.url !== want) {
