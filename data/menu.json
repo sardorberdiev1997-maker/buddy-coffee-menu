@@ -45,7 +45,7 @@
     ["доставка", "Shahrisabz bo‘ylab bepul yetkazib berish", "Бесплатная доставка по Шахрисабзу"],
     ["телефон", "+998 90 896 54 00", "+998 90 896 54 00"],
     ["часы_работы", "Har kuni 24/7", "Ежедневно 24/7"],
-    ["адрес", "Fusunkor ko‘chasi, 70 (Visol to‘yxonasi yonida, Hamkor Bank ro‘parasida)", "ул. Фусункор, 70 (рядом с тойханой «Visol», напротив Hamkor Bank)"],
+    ["адрес", "Fusunkor ko‘chasi, 49 (Visol to‘yxonasi yonida, Hamkor Bank ro‘parasida)", "ул. Фусункор, 49 (рядом с тойханой «Visol», напротив Hamkor Bank)"],
     ["ссылка_на_карту", "https://yandex.ru/maps/-/CXbKJ47d", "https://yandex.ru/maps/-/CXbKJ47d"],
     ["оплата", "Naqd pul yoki kartaga o‘tkazma", "Наличные или перевод на карту"],
     ["wifi_сеть", "Buddy_Guest", "Buddy_Guest"],
@@ -59,7 +59,7 @@
     ["отзыв_yandex", "", ""],
     ["отзыв_2gis", "", ""],
     ["заказы", "да", "да"],
-    ["мин_заказ", "40000", "40000"],
+    ["мин_заказ", "50000", "50000"],
     ["время_доставки", "30–45", "30–45"],
     ["время_самовывоза", "15–20", "15–20"],
     ["координаты", "39.053768, 66.848886", "39.053768, 66.848886"]
