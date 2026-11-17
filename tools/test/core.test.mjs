@@ -79,7 +79,7 @@ test('подпись Mini App (initData) проверяется по токен�
   assert.equal(await verifyInitData({ BOT_TOKEN: token }, sign(-3600 * 1000)), null, 'из будущего');
 });
 
-test('сводки в 00:00: день, неделя, месяц — по одному разу, с сравнением', async () => {
+test('сводки в 00:00: в группу сама уходит только месячная, по одному разу, с сравнением', async () => {
   const env = { DB: memoryD1(), BOT_TOKEN: 'x:y' };
   await ensureSchema(env);
   const sent = [];
@@ -103,12 +103,16 @@ test('сводки в 00:00: день, неделя, месяц — по одн�
 
     const midnight = Date.UTC(2026, 11, 1) - TZ_OFFSET; // 01.12.2026 00:00 Ташкент — вторник
     const r1 = await tick(env, midnight + 60000);
-    assert.deepEqual(r1.reports, ['day', 'month']);
+    assert.deepEqual(r1.reports, ['month'], 'дневные, недельные и прочие владелец отключил 18.11.2026');
     const r2 = await tick(env, midnight + 120000);
     assert.deepEqual(r2.reports, [], 'второй раз не отправляет');
-    const daily = sent.find((x) => /Итоги дня/.test(x.body.text));
-    assert.ok(daily);
-    assert.equal(daily.body.disable_notification, true, 'сводки приходят без звука');
+    assert.equal((await tick(env, Date.UTC(2026, 11, 2) - TZ_OFFSET + 60000)).reports.length, 0, 'обычная полночь — без сводки');
+    const monthly = sent.find((x) => /Итоги месяца/.test(x.body.text));
+    assert.ok(monthly);
+    assert.ok(!sent.some((x) => /Итоги (дня|недели|квартала|года)/.test(x.body.text || '')), 'других сводок в группе нет');
+    assert.equal(monthly.body.disable_notification, true, 'сводки приходят без звука');
+    // Текст за день по-прежнему собирается — его показывает /stats
+    const daily = { body: { text: await reportText(env, 'ru', 'day', day, day + DAY) } };
     assert.match(daily.body.text, /165 000 сум/);
     assert.match(daily.body.text, /▲ 65% к пн 23\.11/);
     assert.match(daily.body.text, /Big burger ×2/);

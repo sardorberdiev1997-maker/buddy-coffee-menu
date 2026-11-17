@@ -1,5 +1,5 @@
 // Раз в минуту (Cron Trigger воркера buddy-cron): напоминания о неподтверждённых заказах,
-// повторная отправка в группу, сводки в 00:00 по Ташкенту, удаление личных данных через 90 дней.
+// повторная отправка в группу, сводка за месяц в 00:00 по Ташкенту, удаление личных данных через 90 дней.
 // Всё идемпотентно — лишний вызов ничего не дублирует.
 import { continueBroadcasts } from './broadcast.js';
 import { claimKV, getKV, parseOrder, setKV, throttle } from './db.js';
@@ -14,6 +14,7 @@ import { groupChat, groupLang, tg } from './tg.js';
 import { DAY, dayKey, HOUR, MIN, periodStart, prevPeriod } from './util.js';
 
 const REMIND = [3 * MIN, 10 * MIN]; // первое и второе напоминание
+export const REPORT_KINDS = ['month']; // какие сводки уходят в группу сами
 const REPORT_GRACE = 6 * HOUR; // сводку за период отправляем не позже 6 часов после его конца
 const KEEP_PERSONAL = 90 * DAY;
 const KEEP_CUSTOMER = 3 * 365 * DAY;
@@ -60,8 +61,9 @@ export async function tick(env, now = Date.now()) {
     // 4. Рассылка акций: следующая порция получателей
     done.broadcast = await continueBroadcasts(env);
 
-    // 5. Сводки за закончившиеся день, неделю, месяц, квартал и год
-    for (const kind of ['day', 'week', 'month', 'quarter', 'year']) {
+    // 5. Сводка за закончившийся месяц (дневные, недельные, квартальные и годовые владелец отключил 18.11.2026;
+    //    любой период по-прежнему можно открыть командой /stats в группе)
+    for (const kind of REPORT_KINDS) {
       const end = periodStart(kind, now);
       if (now - end > REPORT_GRACE) continue;
       const [start] = prevPeriod(kind, end);
