@@ -140,6 +140,8 @@ function App() {
   const [toast, setToast] = useState(null);
   const dirty = useRef(false);
   const t = TEXTS[lang];
+  // Язык страницы = язык панели: иначе VoiceOver читает русский текст узбекским голосом (как на сайте, assets/app.js)
+  useEffect(() => { document.documentElement.lang = lang === 'ru' ? 'ru' : 'uz-Latn'; }, [lang]);
 
   const load = useCallback(() => api('state').then((s) => { setSt(s); setError(null); }).catch((e) => setError(e)), []);
   useEffect(() => {
