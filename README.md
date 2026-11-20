@@ -83,7 +83,7 @@ buddy-cron (Worker, каждую минуту) ──► /api/tick: напоми
 ## Локально
 
 ```bash
-npm install
+npm ci          # ровно по package-lock.json; npm install не запускать без нужды — npm 12 перепишет lock-файл
 npm run build
 npm run dev     # http://127.0.0.1:8790 — сайт + /api, база SQLite в .dev/, Telegram-заглушка (журнал: /__tg)
 npm test        # сквозные тесты: заказ → группа → статусы → покупатель, оценки, звонок, рассылки, сторож бота, ошибки браузера, зона, телефоны, сводки, подпись Mini App
