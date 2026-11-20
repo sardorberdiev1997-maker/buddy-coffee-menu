@@ -12,6 +12,7 @@ import { loadModel, OC, R } from '../../server/menu.js';
 import { watchBot } from '../../server/health.js';
 import { reportText } from '../../server/stats.js';
 import { tick } from '../../server/tick.js';
+import { LIMIT, metered } from '../../server/budget.js';
 import { verifyInitData } from '../../server/tg.js';
 import { DAY, periodStart, prevPeriod, redact, TZ_OFFSET } from '../../server/util.js';
 
@@ -287,4 +288,54 @@ test('панель: расписание, «Сегодня закрыты», «�
   const html = R.createView(m, 'ru').menuHTML();
   assert.match(html, /class="price__old"/, 'старая цена зачёркнута');
   assert.equal(R.buildModel(tablesFromDoc(doc, noon + 86400000)).items.find((x) => x.key === target.key).badge, target.badge && R.buildModel(sheetTables).items.find((x) => x.key === target.key).badge, 'на следующий день — обычная метка');
+});
+
+test('тяжёлая минута укладывается в лимиты бесплатного Cloudflare (50 запросов к D1 и 50 наружу), остальное — следующими минутами', async () => {
+  // Отдельный счётчик поверх базы — проверяем сам расход, а не то, что насчитал server/budget.js
+  const raw = memoryD1();
+  const use = { db: 0, net: 0 };
+  const st = (x) => ({ sql: x.sql, inner: x, bind: (...a) => st(x.bind(...a)), first: (c) => { use.db++; return x.first(c); }, all: () => { use.db++; return x.all(); }, run: () => { use.db++; return x.run(); } });
+  const env = { DB: { prepare: (q) => st(raw.prepare(q)), batch: (l) => { use.db++; return raw.batch(l.map((x) => x.inner || x)); } }, BOT_TOKEN: 'x:y' };
+  await env.DB.batch(SCHEMA.map((q) => env.DB.prepare(q))); // ensureSchema помнит первую базу процесса
+  const sent = [];
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = async (url, init) => {
+    use.net++;
+    const method = String(url).split('/').pop();
+    const body = JSON.parse(init.body);
+    sent.push({ method, body });
+    if (method === 'copyMessage' && body.chat_id % 3 === 0) return new Response(JSON.stringify({ ok: false, error_code: 403, description: 'Forbidden: bot was blocked by the user' }));
+    const result = method === 'getWebhookInfo' ? { url: 'https://buddycoffee.uz/api/tg', pending_update_count: 0 } : { message_id: sent.length, chat: { id: body.chat_id } };
+    return new Response(JSON.stringify({ ok: true, result }));
+  };
+  try {
+    const midnight = Date.UTC(2026, 11, 1) - TZ_OFFSET; // 01.12.2026 00:00 — сводка за месяц и ночная чистка
+    await env.DB.prepare("INSERT INTO kv (k, v) VALUES ('group', '-100500')").run();
+    for (let i = 1; i <= 30; i++) {
+      await env.DB.prepare('INSERT INTO customers (tg_chat, lang, created_at, last_seen) VALUES (?, ?, ?, ?)').bind(1000 + i, i % 2 ? 'uz' : 'ru', midnight - DAY, midnight - DAY).run();
+    }
+    await env.DB.prepare("INSERT INTO broadcasts (src_chat, src_msg, ctl_msg, audience, status, created_at, total) VALUES (-100500, 7, 8, 'all', 'sending', ?, 30)").bind(midnight - 60000).run();
+    for (let i = 1; i <= 10; i++) { // доставлены 50 минут назад — пора просить оценку
+      const t = midnight - 50 * 60000;
+      await env.DB.prepare(`INSERT INTO orders (token, created_at, updated_at, status, type, items, total, done_at, tg_chat)
+        VALUES (?, ?, ?, 'delivered', 'delivery', '[]', 50000, ?, ?)`).bind('h' + i, t - 1800000, t, t, 2000 + i).run();
+    }
+
+    let now = midnight + 60000;
+    for (let minute = 0; minute < 8; minute++, now += 60000) {
+      use.db = 0; use.net = 0;
+      await tick(metered(env), now);
+      assert.ok(use.db <= LIMIT && use.net <= LIMIT, `минута ${minute + 1}: D1 ${use.db}, наружу ${use.net}`);
+    }
+    const b = await env.DB.prepare('SELECT * FROM broadcasts WHERE id = 1').first();
+    assert.equal(b.status, 'done', 'рассылка дошла до конца');
+    assert.equal(b.sent + b.failed, 30);
+    assert.equal(b.failed, 10, 'заблокировавшие бота отмечены');
+    assert.equal(sent.filter((x) => x.method === 'copyMessage').length, 30, 'никому не отправлено дважды');
+    assert.equal(sent.filter((x) => /Итоги месяца|Oy yakuni/.test(x.body.text || '')).length, 1, 'сводка за месяц — ровно одна');
+    assert.equal(sent.filter((x) => x.method === 'sendMessage' && x.body.chat_id > 2000 && x.body.chat_id <= 2010).length, 10, 'всех попросили оценить, по разу');
+    assert.ok(await getKV(env, 'cleanup:' + new Date(midnight + 60000 + 5 * 3600000).toISOString().slice(0, 10)) || (await env.DB.prepare("SELECT 1 FROM kv WHERE k LIKE 'cleanup:%'").first()), 'ночная чистка прошла');
+  } finally {
+    globalThis.fetch = realFetch;
+  }
 });

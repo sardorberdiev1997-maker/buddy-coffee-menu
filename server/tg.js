@@ -1,4 +1,5 @@
 // Telegram Bot API: вызовы, проверка вебхука и данных Mini App.
+import { countNet } from './budget.js';
 import { getKV, setKV } from './db.js';
 import { hmac, redact, safeEqual, DAY, MIN } from './util.js';
 
@@ -6,6 +7,7 @@ export async function tg(env, method, body, retried) {
   if (!env.BOT_TOKEN) return { ok: false, description: 'BOT_TOKEN is not set' };
   let res;
   try {
+    countNet(env);
     res = await fetch(`https://api.telegram.org/bot${env.BOT_TOKEN}/${method}`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
@@ -33,6 +35,7 @@ export async function tgUpload(env, method, fields, file) {
   Object.entries(fields).forEach(([k, v]) => { if (v != null) fd.append(k, typeof v === 'object' ? JSON.stringify(v) : String(v)); });
   fd.append(file.field, new Blob([file.bytes], { type: file.type }), file.name);
   try {
+    countNet(env);
     const res = await fetch(`https://api.telegram.org/bot${env.BOT_TOKEN}/${method}`, { method: 'POST', body: fd, signal: AbortSignal.timeout(20000) });
     const j = await res.json().catch(() => ({ ok: false, description: 'HTTP ' + res.status }));
     if (!j.ok) console.warn('telegram', method, j.error_code, j.description);

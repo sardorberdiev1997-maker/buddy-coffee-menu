@@ -6,6 +6,7 @@
 // • ссылки на Google, Яндекс и 2ГИС видят все, при любой оценке: звать на карты только довольных
 //   запрещают правила Google («selectively solicit positive reviews»), вознаграждение за отзыв — тоже;
 // • те же оценка, причины и ссылки — на странице заказа на сайте (для тех, кто не в Telegram).
+import { left } from './budget.js';
 import { callButton } from './call.js';
 import { getKV, orderById, orderByToken, parseOrder, setKV } from './db.js';
 import { loadModel, OC, R, setting } from './menu.js';
@@ -111,6 +112,7 @@ export async function askRatings(env, now = Date.now()) {
         AND o.done_at <= ? AND o.done_at > ? ORDER BY o.done_at LIMIT 10`).bind(now - ASK_AFTER, now - ASK_UNTIL).all()).results.map(parseOrder);
   let asked = 0;
   for (const o of rows) {
+    if (left(env) < 6) break; // остальных спросим на следующей минуте
     const recent = await env.DB.prepare(`SELECT 1 FROM ratings r JOIN orders o ON o.id = r.order_id
         WHERE o.tg_chat = ? AND r.asked_at > ? LIMIT 1`).bind(o.tg_chat, now - ASK_GAP).first();
     // Строку вставляем до отправки: параллельный tick её уже не возьмёт. asked_at = 0 — решили не спрашивать

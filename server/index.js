@@ -4,6 +4,7 @@
 // Нужно в настройках проекта Pages:
 //   DB         — привязка базы D1 (Settings → Bindings → D1 database)
 //   BOT_TOKEN  — секрет: токен бота от @BotFather (Settings → Variables and Secrets, тип Secret)
+import { metered } from './budget.js';
 import { adminRoute, servePhoto } from './admin.js';
 import { handleUpdate, setupBot } from './bot.js';
 import { ensureSchema, getKV, setKV } from './db.js';
@@ -139,7 +140,7 @@ async function route(request, env, ctx) {
     }, 200, { 'x-robots-tag': 'noindex' });
   }
 
-  if (path === '/api/tick') return json(await tick(env));
+  if (path === '/api/tick') return json(await tick(metered(env))); // со счётчиком обращений — лимиты бесплатного Cloudflare
 
   // Воронка для /stats: открыли меню → корзина → оформление (счётчики по дням, без данных о людях)
   if (path === '/api/ev' && method === 'POST') {

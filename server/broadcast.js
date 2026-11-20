@@ -3,11 +3,12 @@
 // бот показывает аудитории и число получателей, можно отправить себе на пробу, затем — подтверждение.
 // Отправка порциями (лимиты Telegram и Cloudflare): сразу первая порция, остальное — каждую минуту из /api/tick.
 // В каждом сообщении — кнопки «Открыть меню» и «Отписаться от акций».
+import { left } from './budget.js';
 import { audienceCounts, audienceSQL } from './customers.js';
 import { C, T } from './texts.js';
-import { claimKV, setKV } from './db.js';
+import { claimKV, getKV, setKV } from './db.js';
 import { groupLang, tg } from './tg.js';
-import { SITE } from './util.js';
+import { MIN, SITE } from './util.js';
 
 const BATCH = 25;
 
@@ -107,12 +108,19 @@ export async function onBroadcastButton(env, q, parts, isAdmin) {
 export async function sendBatch(env, id) {
   const b = await env.DB.prepare('SELECT * FROM broadcasts WHERE id = ?').bind(id).first();
   if (!b || b.status !== 'sending') return false;
+  // Размер порции — сколько позволяет лимит обращений этого вызова (на человека: отправка и, может быть, отметка «заблокировал»)
+  const size = Math.min(BATCH, Math.floor((left(env) - 10) / 2));
+  if (size < 1) return true;
   const L = await groupLang(env);
   const X = T[L];
-  // Порцию берёт один исполнитель: «Отправить» в группе и минутный tick могут сработать одновременно
+  // Порцию берёт один исполнитель: «Отправить» в группе и минутный tick могут сработать одновременно.
+  // Захват старше 5 минут — исполнитель упал посередине; без перехвата рассылка встала бы навсегда
   const claim = `bc_batch:${id}:${b.cursor}`;
-  if (!(await claimKV(env, claim, Date.now()))) return true;
-  const people = (await env.DB.prepare(`SELECT id, tg_chat, lang FROM customers WHERE ${audienceSQL(b.audience)} AND id > ? ORDER BY id LIMIT ${BATCH}`)
+  if (!(await claimKV(env, claim, Date.now()))) {
+    if (Date.now() - parseInt((await getKV(env, claim)) || '0', 10) < 5 * MIN) return true;
+    await setKV(env, claim, Date.now());
+  }
+  const people = (await env.DB.prepare(`SELECT id, tg_chat, lang FROM customers WHERE ${audienceSQL(b.audience)} AND id > ? ORDER BY id LIMIT ${size}`)
     .bind(b.cursor).all()).results;
   let sent = 0, failed = 0, cursor = b.cursor, paused = false, broken = '';
   for (const p of people) {
@@ -134,7 +142,7 @@ export async function sendBatch(env, id) {
     await edit(env, fresh, X.bcBroken(id, fresh.sent, fresh.total));
     return false;
   }
-  const finished = !paused && people.length < BATCH;
+  const finished = !paused && people.length < size;
   if (!finished && cursor === b.cursor) await setKV(env, claim, null); // никого не отправили (Telegram просил подождать) — порцию возьмём снова
   await env.DB.prepare(`UPDATE broadcasts SET sent = sent + ?, failed = failed + ?, cursor = ?${finished ? ", status = 'done', done_at = ?" : ''} WHERE id = ?`)
     .bind(...(finished ? [sent, failed, cursor, Date.now(), id] : [sent, failed, cursor, id])).run();

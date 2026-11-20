@@ -80,5 +80,6 @@ export async function clientErrors(env, limit = 10) {
 }
 
 // Из ежедневной чистки: ошибки старше недели не храним
+// (возвращает запрос, его выполняет пакет ночной чистки в server/tick.js)
 export const cleanClientErrors = (env, now) =>
-  env.DB.prepare("DELETE FROM kv WHERE k >= 'err:' AND k < ?").bind(`err:${new Date(now - 7 * DAY).toISOString().slice(0, 13)}`).run();
+  env.DB.prepare("DELETE FROM kv WHERE k >= 'err:' AND k < ?").bind(`err:${new Date(now - 7 * DAY).toISOString().slice(0, 13)}`);

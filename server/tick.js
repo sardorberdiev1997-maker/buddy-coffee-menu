@@ -2,6 +2,7 @@
 // повторная отправка в группу, сводка за месяц в 00:00 по Ташкенту, удаление личных данных через 90 дней.
 // Всё идемпотентно — лишний вызов ничего не дублирует.
 import { continueBroadcasts } from './broadcast.js';
+import { left } from './budget.js';
 import { claimKV, getKV, parseOrder, setKV, throttle } from './db.js';
 import { cleanClientErrors, watchBot } from './health.js';
 import { loadModel } from './menu.js';
@@ -34,12 +35,13 @@ export async function tick(env, now = Date.now()) {
     // Старше минуты — чтобы не задвоить заказ, который ещё отправляется сразу после оформления
     const lost = (await env.DB.prepare("SELECT * FROM orders WHERE group_msg IS NULL AND status != 'canceled' AND created_at > ? AND created_at < ? ORDER BY id LIMIT 10")
       .bind(now - 2 * HOUR, now - MIN).all()).results.map(parseOrder);
-    for (const o of lost) { await sendGroup(env, o); done.resent++; }
+    for (const o of lost) { if (left(env) < 10) break; await sendGroup(env, o); done.resent++; }
 
     // 2. Напоминания: заказ не приняли за 3 и за 10 минут
     const waiting = (await env.DB.prepare("SELECT * FROM orders WHERE status = 'new' AND group_msg IS NOT NULL AND reminded < 2 AND created_at < ? ORDER BY id LIMIT 10")
       .bind(now - REMIND[0]).all()).results.map(parseOrder);
     for (const o of waiting) {
+      if (left(env) < 10) break;
       const level = now - o.created_at >= REMIND[1] ? 2 : 1;
       if (o.reminded >= level) continue;
       await tg(env, 'sendMessage', {
@@ -54,12 +56,14 @@ export async function tick(env, now = Date.now()) {
     const closed = (await env.DB.prepare("SELECT id, token, phone, group_chat, group_msg FROM orders WHERE status IN ('delivered', 'picked', 'canceled') AND group_msg IS NOT NULL AND done_at >= ? AND done_at < ? LIMIT 20")
       .bind(now - UNDO_WINDOW - 3 * MIN, now - UNDO_WINDOW).all()).results;
     for (const o of closed) {
+      if (left(env) < 10) break;
       await tg(env, 'editMessageReplyMarkup', { chat_id: o.group_chat, message_id: o.group_msg, reply_markup: { inline_keyboard: callButton(o, L) ? [callButton(o, L)] : [] } });
       done.closed = (done.closed || 0) + 1;
     }
 
     // 4. Рассылка акций: следующая порция получателей
-    done.broadcast = await continueBroadcasts(env);
+    // Дальше — то, что можно отложить на минуту, если обращений к Cloudflare в этом вызове осталось мало
+    if (left(env) >= 20) done.broadcast = await continueBroadcasts(env);
 
     // 5. Сводка за закончившийся месяц (дневные, недельные, квартальные и годовые владелец отключил 18.11.2026;
     //    любой период по-прежнему можно открыть командой /stats в группе)
@@ -68,6 +72,7 @@ export async function tick(env, now = Date.now()) {
       if (now - end > REPORT_GRACE) continue;
       const [start] = prevPeriod(kind, end);
       const key = `report:${kind}:${dayKey(start)}`;
+      if (left(env) < 15) continue; // сводку соберём на следующей минуте
       if (!(await claimKV(env, key, now))) continue;
       const r = await tg(env, 'sendMessage', { chat_id: group, text: await reportText(env, L, kind, start, end), parse_mode: 'HTML', disable_notification: true });
       if (r.ok) done.reports.push(kind);
@@ -77,33 +82,37 @@ export async function tick(env, now = Date.now()) {
 
   // Просьба оценить заказ — через 45 минут после доставки; сторож бота — раз в 10 минут
   if (env.BOT_TOKEN) {
-    done.rateAsked = await askRatings(env, now);
-    done.bot = await watchBot(env, now);
+    done.rateAsked = left(env) >= 12 ? await askRatings(env, now) : 0;
+    if (left(env) >= 8) done.bot = await watchBot(env, now);
   }
 
   // 6. В заказах личные данные (адрес, точка, комментарий, имя, телефон) храним 90 дней; имя и телефон остаются в базе клиентов
-  if (await claimKV(env, `cleanup:${dayKey(now)}`, now)) {
-    const r = await env.DB.prepare(`UPDATE orders SET name = NULL, phone = NULL, address = NULL, lat = NULL, lng = NULL, acc = NULL,
-        comment = NULL, ip_hash = NULL, tg_user = NULL, tg_chat = NULL, tg_msg = NULL, anonymized = 1 WHERE anonymized = 0 AND created_at < ?`)
-      .bind(now - KEEP_PERSONAL).run();
-    done.cleaned = (r.meta && r.meta.changes) || 0;
-    await env.DB.prepare('UPDATE ratings SET comment = NULL WHERE comment IS NOT NULL AND rated_at < ?').bind(now - KEEP_PERSONAL).run();
-    // База клиентов — 3 года с последнего заказа или сообщения боту (срок для маркетинговых баз, как у CNIL);
-    // тогда же из старых заказов уходит и хеш телефона — дальше только обезличенная статистика. Сроки — на /privacy
-    await env.DB.prepare('DELETE FROM customers WHERE last_seen < ?').bind(now - KEEP_CUSTOMER).run();
-    await env.DB.prepare('DELETE FROM customer_notes WHERE customer_id NOT IN (SELECT id FROM customers)').run();
-    await env.DB.prepare('UPDATE orders SET phone_hash = NULL WHERE phone_hash IS NOT NULL AND created_at < ?').bind(now - KEEP_CUSTOMER).run();
-    await cleanClientErrors(env, now);
-    await env.DB.prepare("DELETE FROM kv WHERE k >= 'ev:' AND k < ?").bind(`ev:${dayKey(now - 400 * DAY)}`).run(); // воронка — больше года не нужна
-    await env.DB.prepare("DELETE FROM kv WHERE k IN ('sheet_key', 'menu_cache')").run(); // остались от Google Таблицы (удалена 01.11.2026)
-    await env.DB.prepare('DELETE FROM changes WHERE at < ?').bind(now - KEEP_CHANGES).run();
-    // Фото удаляем, только если на него не ссылаются ни меню, ни оставшийся журнал (иначе отмена вернула бы пустое место)
-    const photos = await env.DB.prepare(`DELETE FROM photos WHERE created_at < ?
+  // Одним db.batch — для лимита это один запрос, и чистка проходит целиком или никак
+  if (left(env) >= 8 && await claimKV(env, `cleanup:${dayKey(now)}`, now)) {
+    const q = (sql, ...args) => env.DB.prepare(sql).bind(...args);
+    const r = await env.DB.batch([
+      q(`UPDATE orders SET name = NULL, phone = NULL, address = NULL, lat = NULL, lng = NULL, acc = NULL,
+        comment = NULL, ip_hash = NULL, tg_user = NULL, tg_chat = NULL, tg_msg = NULL, anonymized = 1 WHERE anonymized = 0 AND created_at < ?`, now - KEEP_PERSONAL),
+      q('UPDATE ratings SET comment = NULL WHERE comment IS NOT NULL AND rated_at < ?', now - KEEP_PERSONAL),
+      // База клиентов — 3 года с последнего заказа или сообщения боту (срок для маркетинговых баз, как у CNIL);
+      // тогда же из старых заказов уходит и хеш телефона — дальше только обезличенная статистика. Сроки — на /privacy
+      q('DELETE FROM customers WHERE last_seen < ?', now - KEEP_CUSTOMER),
+      q('DELETE FROM customer_notes WHERE customer_id NOT IN (SELECT id FROM customers)'),
+      q('UPDATE orders SET phone_hash = NULL WHERE phone_hash IS NOT NULL AND created_at < ?', now - KEEP_CUSTOMER),
+      cleanClientErrors(env, now),
+      q("DELETE FROM kv WHERE k >= 'ev:' AND k < ?", `ev:${dayKey(now - 400 * DAY)}`), // воронка — больше года не нужна
+      q("DELETE FROM kv WHERE k IN ('sheet_key', 'menu_cache')"), // остались от Google Таблицы (удалена 01.11.2026)
+      q('DELETE FROM changes WHERE at < ?', now - KEEP_CHANGES),
+      // Фото удаляем, только если на него не ссылаются ни меню, ни оставшийся журнал (иначе отмена вернула бы пустое место)
+      q(`DELETE FROM photos WHERE created_at < ?
         AND instr(COALESCE((SELECT doc FROM content WHERE id = 1), ''), 'up_' || photos.id) = 0
-        AND NOT EXISTS (SELECT 1 FROM changes WHERE instr(changes.patches, 'up_' || photos.id) > 0)`).bind(now - KEEP_ORPHAN_PHOTO).run();
-    done.photosRemoved = (photos.meta && photos.meta.changes) || 0;
+        AND NOT EXISTS (SELECT 1 FROM changes WHERE instr(changes.patches, 'up_' || photos.id) > 0)`, now - KEEP_ORPHAN_PHOTO)
+    ]);
+    const changed = (x) => (x && x.meta && x.meta.changes) || 0;
+    done.cleaned = changed(r[0]);
+    done.photosRemoved = changed(r[r.length - 1]);
   }
   // Прогрев меню (server/content.js)
-  await loadModel(env).catch((e) => console.warn('tick: menu', e.message));
+  if (left(env) >= 5) await loadModel(env).catch((e) => console.warn('tick: menu', e.message));
   return done;
 }
