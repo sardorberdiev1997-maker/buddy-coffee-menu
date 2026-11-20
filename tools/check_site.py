@@ -76,10 +76,14 @@ def problems():
             return f'HTTP {code}'
 
     def old_domain():
-        # Страницы старого адреса уводит на новый assets/boot.js; короткие ссылки с QR (/r/…) — сервер, кодом 301
-        code, headers, _ = get(OLD + 'r/google', follow=False)
-        if code not in (301, 308) or not (headers.get('location') or '').startswith(SITE):
-            return f'HTTP {code}, перенаправление {headers.get("location")!r}'
+        # С 20.11.2026 старый адрес отдаёт GitHub Pages (репозиторий buddy-cheking-redirect, там нет ECH):
+        # любая страница сразу переводит на buddycoffee.uz с тем же путём. HTTPS должен быть с настоящим сертификатом
+        # Прежний путь (Cloudflare Pages, 301) тоже рабочий: так отвечают кэши DNS первые часы и после отката
+        code, headers, body = get(OLD + 'r/google', follow=False)
+        github = code in (200, 404) and b"location.replace('https://buddycoffee.uz'" in body
+        pages = code in (301, 308) and (headers.get('location') or '').startswith(SITE)
+        if not (github or pages):
+            return f'HTTP {code}, нет перевода на buddycoffee.uz'
 
     check('Сайт', home)
     check('Приём заказов /api/state', state)
