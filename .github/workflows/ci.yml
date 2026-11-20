@@ -17,7 +17,7 @@ concurrency:
 jobs:
   test:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       # Закреплено по SHA коммита, а не по тегу (как в sync-menu.yml). Обновлять вручную:
       # gh api repos/actions/<действие>/git/ref/tags/<версия>
@@ -28,3 +28,9 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run ci
+      # Аудит доступности (tools/audit.mjs): axe WCAG 2.2 AA, клавиатура, 320 px и 200 %, обе темы, uz и ru.
+      # Chrome на ubuntu-latest уже установлен — puppeteer-core ничего не скачивает. Выкладку не блокирует (её решает Cloudflare),
+      # но красный значок у коммита — сигнал исправить
+      - run: npm run audit
+        env:
+          CHROME_PATH: /usr/bin/google-chrome

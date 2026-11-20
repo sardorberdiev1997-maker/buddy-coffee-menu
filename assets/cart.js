@@ -311,10 +311,10 @@
     lines.forEach((l) => view().pairsOf(l.item).forEach((p) => { if (!inCart.has(p.key) && !out.includes(p) && canOrder(p)) out.push(p); }));
     if (!out.length) return '';
     return `<section class="upsell" aria-labelledby="upsell-title"><h3 class="cart__h" id="upsell-title">${esc(t('upsell'))}</h3>
-      <div class="upsell__track">${out.slice(0, 6).map((p) => `<button type="button" class="ups" data-ups="${esc(p.key)}" aria-label="${esc(app().t('addTo', p[lang()]))}">
+      <div class="upsell__track">${out.slice(0, 6).map((p) => `<button type="button" class="ups" data-ups="${esc(p.key)}">
         <span class="ups__img">${view().pictureHTML(p, 'pair__img', 96, 72, 'eager')}</span>
         <span class="ups__name">${esc(p[lang()])}</span>
-        <span class="ups__price">${esc(money(p.prices[0]))}</span>
+        <span class="ups__price">${esc(money(p.prices[0]))}</span><span class="sr-only">, ${esc(t('toCart'))}</span>
         <span class="ups__plus" aria-hidden="true">${icon('i-plus')}</span>
       </button>`).join('')}</div></section>`;
   }
