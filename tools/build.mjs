@@ -3,6 +3,7 @@
 // 2) JS/CSS минифицируются, к ссылкам добавляется хеш содержимого — можно кэшировать «навсегда».
 // 3) Service worker получает тот же список файлов и версию.
 // 4) Сервер заказов (server/) собирается в dist/_worker.js и обслуживает только /api/* и /r/* (dist/_routes.json).
+import { execSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
@@ -129,8 +130,13 @@ for (const p of ['404.html', 'offline.html', 'favicon.svg', 'manifest.webmanifes
   if (p === 'data/photos' && !existsSync(path.join(ROOT, p))) continue; // копия фото из панели (tools/sync_menu.py)
   cpSync(path.join(ROOT, p), path.join(DIST, p), { recursive: true });
 }
-// Сервер заказов: один файл для Cloudflare Pages (advanced mode)
+// Сервер заказов: один файл для Cloudflare Pages (advanced mode).
+// Отпечаток сборки (коммит) виден в /api/tg/info — после выкладки проверяем, что работает именно новый код
+const BUILD = (process.env.CF_PAGES_COMMIT_SHA || (() => {
+  try { return execSync('git rev-parse HEAD', { cwd: ROOT, stdio: ['ignore', 'pipe', 'ignore'] }).toString(); } catch { return 'local'; }
+})()).trim().slice(0, 7);
 await esbuild.build({
+  define: { __BUILD__: JSON.stringify(BUILD) },
   entryPoints: [path.join(ROOT, 'server/index.js')],
   outfile: path.join(DIST, '_worker.js'),
   bundle: true,

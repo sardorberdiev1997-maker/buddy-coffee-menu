@@ -123,7 +123,7 @@ async function route(request, env, ctx) {
       client_errors: errors
     } : { has_exception: !!exception, has_bot_problem: !!problem, client_errors: errors.length };
     return json({
-      ok: !!r.ok, url: w.url, pending: w.pending_update_count,
+      ok: !!r.ok, build: typeof __BUILD__ === 'string' ? __BUILD__ : 'dev', url: w.url, pending: w.pending_update_count,
       last_error_at: w.last_error_date ? new Date(w.last_error_date * 1000).toISOString() : null,
       group: (await getKV(env, 'group')) ? 'bound' : 'not bound',
       setup_open: Date.now() - parseInt((await getKV(env, 'bind_open_at')) || '0', 10) < 30 * 60 * 1000, // открыто ли окно /bind

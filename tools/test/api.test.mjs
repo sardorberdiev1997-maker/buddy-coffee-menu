@@ -260,6 +260,7 @@ test('сторож бота: сброшенный вебхук ставит са
   assert.ok(!calls.some((c) => c.method === 'sendMessage' && /не получает/.test(c.body.text || '')), 'без тревоги');
   const pub = (await api('/api/tg/info')).body;
   assert.equal(pub.has_bot_problem, true);
+  assert.match(pub.build, /^([0-9a-f]{7}|local)$/, 'отпечаток сборки — чтобы после выкладки сверить, что работает новый код');
   assert.equal(pub.bot_problem, undefined, 'тексты проблем без ключа не показываем');
   assert.equal((await api('/api/tg/info?key=wrong')).body.bot_problem, undefined);
   assert.match((await diag()).bot_problem, /восстановлен/);
